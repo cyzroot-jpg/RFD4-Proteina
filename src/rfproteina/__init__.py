@@ -9,6 +9,12 @@ from rfproteina.utils.env import load_dotenv
 
 load_dotenv()
 
+# Enable Teco SDAA support (no-op on CPU/CUDA) and bridge the biotite layout that
+# AtomWorks expects, before anything reads the device or imports AtomWorks.
+from rfproteina.utils.sdaa_compat import activate_accelerator_compat
+
+activate_accelerator_compat()
+
 _env = Env()
 _env.read_env()
 should_debug = _env.bool("DEBUG", default=False)

@@ -1,0 +1,26 @@
+op_name: "scale_tensor"
+input {
+  id: "y"
+  shape {
+    dims: 256
+    dims: 1
+    dims: 1
+    dims: 1
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  reused: true
+  random_data {
+    seed: 428636
+    lower_bound: -10.0
+    upper_bound: 10.0
+    distribution: UNIFORM
+  }
+  ttype: TENSOR
+}
+tecoal_param {
+  scale_tensor_param {
+    alpha: 3.9999998989515007e-05
+    algo: ALGO_0
+  }
+}

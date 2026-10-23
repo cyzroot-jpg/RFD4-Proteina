@@ -1,0 +1,11 @@
+{
+  "status": "ok",
+  "wall_time_s": 6.081591634079814,
+  "cpu_time_s": 6.061684999999997,
+  "cpu_utilization_percent": 0.7786927651821102,
+  "process_max_rss_bytes": 3972349952,
+  "device_peak_memory_bytes": 0,
+  "device_reserved_memory_bytes": 0,
+  "num_examples": 3,
+  "examples_per_second": 0.49329191772573205
+}

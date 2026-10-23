@@ -44,7 +44,7 @@ def mean_w_mask(a: torch.Tensor, mask: torch.Tensor, keepdim: bool = True) -> to
     """
     mask = mask[..., None]  # [*, n, 1]
     num_elements = torch.sum(mask, dim=-2, keepdim=True)  # [*, 1, 1]
-    num_elements = torch.where(num_elements == 0, torch.tensor(1.0), num_elements)  # [*, 1, 1]
+    num_elements = torch.where(num_elements == 0, torch.ones_like(num_elements), num_elements)  # [*, 1, 1]
     a_masked = torch.masked_fill(a, ~mask, 0.0)  # [*, n, d]
     mean = torch.sum(a_masked, dim=-2, keepdim=True) / num_elements  # [*, 1, d]
     mean = torch.masked_fill(mean, num_elements == 0, 0.0)  # [*, 1, d]

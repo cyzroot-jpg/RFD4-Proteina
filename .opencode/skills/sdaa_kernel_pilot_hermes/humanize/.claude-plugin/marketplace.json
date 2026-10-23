@@ -1,0 +1,15 @@
+{
+  "name": "PolyArch",
+  "owner": {
+    "name": "PolyArch"
+  },
+  "description": "Humanize RLCR packaged with KernelPilot's Hermes-reviewed teco-ops workflow.",
+  "plugins": [
+    {
+      "name": "humanize",
+      "source": "./",
+      "description": "Humanize RLCR with native teco-ops correctness and SDPTI performance testing and exclusive teco-ops-wiki evidence.",
+      "version": "1.18.0"
+    }
+  ]
+}

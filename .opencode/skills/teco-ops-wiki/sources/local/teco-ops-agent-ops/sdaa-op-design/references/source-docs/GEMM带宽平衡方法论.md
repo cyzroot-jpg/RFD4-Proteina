@@ -1,0 +1,250 @@
+---
+id: source-teco-ops-agent-ops-sdaa-op-design-references-source-docs-gemm-642e39fb
+title: "teco-ops-agent ops: sdaa-op-design/references/source-docs/GEMM带宽平衡方法论.md"
+type: source-local
+tags: [teco-ops-agent, ops, skill, sdaa]
+confidence: source-reported
+skill: sdaa-op-design
+source_path: /data/application/xuelu/teco-agent-skills/skills/teco-ops-agent/ops/sdaa-op-design/references/source-docs/GEMM带宽平衡方法论.md
+relative_source_path: sdaa-op-design/references/source-docs/GEMM带宽平衡方法论.md
+captured_at: 2026-08-04
+---
+
+# GEMM 带宽平衡方法论
+
+> **定位**：从"带宽供需平衡"的视角解释 GEMM 设计为什么这么做。`算子设计方法论.md` 给的是六阶段流程（怎么走），本文给的是背后的物理原理（为什么这么选）。
+> **核心命题**：GEMM 设计的本质，是在「搬运 → 消费 → 计算 → 产出」四条数据通路上做供需平衡，目标是让 `max(各通路耗时)` 最小，再用流水线把它们重叠。
+> **配套**：带宽参数见 `sdaa-hardware-architecture.md`；ACE 效率见 `ACE.xlsx`；流程见 `算子设计方法论.md`；访存细节见 `T1-DMA-RMA访存优化方法论.md`。
+
+---
+
+## 一、四条数据通路
+
+GEMM `C[M,N] += A[M,K] × B[K,N]` 在 T1 上要经过四条物理通路，每条都有自己的带宽上限：
+
+```
+                  ②消费                    ③计算
+        ┌──────────────────┐         ┌──────────────┐
+        │  West口(A) North口(B)│──────→│   ACE MXMU   │
+        │   LDM ─────────→ ACE │        │   乘加阵列    │
+        └──────────────────┘         └──────┬───────┘
+            ↑                                ↓ ④产出
+   ①搬运    │ DMA/RMA                  ACMB写回→LDM
+ HBM ──────→ LDM ←────── RMA ←─── 邻核      │
+   (A,B)         (A,B复用)                  ↓ DMA put
+                                         HBM (C)
+```
+
+| 通路 | 物理动作 | 方向 | 关键带宽 |
+|------|----------|------|----------|
+| ①搬运·供给 | A、B 从 HBM 进 LDM | HBM→LDM | DMA 单引擎 ~40 GB/s（4KB 包）；RMA 广播 188~278 GB/s |
+| ②消费·喂入 | A 经 West、B 经 North 进 ACE | LDM→ACE | West 80 GB/s；North 80 GB/s（理论，B 复用后折减）|
+| ③计算 | ACE MAC 乘加 | ACE 内部 | 见下，受 ①②④ 共同约束 |
+| ④产出·写回 | C 从 ACMB 写回 LDM，再 DMA put 到 HBM | ACE→LDM→HBM | 写回 27 GB/s（fp32）；DMA put ~40 GB/s |
+
+> **关键认知**：ACE 的乘加阵列（MXMU）本身不是瓶颈。瓶颈永远是喂它的口（West/North）和供它的路（DMA/RMA）。算得快没用，喂不饱就空转。
+
+---
+
+## 二、五个带宽的供给能力（硬件常量）
+
+以下数值均来自硬件手册 / 实测，按 `teco-smi` 实际频率等比缩放（标称 SPE=2.5GHz→ACE=1.25GHz）。
+
+| 带宽 | 通路 | 标称值 | 来源 | 对谁 |
+|------|------|--------|------|------|
+| **West 口** | LDM→ACE | 80 GB/s（64B/cycle）| teco-T1.md §ACE | A 消费 |
+| **North 口** | LDM→ACE | 80 GB/s 理论，**等效 = 80/(M2/32)** | B 跨 West 行复用 | B 消费 |
+| **ACMB 写回** | ACE→LDM | 27 GB/s（fp32）| teco-T1.md | C 产出 |
+| **DMA** | HBM→LDM | 单引擎 40 GB/s（4KB 包）；8 引擎按列绑定 | 分核.md §1.4 | A/B 供给 |
+| **RMA 广播** | LDM→LDM | 列广播 278、行广播(对角)188、点对点 53 GB/s | 分核.md §1.5 | A/B 核间复用 |
+| **LDM 读口合计** | LDM→ACE 三口 | ≤160 GB/s（512bit×2.5G/8）| 分核.md §1.2 | West+North+写回 总和上限 |
+
+---
+
+## 三、给定 tile 的需求计算（供需模型）
+
+取一个内层 tile `C[M2,32] += A[M2,K2] × B[K2,32]`（fp16→fp32，N2=32 锁死）。
+
+### 3.1 每条通路的数据量与"字节/算力比"
+
+| 数据 | 字节数 | 参与 FLOPs | **字节/FLOP** | 走哪条通路 |
+|------|--------|-----------|--------------|-----------|
+| A | M2·K2·2 | 2·M2·32·K2 | **2/(2·32) = 1/32** | West（一次消费，不复用）|
+| B | K2·32·2 | 2·M2·32·K2 | 2/(2·M2) = **1/M2** | North（跨 M2 行复用）|
+| C | M2·32·4 | 2·M2·32·K2 | 4/(2·K2) = **2/K2** | 写回（跨 K2 段摊薄）|
+
+> 这三个"字节/算力比"是整个平衡的钥匙——它们只依赖 N=32（硬件锁死）和 tile 形状，与 FLOPs/cycle 的具体口径无关。
+
+### 3.2 每条通路的"算力天花板"
+
+用 `带宽 × (FLOP/字节)` 把带宽折算成它能支撑的 TFLOPS：
+
+| 通路 | 折算公式 | 上限（@1.25GHz，32 核合计）| 何时成瓶颈 |
+|------|----------|---------------------------|-----------|
+| **West（A）** | 80 × 32 | **≈ 82 TFLOPS** | 几乎总是（A 不复用，每字节只做 32 MAC）|
+| **North（B）** | 80 × M2 | M2=128→327 T | 几乎不（B 复用 M2/32 倍）|
+| **写回（C）** | 27 × K2/2 | K2=32→13.8 T；K2=384→166 T | **小 K 时**（K2 < ~190）|
+
+### 3.3 与实测 ACE 效率曲线吻合
+
+| K2 | 写回天花板 | West 天花板 | 实测 ACE.xlsx | 瓶颈判定 |
+|----|-----------|------------|--------------|----------|
+| 32 | ~14 T | ~82 T | 12.2 T | ✅ **写回瓶颈**（产出拖累）|
+| 384 | ~166 T | ~82 T | 67.1 T | ✅ **West 瓶颈**（82 的 82%）|
+| ≥576 | ~390 T+ | ~82 T | ~75 T | ✅ **West 瓶颈**（82 的 91%）|
+
+> **结论一**：ACE 峰值 ~77 TFLOPS ≈ West 口上限 ~82 TFLOPS。乘加阵列算得更快也没用，A 喂不进来。这就是为什么 M2 不必无限推大（West 在 M2=128 附近就饱和），而 K 必须够大（摊薄写回与启动开销）。
+>
+> **结论二**：小 K（<192）时 C 写回是瓶颈，与 ACE.xlsx "K=32 只有 12T" 完全对应。解法是把 K 做大、或 half 写回、或多次 K 段累加后一次写回。
+
+---
+
+## 四、平衡判定：找瓶颈
+
+### 4.1 ACE 内部：max(West, North, 写回) 决定 T_ace
+
+```
+T_ace_actual = max(T_mxmu, T_west, T_north_eff, T_writeback)
+
+  T_west      = A_bytes / 80GB/s          ← A 一次性消费
+  T_north_eff = B_bytes / North_BW_eff    ← B 复用后需求很小，几乎不主导
+  T_writeback = C_bytes / 27GB/s          ← 随 K 摊薄，仅小 K 主导
+```
+
+常态（M2≥64, K2≥256）：**T_west 主导**，T_ace ≈ A_bytes / 80GB/s。
+
+### 4.2 ACE 外部：max(T_dma, T_ace) 决定 tile 耗时
+
+```
+T_tile = max(T_dma_supply, T_ace) + T_rma + T_sync
+
+  T_dma_supply = max(A_bytes, B_bytes) / DMA_BW_eff
+  T_rma        = RMA_bytes / RMA_BW
+```
+
+**主矛盾**：DMA 供给（~40 GB/s/核）远小于 ACE 消费（West 80 GB/s/核）。
+
+```
+DMA 供给 40 GB/s  <<  West 消费 80 GB/s
+```
+
+即：DMA 单枪匹马喂不饱 ACE。这正是 GEMM 实例里 DMA 占 70~75% 耗时的根因。
+
+### 4.3 三种瓶颈形态
+
+| 瓶颈 | 信号 | 解法方向 |
+|------|------|----------|
+| **供给(DMA)瓶颈** | T_dma ≫ T_ace | 用广播/RMA 降低单核 DMA 量；缩小 tile；优化 HBM 布局打满 8 引擎 |
+| **消费(West)瓶颈** | T_ace ≈ A_bytes/80，且 DMA 喂得饱 | 这是 ACE 天花板，已近极限；只能靠 K 摊薄固定开销 |
+| **产出(写回)瓶颈** | 小 K，IO_C 高 | 增大 K；half 写回；多 K 段合并一次写回 |
+
+---
+
+## 五、广播/RMA 如何降低供给压力
+
+DMA 喂不饱 ACE，但 A、B 在 32 核间天然可复用——广播让"少数核搬、全核用"，把单核 DMA 量降下来：
+
+| 复用 | 机制 | 降 DMA 倍数 | 代价 |
+|------|------|------------|------|
+| A 行广播 | 同行 4 核共享同一 A 行 | **4×** | 行广播仅 1 引擎，须用双对角线(188 GB/s) |
+| B 列广播 | 同列 8 核共享同一 B 列 | **8×** | 列广播高效(278 GB/s)，B 的首选 |
+| 3D 拆 K | K 拆给 4 行 | B 不再列共享 → 失去 8× | 换来 M2 可推到 128（ACE 饱和）|
+
+> **核心权衡**：2D 广播（K 不拆）享受 A×4、B×8 的 DMA 折扣，但 M2 被 LDM 压小（ACE 效率低）；3D 拆 K 丢掉 B 的 8× 折扣（改 RMA 环传 53 GB/s），但 M2 可推到 128（ACE 饱和）。**选 2D 还是 3D，本质是比"DMA 折扣省的时间" vs "ACE 饱和赚的时间"**——这正是算子设计方法论阶段三~四的决策内核。
+
+---
+
+## 六、tile 选择：让瓶颈最小
+
+### 6.1 目标函数
+
+```
+对可行域内每个 (M2, K2):
+    T_total(M2,K2) = max(T_dma, T_ace) + T_rma + T_sync
+选 T_total 最小的（不是 ACE 效率最高的！）
+```
+
+### 6.2 反直觉：DMA 瓶颈时 M2 越小越快
+
+ACE 效率随 M2 增大而升高（M2=128 饱和），但 DMA 数据量也随 M2 同步增大。当 DMA 是瓶颈（`T_dma ≫ T_ace`）：
+
+```
+T_total ≈ T_dma ∝ M2·K2·2 / DMA_BW
+```
+
+→ M2 越小，T_dma 越小，T_total 越小。此时牺牲 ACE 效率换 DMA 省时，整体更快。
+
+> 见 `GEMM设计推演示例.md`：M2=32（ACE 仅 34%）反而比 M2=128（饱和）快 2.5×，因为 DMA 占 70%。**优化 T_total，不是优化 ACE 效率。**
+
+### 6.3 甜点：T_dma ≈ T_ace
+
+当 `T_dma ≈ T_ace` 时，双缓冲能让两者完全重叠，稳态 `T_iter = T_ace = T_dma`，是最高效的工作点。判据见阶段六：`T_dma < 0.8·T_ace` 才值得双缓冲。
+
+---
+
+## 七、流水线：用重叠掩盖瓶颈
+
+平衡算出来后，用三段重叠把瓶颈藏起来：
+
+```
+时间 →
+DMA预取下一块  ‖  ACE计算当前块  ‖  ACMB写回上一块
+   (供给)          (消费+计算)         (产出)
+```
+
+| 重叠对 | 条件 | 风险 |
+|--------|------|------|
+| DMA_GET ‖ ACE | T_dma < 0.8·T_ace | DMA 喂不饱则无法掩盖（最常见的失败）|
+| ACE ‖ 写回 | ACMB0/1 ping-pong | C buffer 与 ACE 输入须错 LDM Bank |
+| DMA_GET ‖ RMA_PUT | 反向（下/上行）✅ 不冲突 | DMA_GET ‖ RMA 列广播接收 → 返回通路拥塞 ⚠️ |
+| 产出 C ‖ 下一轮计算 | K 段累加后一次写回 | 小 K 时写回暴露，见 §3.3 |
+
+> LDM 双 Bank 必须显式错开：DMA 写、RMA 收发、ACE 读写、SIMD 访问分到 Bank0/Bank1，否则伪双端口退化成串行。
+
+---
+
+## 八、可执行决策流程
+
+```
+1. 列五带宽供给能力（§二，硬件常量）
+2. 给候选 tile (M2,K2)，算三条字节/算力比（§3.1）
+3. 判 ACE 内部瓶颈：West? 写回?(小K) → 定 T_ace（§3.2/4.1）
+4. 判外部供给：T_dma vs T_ace，DMA 喂得饱吗？（§4.2）
+5. 算广播/RMA 折扣：2D 享 A×4 B×8，3D 丢 B×8 换 ACE 饱和（§五）
+6. 搜可行域，选 T_total 最小 tile（§六，非 ACE 效率最高）
+7. T_dma<0.8·T_ace？→ 双缓冲；否则单缓冲认 DMA 开销（§七）
+8. 错 LDM Bank、错 DMA/RMA 方向，流水线重叠（§七）
+```
+
+---
+
+## 九、实例验证：GEMM 4096³（fp16）
+
+| | 方案A M2=128 | 方案B M2=64 | 方案C M2=32 |
+|---|---|---|---|
+| K2 | 512 | 1024 | 1024 |
+| ACE 效率 | 饱和 | 67% | 34% |
+| T_ace | 0.82 μs | 0.61 μs | 0.60 μs |
+| T_dma | 8.8 μs | 5.0 μs | 3.3 μs |
+| T_total | 11.8 μs | 6.66 μs | **4.74 μs** ✅ |
+| 瓶颈 | DMA(75%) | DMA(75%) | DMA(70%) |
+
+三方案 T_ace 都远小于 T_dma（DMA 喂不饱 ACE，West 消费天花板没碰到），故 **DMA 是主矛盾**，M2 越小 DMA 量越小、T_total 越短。方案 C 牺牲了 66% 的 ACE 效率，却快 2.5×。
+
+> 这恰好印证：当 ①搬运(DMA) 是瓶颈，③计算(ACE) 再强也无济于事——平衡的是搬运与消费，不是计算。
+
+---
+
+## 十、与现有文档的关系
+
+| 本文（为什么） | 其他文档（怎么做） |
+|----------------|-------------------|
+| 四通路供需模型 | `算子设计方法论.md`：六阶段流程 |
+| 五带宽常量表 | `sdaa-hardware-architecture.md`：硬件细节 |
+| 字节/算力比 → ACE 天花板 | `ACE.xlsx` + `T1-ACE使用方法论.md`：实测效率 |
+| DMA/RMA 折扣与方向冲突 | `T1-DMA-RMA访存优化方法论.md` / `访存与流水线优化.md` |
+| tile 搜索与双缓冲判定 | `算子设计方法论.md` 阶段五/六、`分核.md` B.0/B.7 |
+
+---
+
+*版本：v1.0 | 从带宽供需平衡视角统合 GEMM 设计原理 | 与六阶段流程互补*

@@ -1,0 +1,146 @@
+// BSD 3- Clause License Copyright (c) 2024, Tecorigin Co., Ltd. All rights
+// reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// Redistributions of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+// Neither the name of the copyright holder nor the names of its contributors
+// may be used to endorse or promote products derived from this software
+// without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)  ARISING IN ANY
+// WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
+#include "ual/kernel/scatter_out/scatter_out.h"
+
+using namespace sdaa;
+using namespace tecoal::ual::common;
+
+namespace tecoal {
+namespace ual {
+namespace kernel {
+
+enum {
+    REDUCE_NONE = 0,
+    REDUCE_ADD = 1,
+    REDUCE_MUL = 2,
+};
+
+template <typename T>
+__device__ static inline void update_output_data(int reduce_func, T *output, T val) {
+    if (reduce_func == REDUCE_NONE) {
+        *output = val;
+    } else if (reduce_func == REDUCE_ADD) {
+        *output += val;
+    } else {
+        *output *= val;
+    }
+}
+
+__device__ static inline int PI(const int *x, int ln) {
+    int ans = 1;
+    for (int i = 0; i < ln; ++i) ans *= x[i];
+    return ans;
+}
+
+__device__ static inline void convert(int *a, int x, const int *A, int n) {
+    for (int i = 0; i < n; ++i) {
+        a[i] = x % A[i];
+        x /= A[i];
+    }
+}
+
+__device__ static inline int get_idx(int *pos, const int *A, int n) {
+    int ans = 0;
+    for (int i = n - 1; i > -1; --i) {
+        ans = ans * A[i] + pos[i];
+    }
+    return ans;
+}
+
+// assert(n > 0)
+__device__ static inline void add_idx(int *a, const int *b, const int *A, int n) {
+    for (int i = 0; i < n; ++i) {
+        a[i] += b[i];
+        int carry = a[i] >= A[i];
+        if (i + 1 < n) a[i + 1] += carry;
+        a[i] = carry ? a[i] - A[i] : a[i];
+    }
+}
+
+template <typename T>
+__global__ void tecoKernelScatterOut(ScatterOutArgs arg) {
+    const int spe_cnt = arg.spe_cnt;
+    const int tid = threadIdx;
+
+    const int axis = arg.axis;
+    const int dim_ln = arg.dim_ln;
+
+    T *input = (T *)arg.input;
+    int64_t *index = (int64_t *)arg.index;
+    T *output = (T *)arg.output;
+
+    const int reduce_func = arg.func_opcode;
+    const int is_scalar = arg.is_scalar;
+    const T alpha = arg.alpha;
+
+    int dim_input[MAX_DIM];
+    int dim_index[MAX_DIM];
+    int dim_output[MAX_DIM];
+
+    memcpy(dim_input, arg.dim_input, sizeof(int) * dim_ln);
+    memcpy(dim_index, arg.dim_index, sizeof(int) * dim_ln);
+    memcpy(dim_output, arg.dim_output, sizeof(int) * dim_ln);
+
+    int dim_loop[MAX_DIM];
+    memcpy(dim_loop, dim_index, sizeof(int) * dim_ln);
+    dim_loop[axis] = 1;
+
+    int loop_pos[MAX_DIM];
+    int SPE_CNT[MAX_DIM];
+    convert(loop_pos, tid, dim_loop, dim_ln);
+    convert(SPE_CNT, spe_cnt, dim_loop, dim_ln);
+
+    int low_input = PI(dim_input, axis);
+    int low_index = PI(dim_index, axis);
+    int low_output = PI(dim_output, axis);
+
+    int K = dim_index[axis];
+
+    int loop_cnt = PI(dim_loop, dim_ln);
+
+    // Due to the uncertainty of the destination address, all accesses are gload
+    for (int i = tid; i < loop_cnt; i += spe_cnt) {
+        int offset_input = get_idx(loop_pos, dim_input, dim_ln);
+        int offset_index = get_idx(loop_pos, dim_index, dim_ln);
+        int offset_output = get_idx(loop_pos, dim_output, dim_ln);
+        for (int k = 0; k < K; ++k) {
+            auto idx = index[offset_index + k * low_index];
+            T val = alpha;
+            if (!is_scalar) {
+                val = input[offset_input + k * low_input];
+            }
+            update_output_data<T>(reduce_func, &output[offset_output + idx * low_output], val);
+        }
+        add_idx(loop_pos, SPE_CNT, dim_loop, dim_ln);
+    }
+}
+
+template __global__ void tecoKernelScatterOut<float>(ScatterOutArgs);
+
+}  // namespace kernel
+}  // namespace ual
+}  // namespace tecoal

@@ -1,0 +1,24 @@
+[features]
+# Codex 0.139.0 exposes this feature as `hooks`.
+hooks = true
+# Keep the alias requested by the project workflow for compatibility with
+# environments that use the older/newer `codex_hooks` feature name.
+# codex_hooks = true
+
+[hooks]
+# 用户提交新请求时触发：若命中静态 kernel 关键词，或命中 domain-routes.json 中
+# 任意算子族并同时出现优化/实现/开发/修改等动作词，提示先读取领域索引、机制 pattern 和代码规范。
+# 纯精度/性能测试不触发本 hook，由 kernel-bench 处理。
+# command hook 的 stdout 必须是单个 Codex hook JSON 对象。
+UserPromptSubmit = [
+  { hooks = [
+    { type = "command", command = "python3 ops/sdaa-op-template/scripts/hooks/new_op_preflight.py" }
+  ] }
+]
+# Codex 停止前触发：若本轮修改了长期 learned-patterns，
+# 校验其必须有可移植 evidence；kernel 改动则提示补齐 stage_result。
+Stop = [
+  { hooks = [
+    { type = "command", command = "python3 ops/sdaa-op-learning-validation/scripts/hooks/learned_patterns_guard.py" }
+  ] }
+]

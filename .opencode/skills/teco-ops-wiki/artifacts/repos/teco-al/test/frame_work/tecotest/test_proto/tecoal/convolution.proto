@@ -1,0 +1,61 @@
+syntax = "proto2";
+
+package testpt;
+import "tensor.proto";
+import "tecoal/common.proto";
+
+enum ConvolutionMode{
+    CONVOLUTION = 0;
+    CROSS_CORRELATION = 1;
+}
+
+enum ReorderType{
+    NO_REORDER = 0;
+    FILTER_6D_REORDER = 1;
+}
+
+enum ConvolutionFwdAlgo{
+    CONVOLUTION_FWD_ALGO_0 = 0;
+    CONVOLUTION_FWD_ALGO_ACE_1 = 1;
+    CONVOLUTION_FWD_ALGO_ACE_2 = 2;
+}
+
+enum ConvolutionBwdFilterAlgo{
+    CONVOLUTION_BWD_FILTER_ALGO_0 = 0;
+}
+
+enum ConvolutionBwdDataAlgo{
+    CONVOLUTION_BWD_DATA_ALGO_0 = 0;
+    CONVOLUTION_BWD_DATA_ALGO_1 = 1;
+}
+
+message ConvolutionDescParam {
+    optional int32 padding_h                    = 1 [default = 0];
+    optional int32 padding_w                    = 2 [default = 0];
+    optional int32 stride_h                     = 3 [default = 1];
+    optional int32 stride_w                     = 4 [default = 1];
+    optional int32 dilation_h                   = 5 [default = 1];
+    optional int32 dilation_w                   = 6 [default = 1];
+    optional int32 groups                       = 7 [default = 1];
+    optional int32 arrayLength                  = 8 [default = 0];
+    repeated int32 pad_array                    = 9 ;
+    repeated int32 stride_array                 = 10 ;
+    repeated int32 dilation_array               = 11 ;
+    optional ConvolutionMode mode               = 12 [default = CROSS_CORRELATION];
+    optional DataType conv_datatype             = 13 [default = DTYPE_FLOAT];
+    optional MathType math                      = 14 [default = TENSOR_ACC_MATH];
+    optional ReorderType reorder_type           = 15 [default = NO_REORDER];
+}
+
+message ConvolutionParam {
+    optional HandleParam handle                                 = 1;
+    optional ConvolutionDescParam conv_desc_param               = 2;
+    optional float alpha                                        = 3;
+    optional float beta                                         = 4;
+    optional ConvolutionFwdAlgo fwd_algo                        = 5 [default = CONVOLUTION_FWD_ALGO_0];
+    optional ConvolutionBwdDataAlgo bwd_data_algo               = 6 [default = CONVOLUTION_BWD_DATA_ALGO_0];
+    optional ConvolutionBwdFilterAlgo bwd_filter_algo           = 7 [default = CONVOLUTION_BWD_FILTER_ALGO_0];
+    optional ModelMode model_mode                               = 8 [default = MODEL_TRAINING];
+    optional bool enable_clip                                   = 9 [default = true];
+    optional Algo algo                                          = 10;
+}

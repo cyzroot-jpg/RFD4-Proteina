@@ -1,0 +1,37 @@
+{
+  "name": "teco-ops",
+  "owner": {
+    "name": "TECO Ops",
+    "url": "https://git.tecorigin.net/gury/teco-ops-agent"
+  },
+  "plugins": [
+    {
+      "name": "teco-ops-agent-skills",
+      "description": "SDAA 算子开发 Demo Agent Skills（环境检查、架构、文档检索、LIBRT/KERNEL/SATE API、性能最佳实践、算子脚手架）。",
+      "source": "./ops",
+      "strict": false,
+      "version": "0.1.0",
+      "author": {
+        "name": "TECO Ops"
+      },
+      "keywords": [
+        "sdaa",
+        "teco",
+        "operator",
+        "swdnn_test_ops"
+      ],
+      "category": "skills",
+      "skills": [
+        "./sdaa-env-check",
+        "./sdaa-docs-search",
+        "./sdaa-performance-best-practices",
+        "./sdaa-op-design",
+        "./sdaa-op-requirement",
+        "./sdaa-op-learning-validation",
+        "./sdaa-op-template",
+        "./kernel-bench",
+        "./record-repo-change"
+      ]
+    }
+  ]
+}

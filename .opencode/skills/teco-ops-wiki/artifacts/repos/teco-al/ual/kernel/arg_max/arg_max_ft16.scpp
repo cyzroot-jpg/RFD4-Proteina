@@ -1,0 +1,93 @@
+// BSD 3- Clause License Copyright (c) 2024, Tecorigin Co., Ltd. All rights
+// reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// Redistributions of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+// Neither the name of the copyright holder nor the names of its contributors
+// may be used to endorse or promote products derived from this software
+// without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)  ARISING IN ANY
+// WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
+#include "ual/kernel/arg_max/arg_max.h"
+#include "ual/kernel/macro.h"
+#include "ual/com/rt.h"
+
+using namespace sdaa;
+using namespace tecoal::ual::common;
+
+namespace tecoal {
+namespace ual {
+namespace kernel {
+
+#define SPM_MAX_NUM ((SPM_MAX_BYTE) / sizeof(half))
+#define ROUND_UP(x, y) ((x)-1) / (y) + 1
+#define FLT16_MIN_VALUE (-65504)
+
+__global__ void tecoKernelArgmaxFT16(ArgMaxArgs arg) {
+    const int high_num = arg.high_num;
+    const int axis_num = arg.axis_num;
+    const int low_num = arg.low_num;
+    const half *x = (const half *)arg.x;
+    int64_t *y = (int64_t *)arg.y;
+    const int spe_num = arg.spe_num;
+
+    int deal_high_num_per_spe = high_num / spe_num;
+    int deal_high_num_per_spe_rem = high_num % spe_num;
+    if (threadIdx < deal_high_num_per_spe_rem) {
+        ++deal_high_num_per_spe;
+    }
+    int axis_time = ROUND_UP(axis_num, SPM_MAX_NUM);
+    int axis_rem = axis_num % SPM_MAX_NUM;
+    if (deal_high_num_per_spe == 0) return;
+    half *spm_x = (half *)rt_spm_malloc(SPM_MAX_BYTE);
+    int init_index = threadIdx < deal_high_num_per_spe_rem ?
+                         threadIdx * deal_high_num_per_spe :
+                         threadIdx * deal_high_num_per_spe + deal_high_num_per_spe_rem;
+
+    for (int i = 0; i < deal_high_num_per_spe; i++) {
+        int offset_h = (init_index + i) * axis_num * low_num;
+        for (int l = 0; l < low_num; l++) {
+            int index = offset_h + l;
+            int offset_l = offset_h + l;
+            int index_max = 0;
+            int deal_num = 0;
+            int offset_a = 0;
+            half value_max = FLT16_MIN_VALUE;
+            for (int at = 0; at < axis_time; at++) {
+                deal_num = at == axis_time - 1 ? axis_rem : SPM_MAX_NUM;
+                offset_a = offset_l + at * SPM_MAX_NUM * low_num;
+                memcpy_stride(spm_x, x + offset_a, deal_num * sizeof(half), sizeof(half),
+                              {0, (low_num - 1) * sizeof(half)});
+                for (int d = 0; d < deal_num; d++) {
+                    if (value_max < spm_x[d]) {
+                        value_max = spm_x[d];
+                        index_max = at * SPM_MAX_NUM + d;
+                    }
+                }
+            }
+            *(y + (init_index + i) * low_num + l) = index_max;
+        }
+    }
+    rt_spm_free(spm_x);
+    return;
+}
+
+}  // namespace kernel
+}  // namespace ual
+}  // namespace tecoal

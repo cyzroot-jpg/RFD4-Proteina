@@ -1,0 +1,1 @@
+/data01/tuyilist/cyz/RFD4-Proteina/linshi/work/gen_ppi/inference_samples/pdl1_binder_1/pdl1_binder_1_generated.cif

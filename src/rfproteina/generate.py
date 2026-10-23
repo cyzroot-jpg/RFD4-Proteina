@@ -48,6 +48,7 @@ with (
     from rfproteina.utils.env import load_dotenv
     from rfproteina.utils.hydra import training_path_length_search_cutoffs
     from rfproteina.utils.logging import print_config_tree
+    from rfproteina.utils.resource_monitor import ResourceMonitorCallback
     from rfproteina.utils.structure_files import is_structure_file, iter_structure_files, structure_file_stem
     from rfproteina.utils.torch import apply_torch_deterministic
     from rfproteina.utils.torch_compile import save_compile_cache, setup_run_compile
@@ -706,13 +707,13 @@ def run_generation(
         )
 
     trainer = L.Trainer(
-        accelerator="gpu",
+        accelerator=cfg.hardware.get("accelerator", "gpu"),
         devices=cfg.hardware.ngpus_per_node_,  # This is number of gpus per node, not total
         num_nodes=cfg.hardware.nnodes_,
         default_root_dir=cfg.out_dir,
         logger=False,
         enable_model_summary=cfg.get("verbose", False),
-        callbacks=[GenerationProgressBar()],
+        callbacks=[GenerationProgressBar(), ResourceMonitorCallback(output_dir=cfg.out_dir)],
         precision=precision,
     )
 

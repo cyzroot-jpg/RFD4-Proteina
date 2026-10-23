@@ -1,0 +1,845 @@
+diff --git a/src/rfproteina/__init__.py b/src/rfproteina/__init__.py
+index dd682d4..989c928 100644
+--- a/src/rfproteina/__init__.py
++++ b/src/rfproteina/__init__.py
+@@ -9,6 +9,12 @@ from rfproteina.utils.env import load_dotenv
+ 
+ load_dotenv()
+ 
++# Enable Teco SDAA support (no-op on CPU/CUDA) and bridge the biotite layout that
++# AtomWorks expects, before anything reads the device or imports AtomWorks.
++from rfproteina.utils.sdaa_compat import activate_accelerator_compat
++
++activate_accelerator_compat()
++
+ _env = Env()
+ _env.read_env()
+ should_debug = _env.bool("DEBUG", default=False)
+diff --git a/src/rfproteina/evaluate.py b/src/rfproteina/evaluate.py
+index f5fa27d..c1c3068 100755
+--- a/src/rfproteina/evaluate.py
++++ b/src/rfproteina/evaluate.py
+@@ -40,6 +40,7 @@ with (
+     from rfproteina.utils.env import load_dotenv
+     from rfproteina.utils.logging import print_config_tree
+     from rfproteina.utils.parse_presets import STANDARD_ANNOTATIONS_ONLY
++    from rfproteina.utils.resource_monitor import ResourceUsageRecorder
+     from rfproteina.utils.structure_files import (
+         find_structure_file,
+         iter_structure_files,
+@@ -264,7 +265,12 @@ def run_evaluate(cfg: DictConfig) -> None:
+ def main_hydra(cfg: DictConfig) -> None:
+     load_dotenv()
+     print_config_tree(cfg, resolve=True)
+-    run_evaluate(cfg)
++    with ResourceUsageRecorder(Path(cfg.out_dir) / "evaluation_metrics") as recorder:
++        try:
++            recorder.set_num_examples(len(iter_structure_files(Path(cfg.inputs), include_pdb=True)))
++        except Exception:
++            pass
++        run_evaluate(cfg)
+ 
+ 
+ if __name__ == "__main__":
+diff --git a/src/rfproteina/generate.py b/src/rfproteina/generate.py
+index 88767f7..cdab801 100755
+--- a/src/rfproteina/generate.py
++++ b/src/rfproteina/generate.py
+@@ -48,6 +48,7 @@ with (
+     from rfproteina.utils.env import load_dotenv
+     from rfproteina.utils.hydra import training_path_length_search_cutoffs
+     from rfproteina.utils.logging import print_config_tree
++    from rfproteina.utils.resource_monitor import ResourceMonitorCallback
+     from rfproteina.utils.structure_files import is_structure_file, iter_structure_files, structure_file_stem
+     from rfproteina.utils.torch import apply_torch_deterministic
+     from rfproteina.utils.torch_compile import save_compile_cache, setup_run_compile
+@@ -706,13 +707,13 @@ def run_generation(
+         )
+ 
+     trainer = L.Trainer(
+-        accelerator="gpu",
++        accelerator=cfg.hardware.get("accelerator", "gpu"),
+         devices=cfg.hardware.ngpus_per_node_,  # This is number of gpus per node, not total
+         num_nodes=cfg.hardware.nnodes_,
+         default_root_dir=cfg.out_dir,
+         logger=False,
+         enable_model_summary=cfg.get("verbose", False),
+-        callbacks=[GenerationProgressBar()],
++        callbacks=[GenerationProgressBar(), ResourceMonitorCallback(output_dir=cfg.out_dir)],
+         precision=precision,
+     )
+ 
+diff --git a/src/rfproteina/nn/modules/pair_bias_attn.py b/src/rfproteina/nn/modules/pair_bias_attn.py
+index 7b393bd..cc98b7c 100644
+--- a/src/rfproteina/nn/modules/pair_bias_attn.py
++++ b/src/rfproteina/nn/modules/pair_bias_attn.py
+@@ -35,6 +35,7 @@ from rfproteina.nn.modules.adaptive_ln_scale import (
+ )
+ from rfproteina.nn.modules.norm import make_norm
+ from rfproteina.utils.common import default, exists
++from rfproteina.utils.sdaa_compat import sdaa_is_active
+ 
+ # Large negative value for masking (not -inf to avoid gradient issues)
+ NEG_INF = -1e4
+@@ -66,6 +67,22 @@ except (ImportError, OSError):
+     cuet_attention_pair_bias = None
+ 
+ 
++# SDAA's SDPA implementation rejects some dtype/shape combinations the CUDA
++# backend supports. Probe once per process, then use the explicit einsum path
++# for the rest of the run instead of retrying a failing kernel every step.
++_SDAA_SDPA_UNAVAILABLE = False
++
++
++def _einsum_attention(q, k, v, attn_bias, dim_head, target_dtype):
++    scale = dim_head**-0.5
++    q, k, v = (t.to(target_dtype) for t in (q, k, v))
++    sim = einsum("b h i d, b h j d -> b h i j", q, k) * scale
++    if attn_bias is not None:
++        sim = sim + attn_bias
++    attn = torch.softmax(sim, dim=-1)
++    return einsum("b h i j, b h j d -> b h i d", attn, v)
++
++
+ class PairBiasAttention(nn.Module):
+     """Pair-bias multi-head attention via ``F.scaled_dot_product_attention``.
+ 
+@@ -168,22 +185,26 @@ class PairBiasAttention(nn.Module):
+             # Avoid crashes for fully masked attention rows.
+             attn_bias = attn_bias.masked_fill(~mask_expanded.any(dim=-1, keepdim=True), 0.0)
+ 
+-        # SDPA on GPU; explicit einsum fallback on CPU (CI / local dev only, not
+-        # intended for production CPU inference).
+-        if not torch.cuda.is_available():
+-            scale = self.dim_head**-0.5
+-            sim = einsum("b h i d, b h j d -> b h i j", q, k) * scale
+-            if attn_bias is not None:
+-                sim = sim + attn_bias
+-            attn = torch.softmax(sim, dim=-1)
+-            o = einsum("b h i j, b h j d -> b h i d", attn, v)
++        # SDPA on GPU; explicit einsum fallback on CPU. On Teco SDAA, try the
++        # fused kernel first and fall back permanently if this build cannot
++        # dispatch it for an additive pair bias.
++        global _SDAA_SDPA_UNAVAILABLE
++        use_einsum = not torch.cuda.is_available() or (sdaa_is_active() and _SDAA_SDPA_UNAVAILABLE)
++        if use_einsum:
++            o = _einsum_attention(q, k, v, attn_bias, self.dim_head, target_dtype)
+         else:
+-            o = F.scaled_dot_product_attention(
+-                q.contiguous().to(target_dtype),
+-                k.contiguous().to(target_dtype),
+-                v.contiguous().to(target_dtype),
+-                attn_mask=attn_bias.contiguous() if attn_bias is not None else None,
+-            )
++            try:
++                o = F.scaled_dot_product_attention(
++                    q.contiguous().to(target_dtype),
++                    k.contiguous().to(target_dtype),
++                    v.contiguous().to(target_dtype),
++                    attn_mask=attn_bias.contiguous().to(target_dtype) if attn_bias is not None else None,
++                )
++            except RuntimeError:
++                if not sdaa_is_active():
++                    raise
++                _SDAA_SDPA_UNAVAILABLE = True
++                o = _einsum_attention(q, k, v, attn_bias, self.dim_head, target_dtype)
+ 
+         # Apply gating
+         o_gated = torch.sigmoid(g) * o
+diff --git a/src/rfproteina/utils/align.py b/src/rfproteina/utils/align.py
+index 833854d..8351b3d 100644
+--- a/src/rfproteina/utils/align.py
++++ b/src/rfproteina/utils/align.py
+@@ -44,7 +44,7 @@ def mean_w_mask(a: torch.Tensor, mask: torch.Tensor, keepdim: bool = True) -> to
+     """
+     mask = mask[..., None]  # [*, n, 1]
+     num_elements = torch.sum(mask, dim=-2, keepdim=True)  # [*, 1, 1]
+-    num_elements = torch.where(num_elements == 0, torch.tensor(1.0), num_elements)  # [*, 1, 1]
++    num_elements = torch.where(num_elements == 0, torch.ones_like(num_elements), num_elements)  # [*, 1, 1]
+     a_masked = torch.masked_fill(a, ~mask, 0.0)  # [*, n, d]
+     mean = torch.sum(a_masked, dim=-2, keepdim=True) / num_elements  # [*, 1, d]
+     mean = torch.masked_fill(mean, num_elements == 0, 0.0)  # [*, 1, d]
+diff --git a/src/rfproteina/utils/resource_monitor.py b/src/rfproteina/utils/resource_monitor.py
+new file mode 100644
+index 0000000..85f3885
+--- /dev/null
++++ b/src/rfproteina/utils/resource_monitor.py
+@@ -0,0 +1,232 @@
++"""Lightweight inference resource instrumentation.
++
++Records wall time, throughput, device memory and CPU usage without changing any
++generation/evaluation behaviour. Works on CPU, CUDA and Teco SDAA (where the
++CUDA -> SDAA migration makes ``torch.cuda`` resolve to the SDAA backend).
++
++The callback writes, next to the run's other metrics:
++  * ``<out_dir>/inference_metrics/resource_usage.json`` -- run-level summary
++  * ``<out_dir>/inference_metrics/resource_usage_batches.csv`` -- per-batch rows
++and the recorder used by non-Trainer scripts writes
++``<out_dir>/evaluation_metrics/resource_usage.json`` with the same summary shape.
++"""
++
++from __future__ import annotations
++
++import csv
++import json
++import os
++import resource
++import time
++from pathlib import Path
++from typing import Any
++
++import torch
++
++try:  # Lightning is optional for the standalone recorder.
++    import lightning as L
++except ImportError:  # pragma: no cover
++    L = None
++
++
++def _device_module():
++    """Return the CUDA-like module for the active device (sdaa after migration)."""
++    return torch.cuda
++
++
++def _device_available() -> bool:
++    try:
++        return torch.cuda.is_available()
++    except Exception:
++        return False
++
++
++def _reset_peak_memory() -> None:
++    if _device_available():
++        try:
++            _device_module().reset_peak_memory_stats()
++        except Exception:
++            pass
++
++
++def _peak_memory_bytes() -> int | None:
++    if not _device_available():
++        return None
++    try:
++        return int(_device_module().max_memory_allocated())
++    except Exception:
++        return None
++
++
++def _reserved_memory_bytes() -> int | None:
++    if not _device_available():
++        return None
++    try:
++        return int(_device_module().memory_reserved())
++    except Exception:
++        return None
++
++
++def _cpu_times() -> tuple[float, float]:
++    """Return (process CPU seconds, wall seconds)."""
++    usage = resource.getrusage(resource.RUSAGE_SELF)
++    cpu_seconds = usage.ru_utime + usage.ru_stime
++    return cpu_seconds, time.perf_counter()
++
++
++def _max_rss_bytes() -> int:
++    # ru_maxrss is KiB on Linux.
++    return int(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss) * 1024
++
++
++def _cpu_utilization(cpu_seconds: float, wall_seconds: float) -> float | None:
++    if wall_seconds <= 0:
++        return None
++    ncpu = os.cpu_count() or 1
++    return 100.0 * cpu_seconds / wall_seconds / ncpu
++
++
++def _write_json(path: Path, payload: dict[str, Any]) -> None:
++    path.parent.mkdir(parents=True, exist_ok=True)
++    path.write_text(json.dumps(payload, indent=2) + "\n")
++
++
++def _sync_if_available() -> None:
++    if _device_available():
++        try:
++            _device_module().synchronize()
++        except Exception:
++            pass
++
++
++class ResourceUsageRecorder:
++    """Measure a single inference/evaluation call (non-Lightning entry points)."""
++
++    def __init__(self, out_dir: str | Path, *, name: str = "resource_usage"):
++        self.out_dir = Path(out_dir)
++        self.name = name
++        self._start_wall = 0.0
++        self._start_cpu = 0.0
++        self._n_examples = 0
++
++    def __enter__(self) -> "ResourceUsageRecorder":
++        _sync_if_available()
++        _reset_peak_memory()
++        self._start_cpu, self._start_wall = _cpu_times()
++        return self
++
++    def __exit__(self, exc_type, exc, tb) -> None:
++        _sync_if_available()
++        end_cpu, end_wall = _cpu_times()
++        wall = end_wall - self._start_wall
++        cpu = end_cpu - self._start_cpu
++        payload = {
++            "status": "ok" if exc_type is None else f"error: {exc_type.__name__}",
++            "wall_time_s": wall,
++            "cpu_time_s": cpu,
++            "cpu_utilization_percent": _cpu_utilization(cpu, wall),
++            "process_max_rss_bytes": _max_rss_bytes(),
++            "device_peak_memory_bytes": _peak_memory_bytes(),
++            "device_reserved_memory_bytes": _reserved_memory_bytes(),
++            "num_examples": self._n_examples or None,
++        }
++        if self._n_examples:
++            payload["examples_per_second"] = self._n_examples / wall if wall > 0 else None
++        _write_json(self.out_dir / f"{self.name}.json", payload)
++
++    def set_num_examples(self, n: int) -> None:
++        self._n_examples = int(n)
++
++
++class ResourceMonitorCallback(L.Callback if L is not None else object):
++    """Lightning callback recording the same metrics for generation validation."""
++
++    def __init__(self, *, output_dir: str | Path | None = None, flush_every: int = 25):
++        super().__init__()
++        self.output_dir = Path(output_dir) if output_dir is not None else None
++        self.flush_every = flush_every
++        self._rows: list[dict[str, Any]] = []
++        self._epoch_start_wall = 0.0
++        self._epoch_start_cpu = 0.0
++        self._batch_start_wall = 0.0
++        self._batch_start_cpu = 0.0
++        self._num_batches = 0
++        self._num_examples = 0
++        self._metrics_dir: Path | None = None
++
++    def _resolve_metrics_dir(self, trainer) -> Path:
++        if self.output_dir is not None:
++            return self.output_dir / "inference_metrics"
++        return Path(trainer.default_root_dir) / "inference_metrics"
++
++    def on_validation_epoch_start(self, trainer, pl_module) -> None:
++        _sync_if_available()
++        _reset_peak_memory()
++        self._metrics_dir = self._resolve_metrics_dir(trainer)
++        self._rows = []
++        self._num_batches = 0
++        self._num_examples = 0
++        self._epoch_start_cpu, self._epoch_start_wall = _cpu_times()
++
++    def on_validation_batch_start(self, trainer, pl_module, batch, batch_idx, dataloader_idx=0) -> None:
++        self._batch_start_cpu, self._batch_start_wall = _cpu_times()
++
++    def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=0) -> None:
++        _sync_if_available()
++        now_cpu, now_wall = _cpu_times()
++        batch_wall = now_wall - self._batch_start_wall
++        batch_cpu = now_cpu - self._batch_start_cpu
++        n = 1
++        if isinstance(batch, dict):
++            for value in batch.values():
++                if torch.is_tensor(value) and value.ndim >= 1:
++                    n = int(value.shape[0])
++                    break
++        self._num_batches += 1
++        self._num_examples += n
++        self._rows.append(
++            {
++                "batch_idx": int(batch_idx),
++                "batch_wall_time_s": batch_wall,
++                "batch_cpu_time_s": batch_cpu,
++                "batch_cpu_utilization_percent": _cpu_utilization(batch_cpu, batch_wall),
++                "device_peak_memory_bytes": _peak_memory_bytes(),
++                "device_reserved_memory_bytes": _reserved_memory_bytes(),
++                "num_examples": n,
++            }
++        )
++        if trainer.is_global_zero and self._metrics_dir is not None and len(self._rows) % self.flush_every == 0:
++            self._flush_rows()
++
++    def _flush_rows(self) -> None:
++        if self._metrics_dir is None or not self._rows:
++            return
++        path = self._metrics_dir / "resource_usage_batches.csv"
++        path.parent.mkdir(parents=True, exist_ok=True)
++        with path.open("w", newline="") as handle:
++            writer = csv.DictWriter(handle, fieldnames=list(self._rows[0]))
++            writer.writeheader()
++            writer.writerows(self._rows)
++
++    def on_validation_epoch_end(self, trainer, pl_module) -> None:
++        _sync_if_available()
++        end_cpu, end_wall = _cpu_times()
++        wall = end_wall - self._epoch_start_wall
++        cpu = end_cpu - self._epoch_start_cpu
++        if not trainer.is_global_zero or self._metrics_dir is None:
++            return
++        self._flush_rows()
++        payload = {
++            "status": "ok",
++            "wall_time_s": wall,
++            "cpu_time_s": cpu,
++            "cpu_utilization_percent": _cpu_utilization(cpu, wall),
++            "process_max_rss_bytes": _max_rss_bytes(),
++            "device_peak_memory_bytes": _peak_memory_bytes(),
++            "device_reserved_memory_bytes": _reserved_memory_bytes(),
++            "num_batches": self._num_batches,
++            "num_examples": self._num_examples,
++            "examples_per_second": self._num_examples / wall if wall > 0 else None,
++            "batches_per_second": self._num_batches / wall if wall > 0 else None,
++        }
++        _write_json(self._metrics_dir / "resource_usage.json", payload)
+\ No newline at end of file
+diff --git a/src/rfproteina/utils/sdaa_compat.py b/src/rfproteina/utils/sdaa_compat.py
+new file mode 100644
+index 0000000..1e45ef9
+--- /dev/null
++++ b/src/rfproteina/utils/sdaa_compat.py
+@@ -0,0 +1,259 @@
++"""Runtime compatibility shims for the Teco SDAA (TecoPyTorch) platform.
++
++Importing and calling :func:`activate_accelerator_compat` is a no-op on CPU/CUDA
++hosts.  On an SDAA host it:
++
++* registers ``torch_sdaa`` and enables TecoPyTorch's automatic CUDA -> SDAA
++  migration, so the unchanged CUDA-oriented model code (``torch.cuda.*``,
++  ``device="cuda"``, ...) runs on SDAA;
++* restores the ``biotite==1.6.0`` module layout that AtomWorks imports (the
++  LoongArch biotite builds are API-compatible but report a newer/dev version and
++  moved ``connect_via_residue_names`` out of ``biotite.structure.bonds``).
++
++The shims are deliberately narrow: they only run when an SDAA device is present
++and only touch the exact symbols that are missing.
++"""
++
++from __future__ import annotations
++
++import logging
++import os
++
++import torch
++
++logger = logging.getLogger(__name__)
++
++_SDAA_ACTIVE = False
++
++
++def sdaa_is_active() -> bool:
++    """Return True when the CUDA -> SDAA migration backend is active."""
++    return _SDAA_ACTIVE
++
++
++def _activate_sdaa_backend() -> bool:
++    """Enable ``torch_sdaa`` device support and the CUDA -> SDAA auto migration."""
++    global _SDAA_ACTIVE
++
++    # Explicit opt-out for CPU runs on an SDAA host (hardware.accelerator=cpu).
++    if os.environ.get("RFPROTEINA_DISABLE_SDAA", "").strip().lower() in {"1", "true", "yes", "on"}:
++        return False
++
++    # A real CUDA build already reports a CUDA device; never hijack it.
++    if torch.cuda.is_available():
++        return False
++
++    try:
++        import torch_sdaa  # noqa: F401
++    except ImportError:
++        return False
++
++    try:
++        if not torch.sdaa.is_available():
++            return False
++    except AttributeError:
++        return False
++
++    # TecoPyTorch's auto-migration maps torch.cuda.* and device="cuda" onto SDAA.
++    from torch_sdaa.utils import cuda_migrate  # noqa: F401
++
++    if not torch.cuda.is_available():  # pragma: no cover - defensive
++        return False
++
++    # ``torch._dynamo`` (imported by torchvision/torchmetrics, even when we never
++    # compile) reads ``torch.cuda._CudaDeviceProperties``. After the migration
++    # ``torch.cuda`` resolves to ``torch_sdaa.backend``, which only exposes the
++    # SDAA-named class.
++    try:
++        import torch_sdaa.backend as _sdaa_backend
++
++        if not hasattr(_sdaa_backend, "_CudaDeviceProperties"):
++            _sdaa_backend._CudaDeviceProperties = _sdaa_backend._SDAADeviceProperties
++        # torch._dynamo.device_interface.CudaInterface resolves a handful of
++        # private stream helpers at import time. SDAA has no CUDA streams, and
++        # we never compile on this backend, so provide inert equivalents.
++        if not hasattr(_sdaa_backend, "_set_stream_by_id"):
++            _sdaa_backend._set_stream_by_id = lambda *args, **kwargs: None
++        if not hasattr(_sdaa_backend, "_exchange_device"):
++            _sdaa_backend._exchange_device = lambda device: device
++        if not hasattr(_sdaa_backend, "_maybe_exchange_device"):
++            _sdaa_backend._maybe_exchange_device = lambda device: device
++
++        # TecoPyTorch exposes ``torch.Event`` / ``torch.Stream`` as deprecated
++        # factory functions. torch._dynamo subclasses them, so expose the real
++        # SDAA classes instead.
++        if not isinstance(torch.Event, type):
++            torch.Event = _sdaa_backend.Event
++        if not isinstance(torch.Stream, type):
++            torch.Stream = _sdaa_backend.Stream
++
++        # Libraries such as transformers annotate ``torch.cuda.CUDAGraph`` at
++        # import time. SDAA exposes the same concept under its own name.
++        if not hasattr(_sdaa_backend, "CUDAGraph"):
++            _sdaa_backend.CUDAGraph = _sdaa_backend.SDAAGraph
++
++        # Lightning's CUDA accelerator probes the compute capability to decide
++        # whether tensor cores are available. SDAA raises NotImplementedError;
++        # report a modern capability so Lightning takes the tensor-core branch.
++        _sdaa_backend.get_device_capability = lambda device=None: (8, 0)
++    except (ImportError, AttributeError):
++        pass
++
++    _SDAA_ACTIVE = True
++    logger.info("TecoPyTorch SDAA detected: CUDA -> SDAA automatic migration is active.")
++    return True
++
++
++def _patch_biotite_layout() -> None:
++    """Bridge the biotite 1.6 / 1.7 module-layout gap used by AtomWorks."""
++    try:
++        import biotite
++        import biotite.structure.bonds as bonds
++    except ImportError:
++        return
++
++    # biotite >= 1.7 moved the residue-template bond connector to
++    # ``biotite.structure.connect``; AtomWorks (pinned to 1.6.0) imports it from
++    # ``biotite.structure.bonds``.
++    if not hasattr(bonds, "connect_via_residue_names"):
++        try:
++            from biotite.structure.connect import connect_via_residue_names
++
++            bonds.connect_via_residue_names = connect_via_residue_names
++            logger.info("biotite compatibility: exposed connect_via_residue_names on biotite.structure.bonds.")
++        except ImportError:
++            pass
++
++    # AtomWorks reads ``BondList._bonds`` (a 1.6 private attribute). In 1.7 the
++    # bond table is only exposed through the public ``as_array()``.
++    try:
++        from biotite.structure import BondList
++
++        if not hasattr(BondList, "_bonds"):
++            BondList._bonds = property(lambda self: self.as_array())
++    except (ImportError, AttributeError):
++        pass
++
++    # AtomWorks hard-enforces an exact biotite version string. The available
++    # LoongArch builds are API-compatible with 1.6.0 but report 1.7.x / 0.1.dev.
++    # Present the pinned version only; the symbol above is what actually differs.
++    try:
++        version = str(biotite.__version__)
++        major_minor = tuple(int(part) for part in version.split(".")[:2])
++        if major_minor >= (1, 6) and version != "1.6.0":
++            biotite.__version__ = "1.6.0"
++            logger.info("biotite compatibility: reporting API-compatible build %s as 1.6.0.", version)
++    except (ValueError, TypeError):
++        pass
++
++
++def _patch_rdkit_layout() -> None:
++    """Provide ``rdkit.Chem.rdDetermineBonds`` when a build omits the module.
++
++    The available LoongArch rdkit wheel ships every module AtomWorks imports
++    except ``rdDetermineBonds``. AtomWorks imports it unconditionally but uses it
++    only for coordinate-based bond perception (``infer_bonds=True``), which the
++    annotated-CIF inference path does not need. Install a stub that fails loudly
++    only if that path is actually exercised.
++    """
++    import sys
++    import types
++
++    import rdkit.Chem as _rdchem
++
++    try:
++        from rdkit.Chem import rdDetermineBonds  # noqa: F401
++    except ImportError:
++        module = types.ModuleType("rdkit.Chem.rdDetermineBonds")
++
++        def DetermineBonds(*args, **kwargs):  # noqa: N802 - mirror the rdkit API
++            raise NotImplementedError(
++                "rdDetermineBonds is missing from this rdkit build; coordinate-based bond "
++                "perception (infer_bonds=True) is unavailable. Supply explicit bonds in the input."
++            )
++
++        module.DetermineBonds = DetermineBonds
++        sys.modules.setdefault("rdkit.Chem.rdDetermineBonds", module)
++        _rdchem.rdDetermineBonds = module
++        logger.info("rdkit compatibility: installed a stub rdDetermineBonds (infer_bonds unavailable).")
++
++    try:
++        from rdkit.Chem import rdEHTTools  # noqa: F401
++    except ImportError:
++        module = types.ModuleType("rdkit.Chem.rdEHTTools")
++
++        def RunMol(*args, **kwargs):  # noqa: N802 - mirror the rdkit API
++            raise NotImplementedError(
++                "rdEHTTools is missing from this rdkit build; Hueckel-based bond perception is unavailable."
++            )
++
++        module.RunMol = RunMol
++        sys.modules.setdefault("rdkit.Chem.rdEHTTools", module)
++        _rdchem.rdEHTTools = module
++        logger.info("rdkit compatibility: installed a stub rdEHTTools (Hueckel perception unavailable).")
++
++    # The LoongArch rdkit wheel is built without InChI, but AtomWorks imports
++    # MolFromInchi at module scope. Provide raising stubs for the InChI helpers.
++    try:
++        import rdkit.Chem.inchi as _inchi
++
++        for _name in ("MolFromInchi", "MolToInchi", "MolToInchiKey", "InchiToInchiKey"):
++
++            def _unavailable(*args, __name=_name, **kwargs):
++                raise NotImplementedError(f"rdkit.Chem.inchi.{__name} is unavailable in this rdkit build (no InChI).")
++
++            if not hasattr(_inchi, _name):
++                setattr(_inchi, _name, _unavailable)
++    except ImportError:
++        pass
++
++
++def _patch_pyarrow_layout() -> None:
++    """Allow ``import pyarrow.parquet`` when a build ships without the Parquet extension.
++
++    The LoongArch pyarrow wheel omits ``_parquet``. AtomWorks imports
++    ``pyarrow.parquet`` at module scope for its optional dataset cache; the
++    inference path never reads Parquet, so a raising stub keeps the import graph
++    intact while making any accidental use explicit.
++    """
++    try:
++        import pyarrow.parquet  # noqa: F401
++        return
++    except ImportError:
++        pass
++
++    import sys
++    import types
++
++    import pyarrow
++
++    module = types.ModuleType("pyarrow.parquet")
++
++    def _unavailable(*args, **kwargs):
++        raise NotImplementedError("pyarrow.parquet is unavailable in this pyarrow build (missing _parquet).")
++
++    for name in (
++        "write_table",
++        "read_table",
++        "read_schema",
++        "read_metadata",
++        "write_metadata",
++        "ParquetFile",
++        "ParquetWriter",
++    ):
++        setattr(module, name, _unavailable)
++    sys.modules.setdefault("pyarrow.parquet", module)
++    pyarrow.parquet = module
++    logger.info("pyarrow compatibility: installed a stub pyarrow.parquet (Parquet I/O unavailable).")
++
++
++def activate_accelerator_compat() -> None:
++    """Enable SDAA support (no-op on CPU/CUDA) and the biotite layout bridge.
++
++    Call this once, as early as possible after importing :mod:`torch`, before
++    AtomWorks / Lightning read the device configuration.
++    """
++    _activate_sdaa_backend()
++    _patch_biotite_layout()
++    _patch_rdkit_layout()
++    _patch_pyarrow_layout()
+\ No newline at end of file
+diff --git a/configs/metrics/inline_metrics/all_inline_metrics_no_rosetta.yaml b/configs/metrics/inline_metrics/all_inline_metrics_no_rosetta.yaml
+new file mode 100644
+index 0000000..99f1831
+--- /dev/null
++++ b/configs/metrics/inline_metrics/all_inline_metrics_no_rosetta.yaml
+@@ -0,0 +1,10 @@
++# Same inline metric set as `all_inline_metrics.yaml`, but with the
++# Rosetta-dependent developability metric removed so it runs without an external
++# PyRosetta apptainer. Select with:
++#   metrics/inline_metrics=all_inline_metrics_no_rosetta
++defaults:
++  - design_metrics
++  - structure_prediction_metrics
++  - developability_metrics_no_rosetta
++  - antibody_metrics
++  # - ipa_metrics # Disabled until the backend compatibility issue is resolved
+\ No newline at end of file
+diff --git a/configs/metrics/inline_metrics/developability_metrics_no_rosetta.yaml b/configs/metrics/inline_metrics/developability_metrics_no_rosetta.yaml
+new file mode 100644
+index 0000000..e201a9d
+--- /dev/null
++++ b/configs/metrics/inline_metrics/developability_metrics_no_rosetta.yaml
+@@ -0,0 +1,9 @@
++# Developability triage metrics that need only the native Python environment.
++# The Rosetta entry in `developability_metrics.yaml` requires an external
++# PyRosetta apptainer ($PYROSETTA_CONTAINER); use this group when that runtime is
++# unavailable so the remaining official metrics still run.
++
++sequence_developability:
++  _target_: rfproteina.metrics.physics.developability_metrics.SequenceDevelopabilityMetric
++  required_tags_any: ["developability"]
++  prohibited_tags: ["small_molecule_only", "structure_prediction"]
+\ No newline at end of file
+diff --git a/docs/how-to/sdaa-evaluation.md b/docs/how-to/sdaa-evaluation.md
+new file mode 100644
+index 0000000..d3acaf9
+--- /dev/null
++++ b/docs/how-to/sdaa-evaluation.md
+@@ -0,0 +1,139 @@
++# Running and evaluating on Teco SDAA
++
++This page documents the LoongArch / Teco SDAA port used for the adaptation report.
++The model code, weights and metric definitions are unchanged; SDAA support is a
++narrow runtime compatibility layer (`rfproteina.utils.sdaa_compat`). On CUDA and
++CPU hosts that layer is a no-op.
++
++## Platform detection
++
++```bash
++teco-smi | head -20          # SDAA
++nvidia-smi -L                # CUDA
++python -c "import torch; print(torch.cuda.is_available())"
++```
++
++`import rfproteina` automatically enables the CUDA -> SDAA migration when a real
++CUDA device is absent and `torch_sdaa` is installed. Set
++`RFPROTEINA_DISABLE_SDAA=1` to force CPU on an SDAA host.
++
++## Environment
++
++```bash
++cd RFD4-Proteina
++source scripts/load_local_env.sh
++export PYTHONPATH=src
++```
++
++`.env.local` should provide `DATA_PATH`, `HF_HOME`, and (for an offline cache)
++`HF_HUB_OFFLINE=1`.
++
++The LoongArch environment used for this port needs:
++
++- `numpy==1.26.4` and `scipy==1.15.3` (the LoongArch RDKit wheel targets the
++  NumPy 1.x C API).
++- `rdkit==2026.9.1`, `openbabel`, `biotraj` from the provided LoongArch wheels.
++- `wandb==0.17.9` (a newer wandb needs Go to build on LoongArch).
++- `pyarrow==23.0.1` installed from the downloaded wheel (`pip install --no-deps`)
++  because the index hash is stale; Parquet I/O is stubbed at runtime.
++- Symlinks for the RDKit Boost runtime:
++  `/usr/local/lib/libboost_numpy312.so.1.81.0 -> /usr/lib64/libboost_numpy311.so.1.81.0`
++  and the matching `libboost_python312` link.
++
++See `linshi/change_report/README.md` for the full dependency and pitfall log.
++
++## Weights
++
++The released bundle is `nvidia/RFD4-Proteina` at revision
++`a06e2509c7033b010fc43614e9fd840303588502` (`config.json` + `model.safetensors`,
++about 1.74 GB, FP32, includes the autoencoder). Point `hf_ckpt_path` at a local
++snapshot to avoid network access:
++
++```bash
++CKPT=/path/to/models--nvidia--RFD4-Proteina/snapshots/a06e2509c7033b010fc43614e9fd840303588502
++```
++
++## Generate
++
++```bash
++PYTHONPATH=src python3 -m rfproteina.generate \
++  inference_experiment=quickstart \
++  inputs=data/benchmarks/monomer/monomer-short.cif.zst \
++  num_replicates=1 \
++  out_dir=./runs/monomer-short \
++  hf_ckpt_path=$CKPT
++
++# Select a device when several are available:
++SDAA_VISIBLE_DEVICES=0 <the command above>
++```
++
++`quickstart` disables the `torch.compile` warm-up (SDAA runs eagerly) and leaves
++the official sampling defaults intact (`thinking_medium`: 60 steps, 180 trunk
++passes). For metrics that need the input structure (motif RMSD, hotspot
++obedience, interchain interactions), compose the official metric group and pass
++the official tags:
++
++```bash
++PYTHONPATH=src python3 -m rfproteina.generate \
++  inference_experiment=inference_on_user_inputs \
++  compile_lengths=null \
++  inputs=data/benchmarks/motif_scaffolding/motif_indexed/1BCF_AA.cif.zst \
++  num_replicates=2 out_dir=./runs/motif \
++  hf_ckpt_path=$CKPT \
++  metrics_tags='[design,3d_coordinate_conditioning]'
++```
++
++## Evaluate
++
++The evaluation entry point is the official `rfd4-evaluate`
++(`src/rfproteina/evaluate.py`); metrics come from
++`configs/metrics/all_metrics.yaml` and are selected with `metrics_tags`.
++
++```bash
++PYTHONPATH=src python3 -m rfproteina.evaluate \
++  inputs=./runs/monomer-short/inference_samples \
++  metrics_tags='[design,developability]' \
++  metrics/inline_metrics=all_inline_metrics_no_rosetta \
++  out_dir=./eval/monomer-short
++```
++
++Results land in `evaluation_metrics/per_example_metrics.csv`. When
++`rosetta_developability` is available (`$PYROSETTA_CONTAINER`), omit the
++`metrics/inline_metrics=...` override to use the full official developability
++group.
++
++### Datasets and tags used in the report
++
++| Task | Dataset | Tags |
++| --- | --- | --- |
++| Unconditional monomer | `data/benchmarks/monomer/monomer-{short,medium,long}.cif.zst` | `[design, developability]` |
++| Indexed motif scaffolding | `data/benchmarks/motif_scaffolding/motif_indexed/1BCF_AA.cif.zst` | `[design, 3d_coordinate_conditioning]` |
++| Protein binder (PD-L1) | `docs/examples/inputs/5o45_cropped.cif.zst` + binder spec | `[design, hotspot_conditioning, interchain_interactions]` |
++
++### Metrics reported
++
++- `bond_length_metrics.bond_length.frac_unreasonable`
++- `clash_metrics.frac_atoms_clashing_1p5A`
++- `sse_distribution.helix_fraction` / `sheet_fraction` / `loop_fraction` /
++  `num_ss_elements`
++- `amino_acid_composition.n_standard_residues` / `ala_fraction` etc.
++- `sequence_developability.gravy` / `instability_index`
++- `design_motif_allatom_rmsd.rmsd`
++- `hotspot_obedience.hotspot_obedience`
++- `interchain_interactions.*_count_coi` and `*_conditioning_adherence`
++
++Refolding metrics (`refolded_backbone_rmsd`, pLDDT, ipTM/ipAE) and pass criteria
++(`*.pass`) require an AF3 / OpenFold3 runtime and are not computed when the
++oracle is unavailable. Rosetta developability requires a PyRosetta apptainer.
++Do not replace these with ad-hoc metrics; report the gap.
++
++## Resource instrumentation
++
++Both generation and evaluation write:
++
++- `inference_metrics/resource_usage.json` (generation)
++- `evaluation_metrics/resource_usage.json` (evaluation)
++
++with wall time, CPU time, process CPU utilization, peak RSS, and device peak
++memory. Generation also writes per-batch rows in `resource_usage_batches.csv`.
++This instrumentation does not change model or metric behaviour.
+\ No newline at end of file

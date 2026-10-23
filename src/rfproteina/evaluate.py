@@ -40,6 +40,7 @@ with (
     from rfproteina.utils.env import load_dotenv
     from rfproteina.utils.logging import print_config_tree
     from rfproteina.utils.parse_presets import STANDARD_ANNOTATIONS_ONLY
+    from rfproteina.utils.resource_monitor import ResourceUsageRecorder
     from rfproteina.utils.structure_files import (
         find_structure_file,
         iter_structure_files,
@@ -264,7 +265,12 @@ def run_evaluate(cfg: DictConfig) -> None:
 def main_hydra(cfg: DictConfig) -> None:
     load_dotenv()
     print_config_tree(cfg, resolve=True)
-    run_evaluate(cfg)
+    with ResourceUsageRecorder(Path(cfg.out_dir) / "evaluation_metrics") as recorder:
+        try:
+            recorder.set_num_examples(len(iter_structure_files(Path(cfg.inputs), include_pdb=True)))
+        except Exception:
+            pass
+        run_evaluate(cfg)
 
 
 if __name__ == "__main__":

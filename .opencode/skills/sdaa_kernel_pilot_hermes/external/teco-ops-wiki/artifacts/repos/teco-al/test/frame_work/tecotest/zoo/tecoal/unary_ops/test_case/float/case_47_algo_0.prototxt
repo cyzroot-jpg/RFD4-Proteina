@@ -1,0 +1,58 @@
+op_name: "unary_ops"
+input {
+  id: "x"
+  shape {
+    dims: 12
+    dims: 25
+    dims: 10
+    dims: 3
+    dims: 117
+    dims: 9
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  reused: false
+  random_data {
+    seed: 700422772
+    lower_bound: -100.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+    zero_dropout: 0.0
+    nan_dropout: 0.0
+    positive: false
+    negative: false
+  }
+  ttype: TENSOR
+}
+output {
+  id: "y"
+  shape {
+    dims: 12
+    dims: 25
+    dims: 10
+    dims: 3
+    dims: 117
+    dims: 9
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  reused: false
+  random_data {
+    seed: 1500403695
+    lower_bound: -100.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+    zero_dropout: 0.0
+    nan_dropout: 0.0
+    positive: false
+    negative: false
+  }
+  ttype: TENSOR
+}
+tecoal_param {
+  unary_ops_param {
+    mode: BATCH_MUL_A
+    unary_alpha: 4.133150100708008
+    algo: ALGO_0
+  }
+}

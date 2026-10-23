@@ -1,0 +1,59 @@
+op_name: "arg_max"
+input {
+  id: "x"
+  shape {
+    dims: 13
+    dims: 10
+    dims: 2
+    dims: 253
+    dims: 10
+    dims: 10
+    dims: 4
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  reused: false
+  random_data {
+    seed: 1298048555
+    lower_bound: -100.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+    zero_dropout: 0.0
+    nan_dropout: 0.0
+    positive: false
+    negative: false
+  }
+  ttype: TENSOR
+}
+output {
+  id: "y"
+  shape {
+    dims: 13
+    dims: 10
+    dims: 2
+    dims: 253
+    dims: 1
+    dims: 10
+    dims: 4
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  reused: false
+  random_data {
+    seed: 255116276
+    lower_bound: -100.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+    zero_dropout: 0.0
+    nan_dropout: 0.0
+    positive: false
+    negative: false
+  }
+  ttype: TENSOR
+}
+tecoal_param {
+  arg_max_param {
+    axis: 4
+    algo: ALGO_0
+  }
+}

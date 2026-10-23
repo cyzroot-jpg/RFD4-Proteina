@@ -1,0 +1,159 @@
+// BSD 3- Clause License Copyright (c) 2024, Tecorigin Co., Ltd. All rights
+// reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// Redistributions of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+// Neither the name of the copyright holder nor the names of its contributors
+// may be used to endorse or promote products derived from this software
+// without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)  ARISING IN ANY
+// WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
+#include "ual/kernel/masked_fill/masked_fill.h"
+#include "ual/kernel/macro.h"
+
+using namespace sdaa;
+using namespace tecoal::ual::common;
+
+namespace tecoal {
+namespace ual {
+namespace kernel {
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define BOOL uint8_t
+
+#define CDBUF(x) (buf_dbflag == 0 ? x##0 : x##1)
+#define ADBUF(x) (buf_dbflag == 0 ? x##1 : x##0)
+#define EXDBF buf_dbflag = 1 - buf_dbflag  // 交换双缓冲位置
+
+__device__ static inline void simdOp(float *c, float *a, uint8_t *b, float value, int ln) {
+    floatv16 va;
+    floatv16 vb;
+    floatv16 vc;
+    floatv16 v_value = value;
+    intv16 iva;
+    shortv32 sva;
+    short *sa1 = (short *)&sva;
+    short *sa2 = (short *)&sva + 16;
+    int i = 0;
+    int j = 0;
+
+#pragma clang loop unroll_count(8)
+    for (i = 0; i < ln - 32; i += 32) {
+        simd_load(va, a + i);
+        simd_load_u_ext(sva, b + i);
+        simd_load_u_ext(iva, sa1);
+        vb = (iva != 0);
+
+        vc = simd_seleq(vb, va, v_value);
+        simd_store(vc, c + i);
+        simd_load(va, a + i + 16);
+        simd_load_u_ext(iva, sa2);
+        vb = (iva != 0);
+        vc = simd_seleq(vb, va, v_value);
+        simd_store(vc, c + i + 16);
+    }
+    for (; i < ln; i++) {
+        c[i] = b[i] ? value : a[i];
+    }
+}
+
+__global__ void tecoKernelMaskedFillFT32(MaskedFillArgs arg) {
+    const int spe_num = arg.spe_num;
+    int data_num = 1;
+    const float *x = (float *)arg.input;
+    uint8_t *mask = (uint8_t *)arg.mask;
+    float *y = (float *)arg.output;
+    const int tid = threadIdx;
+    const float value = arg.value;
+
+    MemcpyHandle get_handle[2];
+    MemcpyHandle put_handle[2];
+
+    for (int i = 0; i < arg.dimLen; i++) {
+        data_num *= arg.dimInput[i];
+    }
+
+    int BlockSize = SPM_MAX_BYTE / 6;
+    int num_per_loop = BlockSize / sizeof(float);
+    if (num_per_loop * spe_num > data_num)
+        num_per_loop = data_num / spe_num / 64 * 64 < 64 ? 64 : (data_num / spe_num / 64 * 64);
+
+    int dsize = 16 * 1024;
+    if (data_num < (1 << 20)) {
+        dsize = 2 * 1024;
+    }
+    BlockSize = MIN(num_per_loop * sizeof(float), dsize);
+    num_per_loop = BlockSize / sizeof(float);
+
+    int i = tid * num_per_loop;
+    if (i >= data_num) return;
+
+    float *xbuf0 = (float *)0x1400;
+    float *xbuf1 = xbuf0 + num_per_loop;
+    float *ybuf0 = xbuf1 + num_per_loop;
+    float *ybuf1 = ybuf0 + num_per_loop;
+    uint8_t *mask0 = (uint8_t *)(ybuf1 + num_per_loop);
+    uint8_t *mask1 = mask0 + num_per_loop;
+
+    int buf_dbflag = 0;
+
+    const int num_all_spe = num_per_loop * spe_num;
+    int cur_num, next_num, next_i, flag_next;
+
+    cur_num = MIN(num_per_loop, data_num - i);
+
+    memcpy_async(CDBUF(xbuf), x + i, cur_num * sizeof(float), MemcpyGlobalToSpm,
+                 get_handle[buf_dbflag]);
+    memcpy_async(CDBUF(mask), mask + i, num_per_loop * sizeof(uint8_t), MemcpyGlobalToSpm,
+                 get_handle[buf_dbflag]);
+
+    for (; i < data_num; i += num_all_spe) {
+        next_i = i + num_all_spe;
+        flag_next = next_i < data_num;
+
+        if (flag_next) {
+            next_num = MIN(num_per_loop, data_num - (i + num_all_spe));
+            memcpy_async(ADBUF(xbuf), x + next_i, next_num * sizeof(float), MemcpyGlobalToSpm,
+                         get_handle[1 - buf_dbflag]);
+            memcpy_async(ADBUF(mask), mask + next_i, num_per_loop * sizeof(uint8_t),
+                         MemcpyGlobalToSpm, get_handle[1 - buf_dbflag]);
+        }
+
+        memcpy_wait(get_handle[buf_dbflag]);
+        memcpy_wait(put_handle[buf_dbflag]);
+
+        // p_func(CDBUF(xbuf), alpha, CDBUF(xbuf), cur_num);
+        simdOp(CDBUF(ybuf), CDBUF(xbuf), (BOOL *)(CDBUF(mask)), value, cur_num);
+
+        memcpy_async(y + i, CDBUF(ybuf), cur_num * sizeof(float), MemcpySpmToGlobal,
+                     put_handle[buf_dbflag]);
+
+        if (flag_next) {
+            EXDBF;
+            cur_num = next_num;
+        }
+    }
+
+    memcpy_wait(put_handle[buf_dbflag]);
+    memcpy_wait(put_handle[1 - buf_dbflag]);
+}
+
+}  // namespace kernel
+}  // namespace ual
+}  // namespace tecoal

@@ -1,0 +1,75 @@
+{
+  "description": "Humanize 插件 Hook - 用于 /start-rlcr-loop 的验证 hook 和 Stop hook。命令统一以 bash 显式调用脚本（让 bash 以只读方式打开并读取脚本），而非让宿主 execve 脚本文件本身；这能避免 overlayfs 下偶发的 execve 级失败（ETXTBSY/EACCES）导致钩子以退出码 126、无 stderr 静默失败（典型表现为 Stop/PostToolUse 钩子 'No stderr output' 而审查门被跳过）。",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/loop-plan-file-validator.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/loop-write-validator.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/loop-edit-validator.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/loop-read-validator.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/loop-bash-validator.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/loop-post-bash-hook.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/loop-codex-stop-hook.sh",
+            "timeout": 7200
+          }
+        ]
+      }
+    ]
+  }
+}

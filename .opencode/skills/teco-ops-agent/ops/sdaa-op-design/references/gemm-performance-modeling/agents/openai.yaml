@@ -1,0 +1,3 @@
+display_name: GEMM Performance Modeling
+short_description: Build ACE, bandwidth, and roofline models for GEMM kernels.
+default_prompt: Analyze this GEMM kernel's theoretical performance, including ACE compute, LDM usable maximum and capacity margin, bandwidth, roofline, tiling, and pipeline constraints.

@@ -1,0 +1,1 @@
+/data01/tuyilist/cyz/RFD4-Proteina/linshi/work/gen_motif/inference_samples/1bcf_aa_rep1/1bcf_aa_rep1_generated.cif

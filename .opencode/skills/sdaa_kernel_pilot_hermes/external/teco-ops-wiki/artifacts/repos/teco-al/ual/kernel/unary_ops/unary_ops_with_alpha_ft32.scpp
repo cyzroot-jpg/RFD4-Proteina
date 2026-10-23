@@ -1,0 +1,190 @@
+// BSD 3- Clause License Copyright (c) 2024, Tecorigin Co., Ltd. All rights
+// reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// Redistributions of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+// Neither the name of the copyright holder nor the names of its contributors
+// may be used to endorse or promote products derived from this software
+// without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)  ARISING IN ANY
+// WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
+#include "ual/kernel/unary_ops/unary_ops.h"
+#include "ual/kernel/macro.h"
+#include "ual/com/rt.h"
+
+using namespace sdaa;
+using namespace tecoal::ual::common;
+
+namespace tecoal {
+namespace ual {
+namespace kernel {
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+#define CDBUF(x) (buf_dbflag == 0 ? x##0 : x##1)
+#define ADBUF(x) (buf_dbflag == 0 ? x##1 : x##0)
+#define EXDBF buf_dbflag = 1 - buf_dbflag
+
+__device__ static inline __attribute__((always_inline)) void batchSaddAlpha(const float *x,
+                                                                            float alpha, float *y,
+                                                                            int len) {
+    floatv16 v_alpha = alpha;
+    floatv16 v_x0, v_x1, v_x2, v_x3;
+    floatv16 v_y0, v_y1, v_y2, v_y3;
+
+    for (int i = 0; i < len; i += 64) {
+        simd_load(v_x0, x + i);
+        simd_load(v_x1, x + i + 16);
+        simd_load(v_x2, x + i + 32);
+        simd_load(v_x3, x + i + 48);
+
+        v_y0 = v_alpha + v_x0;
+        v_y1 = v_alpha + v_x1;
+        v_y2 = v_alpha + v_x2;
+        v_y3 = v_alpha + v_x3;
+
+        simd_store(v_y0, y + i);
+        simd_store(v_y1, y + i + 16);
+        simd_store(v_y2, y + i + 32);
+        simd_store(v_y3, y + i + 48);
+    }
+}
+
+static __device__ inline __attribute__((always_inline)) void batchSmulAlpha(const float *x,
+                                                                            float alpha, float *y,
+                                                                            int len) {
+    floatv16 v_alpha = alpha;
+    floatv16 v_x0, v_x1, v_x2, v_x3;
+    floatv16 v_y0, v_y1, v_y2, v_y3;
+
+    for (int i = 0; i < len; i += 64) {
+        simd_load(v_x0, x + i);
+        simd_load(v_x1, x + i + 16);
+        simd_load(v_x2, x + i + 32);
+        simd_load(v_x3, x + i + 48);
+
+        v_y0 = v_alpha * v_x0;
+        v_y1 = v_alpha * v_x1;
+        v_y2 = v_alpha * v_x2;
+        v_y3 = v_alpha * v_x3;
+
+        simd_store(v_y0, y + i);
+        simd_store(v_y1, y + i + 16);
+        simd_store(v_y2, y + i + 32);
+        simd_store(v_y3, y + i + 48);
+    }
+}
+
+static __device__ void inline __attribute__((always_inline))
+batchFuncs(int mode, const float *x, float alpha, float *y, int len) {
+    switch (mode) {
+        case 11: {
+            batchSaddAlpha(x, alpha, y, len);
+        } break;
+        case 13: {
+            batchSmulAlpha(x, alpha, y, len);
+        } break;
+        default: {
+            // DLOG("This mode is not supported\n");
+            return;
+        }
+    }
+}
+
+__global__ void tecoKernelUnaryOpsWithAlphaFT32(UnaryOpsArgs arg) {
+    const int spe_num = arg.spe_num;
+    const int mode = arg.mode;
+    const int data_num = arg.n;
+    const float *x = (float *)arg.x;
+    const float alpha = arg.alpha_f32;
+    float *y = (float *)arg.y;
+    const int tid = threadIdx;
+
+    switch (mode) {
+        case 11: /*p_func = batch_Sadd_a;*/ break;
+        case 13: /*p_func = batch_Smul_a;*/ break;
+        default: {
+            // DLOG("This mode is not supported\n");
+            return;
+        }
+    }
+
+    int block_size = SPM_MAX_BYTE / 2;
+    int num_per_loop = block_size / sizeof(float);
+    if (num_per_loop * spe_num > data_num)
+        num_per_loop = data_num / spe_num / 64 * 64 < 64 ? 64 : (data_num / spe_num / 64 * 64);
+
+    int dsize = 16 * 1024;
+    if (data_num < (1 << 16)) {
+        dsize = 4 * 1024;
+    }
+    block_size = MIN(num_per_loop * sizeof(float), dsize);
+    num_per_loop = block_size / sizeof(float);
+
+    int i = tid * num_per_loop;
+    if (i >= data_num) return;
+
+    float *xbuf0 = (float *)rt_spm_malloc(sizeof(float) * num_per_loop * 2);
+    float *xbuf1 = xbuf0 + num_per_loop;
+
+    int buf_dbflag = 0;
+    MemcpyHandle get_handle[2];
+    MemcpyHandle put_handle[2];
+
+    const int num_all_spe = num_per_loop * spe_num;
+    int cur_num, next_num, next_i, flag_next;
+
+    cur_num = MIN(num_per_loop, data_num - i);
+
+    memcpy_async(CDBUF(xbuf), x + i, cur_num * sizeof(float), MemcpyGlobalToSpm,
+                 get_handle[buf_dbflag]);
+
+    for (; i < data_num; i += num_all_spe) {
+        next_i = i + num_all_spe;
+        flag_next = next_i < data_num;
+
+        if (flag_next) {
+            next_num = MIN(num_per_loop, data_num - (i + num_all_spe));
+            memcpy_wait(put_handle[1 - buf_dbflag]);
+            memcpy_async(ADBUF(xbuf), x + next_i, next_num * sizeof(float), MemcpyGlobalToSpm,
+                         get_handle[1 - buf_dbflag]);
+        }
+
+        memcpy_wait(get_handle[buf_dbflag]);
+        memcpy_wait(put_handle[buf_dbflag]);
+
+        batchFuncs(mode, CDBUF(xbuf), alpha, CDBUF(xbuf), cur_num);
+
+        memcpy_async(y + i, CDBUF(xbuf), cur_num * sizeof(float), MemcpySpmToGlobal,
+                     put_handle[buf_dbflag]);
+
+        if (flag_next) {
+            EXDBF;
+            cur_num = next_num;
+        }
+    }
+    memcpy_wait(put_handle[buf_dbflag]);
+    memcpy_wait(put_handle[1 - buf_dbflag]);
+
+    rt_spm_free(xbuf0);
+}
+
+}  // namespace kernel
+}  // namespace ual
+}  // namespace tecoal

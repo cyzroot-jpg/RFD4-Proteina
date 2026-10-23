@@ -1,0 +1,10 @@
+# Same inline metric set as `all_inline_metrics.yaml`, but with the
+# Rosetta-dependent developability metric removed so it runs without an external
+# PyRosetta apptainer. Select with:
+#   metrics/inline_metrics=all_inline_metrics_no_rosetta
+defaults:
+  - design_metrics
+  - structure_prediction_metrics
+  - developability_metrics_no_rosetta
+  - antibody_metrics
+  # - ipa_metrics # Disabled until the backend compatibility issue is resolved

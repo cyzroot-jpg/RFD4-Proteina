@@ -1,0 +1,7 @@
+{
+  "auth_path": "~/.codex/auth.json",
+  "codex_config_path": "~/.codex/config.toml",
+  "default_profile_name": "",
+  "default_model": "deepseek-v4-pro",
+  "default_wire_api": "responses"
+}

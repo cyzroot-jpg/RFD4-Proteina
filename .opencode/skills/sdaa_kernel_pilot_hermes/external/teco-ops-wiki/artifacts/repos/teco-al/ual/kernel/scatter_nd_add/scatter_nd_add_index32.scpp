@@ -1,0 +1,588 @@
+// BSD 3- Clause License Copyright (c) 2024, Tecorigin Co., Ltd. All rights
+// reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// Redistributions of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+// Neither the name of the copyright holder nor the names of its contributors
+// may be used to endorse or promote products derived from this software
+// without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)  ARISING IN ANY
+// WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
+#include "ual/kernel/scatter_nd_add/scatter_nd_add.h"
+#include "ual/com/dma_all_type.h"
+#include "ual/kernel/macro.h"
+#include "ual/com/rt.h"
+
+using namespace sdaa;
+using namespace tecoal::ual::common;
+
+namespace tecoal {
+namespace ual {
+namespace kernel {
+
+#define MAX_INDICES_SPM_SIZE 32768  // 32K
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+__device__ static __inline__ __attribute__((always_inline)) int calindex(int *arrayi, int *arrayx,
+                                                                         int n) {
+    int res = 0;
+    for (int i = 0; i < n - 1; i++) {
+        res = (res + arrayi[i]) * arrayx[i + 1];
+    }
+    res += arrayi[n - 1];
+    return res;
+}
+
+template <typename TYPE>
+__device__ __inline__ __attribute__((always_inline)) void index32_add_simd(int curr_dim,
+                                                                           TYPE *p1_dweights,
+                                                                           TYPE *p_dout) {
+    int h = 0;
+    for (; h <= curr_dim - 8; h += 8) {
+        p1_dweights[h] += p_dout[h];
+        p1_dweights[h + 1] += p_dout[h + 1];
+        p1_dweights[h + 2] += p_dout[h + 2];
+        p1_dweights[h + 3] += p_dout[h + 3];
+        p1_dweights[h + 4] += p_dout[h + 4];
+        p1_dweights[h + 5] += p_dout[h + 5];
+        p1_dweights[h + 6] += p_dout[h + 6];
+        p1_dweights[h + 7] += p_dout[h + 7];
+    }
+    for (; h < curr_dim; h++) {
+        p1_dweights[h] += p_dout[h];
+    }
+}
+
+template <>
+__device__ __inline__ __attribute__((always_inline)) void index32_add_simd<float>(
+    int curr_dim, float *p1_dweights, float *p_dout) {
+    int k;
+    floatv16 v_dweights0, v_dweights1, v_dweights2, v_dweights3, v_dout0, v_dout1, v_dout2, v_dout3;
+    if (ALIGN_N(p1_dweights, 64) && ALIGN_N(p_dout, 64)) {
+        for (k = 0; k <= (curr_dim - 64); k += 64) {
+            simd_load(v_dweights0, p1_dweights);
+            simd_load(v_dout0, p_dout);
+            simd_load(v_dweights1, p1_dweights + 16);
+            simd_load(v_dout1, p_dout + 16);
+            simd_load(v_dweights2, p1_dweights + 32);
+            simd_load(v_dout2, p_dout + 32);
+            simd_load(v_dweights3, p1_dweights + 48);
+            simd_load(v_dout3, p_dout + 48);
+
+            v_dweights0 += v_dout0;
+            v_dweights1 += v_dout1;
+            v_dweights2 += v_dout2;
+            v_dweights3 += v_dout3;
+
+            simd_store(v_dweights0, p1_dweights);
+            simd_store(v_dweights1, p1_dweights + 16);
+            simd_store(v_dweights2, p1_dweights + 32);
+            simd_store(v_dweights3, p1_dweights + 48);
+            p1_dweights += 64;
+            p_dout += 64;
+        }
+        for (; k <= (curr_dim - 32); k += 32) {
+            simd_load(v_dweights0, p1_dweights);
+            simd_load(v_dout0, p_dout);
+            simd_load(v_dweights1, p1_dweights + 16);
+            simd_load(v_dout1, p_dout + 16);
+
+            v_dweights0 += v_dout0;
+            v_dweights1 += v_dout1;
+
+            simd_store(v_dweights0, p1_dweights);
+            simd_store(v_dweights1, p1_dweights + 16);
+            p1_dweights += 32;
+            p_dout += 32;
+        }
+        for (; k <= (curr_dim - 16); k += 16) {
+            simd_load(v_dweights0, p1_dweights);
+            simd_load(v_dout0, p_dout);
+            v_dweights0 += v_dout0;
+            simd_store(v_dweights0, p1_dweights);
+            p1_dweights += 16;
+            p_dout += 16;
+        }
+        for (; k < curr_dim; k++) {
+            *p1_dweights += *p_dout;
+            p1_dweights++;
+            p_dout++;
+        }
+    } else {
+        for (k = 0; k <= (curr_dim - 64); k += 64) {
+            simd_loadu(v_dweights0, p1_dweights);
+            simd_loadu(v_dout0, p_dout);
+            simd_loadu(v_dweights1, p1_dweights + 16);
+            simd_loadu(v_dout1, p_dout + 16);
+            simd_loadu(v_dweights2, p1_dweights + 32);
+            simd_loadu(v_dout2, p_dout + 32);
+            simd_loadu(v_dweights3, p1_dweights + 48);
+            simd_loadu(v_dout3, p_dout + 48);
+
+            v_dweights0 += v_dout0;
+            v_dweights1 += v_dout1;
+            v_dweights2 += v_dout2;
+            v_dweights3 += v_dout3;
+
+            simd_storeu(v_dweights0, p1_dweights);
+            simd_storeu(v_dweights1, p1_dweights + 16);
+            simd_storeu(v_dweights2, p1_dweights + 32);
+            simd_storeu(v_dweights3, p1_dweights + 48);
+            p1_dweights += 64;
+            p_dout += 64;
+        }
+        for (; k <= (curr_dim - 32); k += 32) {
+            simd_loadu(v_dweights0, p1_dweights);
+            simd_loadu(v_dout0, p_dout);
+            simd_loadu(v_dweights1, p1_dweights + 16);
+            simd_loadu(v_dout1, p_dout + 16);
+
+            v_dweights0 += v_dout0;
+            v_dweights1 += v_dout1;
+
+            simd_storeu(v_dweights0, p1_dweights);
+            simd_storeu(v_dweights1, p1_dweights + 16);
+            p1_dweights += 32;
+            p_dout += 32;
+        }
+        for (; k <= (curr_dim - 16); k += 16) {
+            simd_loadu(v_dweights0, p1_dweights);
+            simd_loadu(v_dout0, p_dout);
+            v_dweights0 += v_dout0;
+            simd_storeu(v_dweights0, p1_dweights);
+            p1_dweights += 16;
+            p_dout += 16;
+        }
+        for (; k < curr_dim; k++) {
+            *p1_dweights += *p_dout;
+            p1_dweights++;
+            p_dout++;
+        }
+    }
+}
+
+template <>
+__device__ __inline__ __attribute__((always_inline)) void index32_add_simd<_Float16>(
+    int curr_dim, _Float16 *p1_dweights, _Float16 *p_dout) {
+    int k;
+    float16v16 v_dout0_h, v_dout1_h, v_dout2_h, v_dout3_h;
+    float16v16 v_dweights0, v_dweights1, v_dweights2, v_dweights3, v_dout0, v_dout1, v_dout2,
+        v_dout3;
+    if (ALIGN_N(p1_dweights, 64) && ALIGN_N(p_dout, 64)) {
+        for (k = 0; k <= (curr_dim - 64); k += 64) {
+            simd_load(v_dweights0, p1_dweights);
+            simd_load(v_dout0, p_dout);
+            simd_load(v_dweights1, p1_dweights + 16);
+            simd_load(v_dout1, p_dout + 16);
+            simd_load(v_dweights2, p1_dweights + 32);
+            simd_load(v_dout2, p_dout + 32);
+            simd_load(v_dweights3, p1_dweights + 48);
+            simd_load(v_dout3, p_dout + 48);
+
+            v_dweights0 += v_dout0;
+            v_dweights1 += v_dout1;
+            v_dweights2 += v_dout2;
+            v_dweights3 += v_dout3;
+
+            simd_store(v_dweights0, p1_dweights);
+            simd_store(v_dweights1, p1_dweights + 16);
+            simd_store(v_dweights2, p1_dweights + 32);
+            simd_store(v_dweights3, p1_dweights + 48);
+            p1_dweights += 64;
+            p_dout += 64;
+        }
+        for (; k <= (curr_dim - 32); k += 32) {
+            simd_load(v_dweights0, p1_dweights);
+            simd_load(v_dout0, p_dout);
+            simd_load(v_dweights1, p1_dweights + 16);
+            simd_load(v_dout1, p_dout + 16);
+
+            v_dweights0 += v_dout0;
+            v_dweights1 += v_dout1;
+
+            simd_store(v_dweights0, p1_dweights);
+            simd_store(v_dweights1, p1_dweights + 16);
+            p1_dweights += 32;
+            p_dout += 32;
+        }
+        for (; k <= (curr_dim - 16); k += 16) {
+            simd_load(v_dweights0, p1_dweights);
+            simd_load(v_dout0, p_dout);
+            v_dweights0 += v_dout0;
+            simd_store(v_dweights0, p1_dweights);
+            p1_dweights += 16;
+            p_dout += 16;
+        }
+        for (; k < curr_dim; k++) {
+            *p1_dweights += (float)*p_dout;
+            p1_dweights++;
+            p_dout++;
+        }
+    } else {
+        for (k = 0; k <= (curr_dim - 64); k += 64) {
+            simd_loadu(v_dweights0, p1_dweights);
+            simd_loadu(v_dout0, p_dout);
+            simd_loadu(v_dweights1, p1_dweights + 16);
+            simd_loadu(v_dout1, p_dout + 16);
+            simd_loadu(v_dweights2, p1_dweights + 32);
+            simd_loadu(v_dout2, p_dout + 32);
+            simd_loadu(v_dweights3, p1_dweights + 48);
+            simd_loadu(v_dout3, p_dout + 48);
+
+            v_dweights0 += v_dout0;
+            v_dweights1 += v_dout1;
+            v_dweights2 += v_dout2;
+            v_dweights3 += v_dout3;
+
+            simd_storeu(v_dweights0, p1_dweights);
+            simd_storeu(v_dweights1, p1_dweights + 16);
+            simd_storeu(v_dweights2, p1_dweights + 32);
+            simd_storeu(v_dweights3, p1_dweights + 48);
+            p1_dweights += 64;
+            p_dout += 64;
+        }
+        for (; k <= (curr_dim - 32); k += 32) {
+            simd_loadu(v_dweights0, p1_dweights);
+            simd_loadu(v_dout0, p_dout);
+            simd_loadu(v_dweights1, p1_dweights + 16);
+            simd_loadu(v_dout1, p_dout + 16);
+
+            v_dweights0 += v_dout0;
+            v_dweights1 += v_dout1;
+
+            simd_storeu(v_dweights0, p1_dweights);
+            simd_storeu(v_dweights1, p1_dweights + 16);
+            p1_dweights += 32;
+            p_dout += 32;
+        }
+        for (; k <= (curr_dim - 16); k += 16) {
+            simd_loadu(v_dweights0, p1_dweights);
+            simd_loadu(v_dout0, p_dout);
+
+            v_dweights0 += v_dout0;
+            simd_storeu(v_dweights0, p1_dweights);
+            p1_dweights += 16;
+            p_dout += 16;
+        }
+        for (; k < curr_dim; k++) {
+            *p1_dweights += (float)*p_dout;
+            p1_dweights++;
+            p_dout++;
+        }
+    }
+}
+
+template <typename TYPE_X>
+__global__ void tecoKernelScatterNdAddIndex32(ScatterNdAddArgs arg) {
+    const int tid = threadIdx;
+    const int spe_num = arg.spe_num;
+    const int dim_index0 = arg.dim_index[0];
+    const int dim_index1 = arg.dim_index[1];
+    const int dim_x0 = arg.dim_x[0];
+    const int dim_x1 = arg.dim_x[1];
+    int *dim_x8 = arg.dim_x8;
+    const TYPE_X *x = (const TYPE_X *)arg.x;
+    const int *index = (const int *)arg.index;
+    const TYPE_X *dy = (const TYPE_X *)arg.updates;
+    TYPE_X *dx = (TYPE_X *)arg.out;
+
+    MemcpyHandle get_handle;
+    MemcpyHandle put_handle;
+    RmaHandle rma_handle;
+
+    const size_t num_index = dim_index0 * dim_index1;
+    if (num_index * sizeof(int) <= MAX_INDICES_SPM_SIZE * 2) {
+        int *index_buf_dma = (int *)rt_spm_malloc(num_index * sizeof(int));
+        memcpy_async(index_buf_dma, index, num_index * sizeof(int), MemcpyGlobalToSpm, get_handle);
+        memcpy_wait(get_handle);
+
+        size_t stride_x0 = (dim_x0 + spe_num - 1) / spe_num;
+        size_t begin_x0 = tid * stride_x0;
+        size_t end_x0 = MIN(begin_x0 + stride_x0, dim_x0);
+        int64_t batch_x0 = end_x0 - begin_x0;
+
+        if (batch_x0 > 0) {
+            int blk_num = batch_x0;
+            int add_dim = dim_x1;
+            while (sizeof(TYPE_X) * ((blk_num + 1) * add_dim) + num_index * sizeof(int) >
+                   SPM_MAX_BYTE) {
+                if (blk_num >= 2) {
+                    blk_num >>= 1;
+                } else {
+                    add_dim >>= 1;
+                }
+            }
+
+            TYPE_X *dy_buf = (TYPE_X *)rt_spm_malloc(sizeof(TYPE_X) * add_dim);
+            TYPE_X *dx_buf = (TYPE_X *)rt_spm_malloc(sizeof(TYPE_X) * blk_num * add_dim);
+
+            int m, n, i, j, k;
+            int curr_dim, curr_num;
+            int indexvalue, real_index;
+            TYPE_X *p_dy, *p_dx;
+            for (m = begin_x0; m < end_x0; m += blk_num) {
+                curr_num = MIN(blk_num, end_x0 - m);
+                for (n = 0; n < dim_x1; n += add_dim) {
+                    curr_dim = MIN(add_dim, dim_x1 - n);
+                    allDmaIgetSdaa((TYPE_X *)dx_buf, (TYPE_X *)x + m * dim_x1 + n,
+                                   curr_num * curr_dim * sizeof(TYPE_X), get_handle);
+                    memcpy_wait(get_handle);
+                    for (i = 0; i < dim_index0; i++) {
+                        indexvalue = calindex(index_buf_dma + i * dim_index1, dim_x8, dim_index1);
+                        if (indexvalue >= m && indexvalue < m + curr_num) {
+                            real_index = indexvalue - m;
+                            allDmaIgetSdaa((TYPE_X *)dy_buf, (TYPE_X *)dy + i * dim_x1 + n,
+                                           curr_dim * sizeof(TYPE_X), get_handle);
+                            memcpy_wait(get_handle);
+                            p_dx = dx_buf + real_index * curr_dim;
+                            p_dy = dy_buf;
+                            index32_add_simd<TYPE_X>(curr_dim, p_dx, p_dy);
+                        }
+                    }
+                    allDmaIputSdaa(dx + m * dim_x1 + n, dx_buf,
+                                   curr_num * curr_dim * sizeof(TYPE_X), put_handle);
+                    memcpy_wait(put_handle);
+                }
+            }
+            rt_spm_free(dy_buf);
+            rt_spm_free(dx_buf);
+        }
+        rt_spm_free(index_buf_dma);
+    } else if (num_index * sizeof(int) <= MAX_INDICES_SPM_SIZE * spe_num) {
+        size_t stride_index = (dim_index0 + spe_num - 1) / spe_num;
+        size_t begin_index = tid * stride_index;
+        size_t end_index = MIN(begin_index + stride_index, dim_index0);
+        int64_t batch_index = end_index - begin_index;
+        int *index_buf_dma = (int *)rt_spm_malloc(stride_index * dim_index1 * sizeof(int));
+        int *index_buf_rma = (int *)rt_spm_malloc(stride_index * dim_index1 * sizeof(int));
+        if (batch_index > 0) {
+            memcpy_async(index_buf_dma, index + begin_index * dim_index1,
+                         batch_index * dim_index1 * sizeof(int), MemcpyGlobalToSpm, get_handle);
+            memcpy_wait(get_handle);
+        }
+        sync_threads();
+
+        size_t stride_x0 = (dim_x0 + spe_num - 1) / spe_num;
+        size_t begin_x0 = tid * stride_x0;
+        size_t end_x0 = MIN(begin_x0 + stride_x0, dim_x0);
+        int64_t batch_x0 = end_x0 - begin_x0;
+        if (batch_x0 > 0) {
+            size_t blk_num = batch_x0;
+            size_t add_dim = dim_x1;
+
+            while (sizeof(TYPE_X) * ((blk_num + 1) * add_dim) +
+                       2 * stride_index * dim_index1 * sizeof(int) >
+                   SPM_MAX_BYTE) {
+                if (blk_num >= 2) {
+                    blk_num >>= 1;
+                } else {
+                    add_dim >>= 1;
+                }
+            }
+
+            TYPE_X *dy_buf = (TYPE_X *)rt_spm_malloc(sizeof(TYPE_X) * add_dim);
+            TYPE_X *dx_buf = (TYPE_X *)rt_spm_malloc(sizeof(TYPE_X) * blk_num * add_dim);
+            size_t m, n, i, j, k;
+            size_t curr_dim, curr_num;
+            size_t target_tid;
+            size_t dma_batch_index, rma_batch_index;
+            size_t indexvalue, real_index;
+            TYPE_X *p_dy, *p_dx;
+            for (m = begin_x0; m < end_x0; m += blk_num) {
+                curr_num = MIN(blk_num, end_x0 - m);
+                for (n = 0; n < dim_x1; n += add_dim) {
+                    curr_dim = MIN(add_dim, dim_x1 - n);
+                    allDmaIgetSdaa((TYPE_X *)dx_buf, (TYPE_X *)x + m * dim_x1 + n,
+                                   curr_num * curr_dim * sizeof(TYPE_X), get_handle);
+                    memcpy_wait(get_handle);
+                    for (i = 0; i < dim_index0; i += stride_index) {
+                        target_tid = i / stride_index;
+                        if (tid == target_tid) {
+                            dma_batch_index = batch_index;
+                            for (j = 0; j < dma_batch_index; j++) {
+                                indexvalue =
+                                    calindex(index_buf_dma + j * dim_index1, dim_x8, dim_index1);
+                                if (indexvalue >= m && indexvalue < m + curr_num) {
+                                    real_index = indexvalue - m;
+                                    allDmaIgetSdaa((TYPE_X *)dy_buf,
+                                                   (TYPE_X *)dy + (i + j) * dim_x1 + n,
+                                                   curr_dim * sizeof(TYPE_X), get_handle);
+                                    memcpy_wait(get_handle);
+                                    p_dx = dx_buf + real_index * curr_dim;
+                                    p_dy = dy_buf;
+                                    index32_add_simd<TYPE_X>(curr_dim, p_dx, p_dy);
+                                }
+                            }
+                        } else {
+                            rma_batch_index = MIN(stride_index, dim_index0 - i);
+                            rma_set_thread_id(rma_handle, target_tid);
+                            rma_async_get(index_buf_rma, index_buf_dma,
+                                          rma_batch_index * dim_index1 * sizeof(int), rma_handle);
+                            rma_complete(rma_handle, RmaCustomizeMode);
+                            for (j = 0; j < rma_batch_index; j++) {
+                                indexvalue =
+                                    calindex(index_buf_rma + j * dim_index1, dim_x8, dim_index1);
+                                if (indexvalue >= m && indexvalue < m + curr_num) {
+                                    real_index = indexvalue - m;
+                                    allDmaIgetSdaa((TYPE_X *)dy_buf,
+                                                   (TYPE_X *)dy + (i + j) * dim_x1 + n,
+                                                   curr_dim * sizeof(TYPE_X), get_handle);
+                                    memcpy_wait(get_handle);
+                                    p_dx = dx_buf + real_index * curr_dim;
+                                    p_dy = dy_buf;
+                                    index32_add_simd<TYPE_X>(curr_dim, p_dx, p_dy);
+                                }
+                            }
+                        }
+                    }
+                    allDmaIputSdaa(dx + m * dim_x1 + n, dx_buf,
+                                   curr_num * curr_dim * sizeof(TYPE_X), put_handle);
+                    memcpy_wait(put_handle);
+                }
+            }
+            rt_spm_free(dy_buf);
+            rt_spm_free(dx_buf);
+        }
+        sync_threads();
+        rt_spm_free(index_buf_dma);
+        rt_spm_free(index_buf_rma);
+    } else {
+        size_t defult_index0 = MAX_INDICES_SPM_SIZE / (dim_index1 * sizeof(int));
+        size_t per_loop_index0 = defult_index0 * spe_num;
+        size_t cnt = 0;
+        for (size_t begin_loop_index0 = 0; begin_loop_index0 < dim_index0;
+             begin_loop_index0 += per_loop_index0) {
+            size_t loop_dim_index0 = MIN(per_loop_index0, dim_index0 - begin_loop_index0);
+            size_t end_loop_index0 = begin_loop_index0 + loop_dim_index0;
+            size_t stride_index = (loop_dim_index0 + spe_num - 1) / spe_num;
+            size_t begin_index = begin_loop_index0 + tid * stride_index;
+            size_t end_index = MIN(begin_index + stride_index, end_loop_index0);
+            int64_t batch_index = end_index - begin_index;
+            int *index_buf_dma = (int *)rt_spm_malloc(stride_index * dim_index1 * sizeof(int));
+            int *index_buf_rma = (int *)rt_spm_malloc(stride_index * dim_index1 * sizeof(int));
+            if (batch_index > 0) {
+                memcpy_async(index_buf_dma, index + begin_index * dim_index1,
+                             batch_index * dim_index1 * sizeof(int), MemcpyGlobalToSpm, get_handle);
+                memcpy_wait(get_handle);
+            }
+            sync_threads();
+
+            size_t stride_x0 = (dim_x0 + spe_num - 1) / spe_num;
+            size_t begin_x0 = tid * stride_x0;
+            size_t end_x0 = MIN(begin_x0 + stride_x0, dim_x0);
+            int64_t batch_x0 = end_x0 - begin_x0;
+            if (batch_x0 > 0) {
+                size_t blk_num = batch_x0;
+                size_t add_dim = dim_x1;
+                while (sizeof(TYPE_X) * ((blk_num + 1) * add_dim) +
+                           2 * stride_index * dim_index1 * sizeof(int) >
+                       SPM_MAX_BYTE) {
+                    if (blk_num >= 2) {
+                        blk_num >>= 1;
+                    } else {
+                        add_dim >>= 1;
+                    }
+                }
+
+                TYPE_X *dy_buf = (TYPE_X *)rt_spm_malloc(sizeof(TYPE_X) * add_dim);
+                TYPE_X *dx_buf = (TYPE_X *)rt_spm_malloc(sizeof(TYPE_X) * blk_num * add_dim);
+                int m, n, i, j, k;
+                int curr_dim, curr_num;
+                int target_tid;
+                int dma_batch_index, rma_batch_index;
+                int indexvalue, real_index;
+                TYPE_X *p_dy, *p_dx;
+                for (m = begin_x0; m < end_x0; m += blk_num) {
+                    curr_num = MIN(blk_num, end_x0 - m);
+                    for (n = 0; n < dim_x1; n += add_dim) {
+                        curr_dim = MIN(add_dim, dim_x1 - n);
+                        if (cnt == 0) {
+                            allDmaIgetSdaa((TYPE_X *)dx_buf, (TYPE_X *)x + m * dim_x1 + n,
+                                           curr_num * curr_dim * sizeof(TYPE_X), get_handle);
+                            memcpy_wait(get_handle);
+                        } else {
+                            allDmaIgetSdaa((TYPE_X *)dx_buf, (TYPE_X *)dx + m * dim_x1 + n,
+                                           curr_num * curr_dim * sizeof(TYPE_X), get_handle);
+                            memcpy_wait(get_handle);
+                        }
+                        for (i = begin_loop_index0; i < end_loop_index0; i += stride_index) {
+                            target_tid = (i - begin_loop_index0) / stride_index;
+                            if (tid == target_tid) {
+                                dma_batch_index = batch_index;
+                                for (j = 0; j < dma_batch_index; j++) {
+                                    indexvalue = calindex(index_buf_dma + j * dim_index1, dim_x8,
+                                                          dim_index1);
+                                    if (indexvalue >= m && indexvalue < m + curr_num) {
+                                        real_index = indexvalue - m;
+                                        allDmaIgetSdaa((TYPE_X *)dy_buf,
+                                                       (TYPE_X *)dy + (i + j) * dim_x1 + n,
+                                                       curr_dim * sizeof(TYPE_X), get_handle);
+                                        memcpy_wait(get_handle);
+                                        p_dx = dx_buf + real_index * curr_dim;
+                                        p_dy = dy_buf;
+                                        index32_add_simd<TYPE_X>(curr_dim, p_dx, p_dy);
+                                    }
+                                }
+                            } else {
+                                rma_batch_index = MIN(stride_index, end_loop_index0 - i);
+                                rma_set_thread_id(rma_handle, target_tid);
+                                rma_async_get(index_buf_rma, index_buf_dma,
+                                              rma_batch_index * dim_index1 * sizeof(int),
+                                              rma_handle);
+                                rma_complete(rma_handle, RmaCustomizeMode);
+                                for (j = 0; j < rma_batch_index; j++) {
+                                    indexvalue = calindex(index_buf_rma + j * dim_index1, dim_x8,
+                                                          dim_index1);
+                                    if (indexvalue >= m && indexvalue < m + curr_num) {
+                                        real_index = indexvalue - m;
+                                        allDmaIgetSdaa((TYPE_X *)dy_buf,
+                                                       (TYPE_X *)dy + (i + j) * dim_x1 + n,
+                                                       curr_dim * sizeof(TYPE_X), get_handle);
+                                        memcpy_wait(get_handle);
+                                        p_dx = dx_buf + real_index * curr_dim;
+                                        p_dy = dy_buf;
+                                        index32_add_simd<TYPE_X>(curr_dim, p_dx, p_dy);
+                                    }
+                                }
+                            }
+                        }
+                        allDmaIputSdaa(dx + m * dim_x1 + n, dx_buf,
+                                       curr_num * curr_dim * sizeof(TYPE_X), put_handle);
+                        memcpy_wait(put_handle);
+                    }
+                }
+                rt_spm_free(dy_buf);
+                rt_spm_free(dx_buf);
+            }
+            sync_threads();
+            rt_spm_free(index_buf_dma);
+            rt_spm_free(index_buf_rma);
+            cnt++;
+        }
+    }
+}
+template __global__ void tecoKernelScatterNdAddIndex32<float>(ScatterNdAddArgs arg);
+template __global__ void tecoKernelScatterNdAddIndex32<double>(ScatterNdAddArgs arg);
+template __global__ void tecoKernelScatterNdAddIndex32<int>(ScatterNdAddArgs arg);
+template __global__ void tecoKernelScatterNdAddIndex32<half>(ScatterNdAddArgs arg);
+template __global__ void tecoKernelScatterNdAddIndex32<int64_t>(ScatterNdAddArgs arg);
+
+}  // namespace kernel
+}  // namespace ual
+}  // namespace tecoal

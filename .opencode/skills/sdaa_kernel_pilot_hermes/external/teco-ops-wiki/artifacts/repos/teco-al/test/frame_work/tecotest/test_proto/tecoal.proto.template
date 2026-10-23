@@ -1,0 +1,181 @@
+syntax = "proto2";
+
+package testpt;
+
+import "tensor.proto";
+import "tecoal/common.proto";
+import "tecoal/convolution.proto";
+
+//-----------------UnaryOps---------------
+enum UnaryOpsMode{
+    BATCH_LOG = 0;
+    BATCH_EXP = 1;
+    BATCH_SQRT = 2;
+    BATCH_RSQRT = 3;
+    BATCH_SQUARE = 4;
+    BATCH_SIN = 5;
+    BATCH_COS = 6;
+    BATCH_TANH = 7;
+    BATCH_CEIL = 8;
+    BATCH_FLOOR = 9;
+    BATCH_FABS = 10;
+    // with alpha
+    BATCH_ADD_A = 11;
+    BATCH_SUB_A = 12;
+    BATCH_MUL_A = 13;
+    BATCH_DIV_A = 14;
+    BATCH_RDIV = 15;
+    BATCH_POW = 16;
+    // convert
+    BATCH_S2H = 17;
+    BATCH_H2S = 18;
+}
+
+enum ScatterOutReductionMode{
+    SCATTEROUT_REDUCTION_NONE = 0;
+    SCATTEROUT_REDUCTION_ADD  = 1;
+    SCATTEROUT_REDUCTION_MULTIPLY = 2;
+}
+
+enum ScatterOutInputType{
+    SCATTEROUT_INPUT_SCALAR = 0;
+    SCATTEROUT_INPUT_ARRAY  = 1;
+}
+
+//------------------Activation----------------------
+enum ActivationMode{
+    ACTIVATION_SIGMOID = 0;
+    ACTIVATION_RELU = 1;
+    ACTIVATION_TANH = 2;
+    ACTIVATION_CLIPPED_RELU = 3;
+    ACTIVATION_ELU = 4;
+    ACTIVATION_IDENTITY = 5;
+    ACTIVATION_SIGMOID_TAB = 6;
+    ACTIVATION_ELU_TAB = 7;
+    ACTIVATION_TANH_TAB = 8;
+    ACTIVATION_GELU = 9;
+    ACTIVATION_LEAKYRELU = 10;
+    ACTIVATION_SELU = 11;
+    ACTIVATION_RELU6 = 12;
+    ACTIVATION_SILU = 13;
+    ACTIVATION_GELU_APPROXIMATE = 14;
+    ACTIVATION_TANH_ACCURATE = 15;
+    ACTIVATION_GELU_ACCURATE = 16;
+    ACTIVATION_GELU_APPROXIMATE_ACCURATE = 17;
+    ACTIVATION_SIGMOID_PRECISION = 18;
+    ACTIVATION_SILU_TAB = 19;
+    ACTIVATION_GELU_TAB = 20;
+    ACTIVATION_ERF = 21;
+    ACTIVATION_ERF_TAB = 22;
+    ACTIVATION_MISH_INFERENCE = 23;
+    ACTIVATION_HARDSWISH = 24;
+    ACTIVATION_HARDSIGMOID = 25;
+}
+
+
+
+//scatterOut
+message ScatterOutParam {
+    optional int32 target_dim                               = 1;
+    optional float alpha                                    = 2;
+    optional ScatterOutReductionMode scatter_out_reduce_mode = 3;
+    optional ScatterOutInputType scatter_out_input_type      = 4;
+    optional Algo algo                                 = 5;
+}
+
+//UnaryOps
+message UnaryOpsParam {
+    optional HandleParam handle                     = 1;
+    optional UnaryOpsMode mode                      = 2;
+    optional float unary_alpha                      = 3;
+    optional Algo algo                        = 4;
+}
+
+//ScaleTensor
+message ScaleTensorParam {
+    optional HandleParam handle                     = 1;
+    optional float alpha                            = 2;
+    optional Algo algo                        = 3; 
+}
+
+//ArgMax
+message ArgMaxParam {
+    optional HandleParam handle                     = 1;
+    optional int32 axis                             = 2;
+    optional Algo algo                        = 3;
+}
+
+message MaskedFillParam {
+    optional HandleParam handle                         = 1;
+    optional float value                                = 2;
+    optional Algo algo                                  = 3;
+}
+
+enum UniqueMode{
+    UNIQUE_NONE = 0;
+    UNIQUE_NOT_NONE = 1;
+}
+message UniqueParam {
+    optional HandleParam handle                         = 1;
+    optional bool sorted                                = 2;
+    optional bool return_inverse                        = 3;
+    optional bool return_counts                         = 4;
+    optional UniqueMode mode                            = 5;
+    optional int32 axis                                 = 6;
+    optional Algo algo                                  = 7;
+}
+
+message IndexPutParam{
+    optional HandleParam handle                   = 1;
+    optional int32 indexputnum                    = 2;
+    optional bool accumulate                      = 3;
+    optional Algo algo                            = 4;
+}
+
+message MaskedSelectParam {
+    optional HandleParam handle                         = 1;
+    optional Algo algo                                  = 2;
+}
+
+//LogicalNotTensor
+message LogicalNotTensorParam {
+    optional HandleParam handle                     = 1;
+    optional Algo algo                              = 2;
+}
+
+//Activation
+message ActivationDescParam {
+    optional ActivationMode mode                   = 1;
+    optional NanPropagation relu_nanopt            = 2;
+    optional double coef                           = 3;
+}
+
+message ActivationParam {
+    optional HandleParam handle                    = 1;
+    optional ActivationDescParam act_desc_param    = 2;
+    optional float alpha                           = 3;
+    optional float beta                            = 4;
+    optional Algo algo                             = 5;
+}
+
+message ScatterNdAddParam{
+    optional HandleParam handle                    = 1;
+    optional Algo algo                             = 2;
+}
+
+//TecoalParam
+message TecoalParam {
+    optional UnaryOpsParam unary_ops_param                   = 1;
+    optional ArgMaxParam arg_max_param                       = 2;
+    optional ScatterOutParam scatter_out_param               = 3;
+    optional MaskedFillParam masked_fill_param               = 4;
+    optional ScaleTensorParam scale_tensor_param             = 5;
+    optional UniqueParam unique_param                        = 6;
+    optional IndexPutParam index_put_param                   = 7;
+    optional MaskedSelectParam  masked_select_param          = 8;
+    optional LogicalNotTensorParam logical_not_tensor_param  = 9;
+    optional ActivationParam activation_forward_param        = 10;
+    optional ActivationParam activation_backward_param       = 11;
+    optional ScatterNdAddParam scatter_nd_add_param          = 12;
+    optional ConvolutionParam conv_forward_param             = 13;
+}

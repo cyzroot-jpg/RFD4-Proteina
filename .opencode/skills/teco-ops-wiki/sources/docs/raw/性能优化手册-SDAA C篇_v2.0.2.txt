@@ -1,0 +1,6842 @@
+性能优化手册-SDAA C篇
+
+
+产品版本号：v2.0.2
+发布日期：2025.06.30
+
+
+
+
+太初(无锡)电子科技有限公司
+性能优化手册-SDAA C篇                                    版权声明
+
+
+
+
+版权声明
+本版权声明是太初（无锡）电子科技有限公司（以下简称“太初科技”）关于软件产品（下称“产品”）、编程指南以及软
+件使用手册的全部版本（包含现有版本及未来更新版本）及与软件产品、编程指南以及软件使用手册全部版本相关的
+源程序、源代码、示例、模型、场景、数据、域名、结构设计、图标、标志、标识、版面设计、文档资料等以及任何
+由太初科技基于软件技术维护或支持服务所提供的数据、资料等（下称“产品信息”）做出的法律声明。
+
+
+
+免责声明：
+
+太初科技不就产品和产品信息做出任何担保、条件、陈述和保证（无论是明示的还是默示的，无论是依据成文法、普
+通法、惯例还是其他任何原因），包括但不限于性能、结果、安全、不侵权、适销性、完整性、准确性、可不受干扰
+性、可销售品质以及特定用途，太初科技不应对因下列原因产生的任何违约、损害赔偿、费用或问题承担赔偿责任，
+包括但不限于：
+
+（1）用户未按照软件使用手册/指南内容规范使用产品；
+
+（2）因用户自身设计问题导致的损失；
+
+（3）因用户将软件产品与非太初科技提供的任何其他软件、程序或设备的组合或使用而产生的损失；
+
+（4）因电力供应故障、通讯网络故障等公共服务因素或移动通讯终端病毒或黑客攻击、系统不稳定等第三人因素产生
+的损失；
+
+（5） 因不可抗力等风险因素（是指不能预见、不能克服并不能避免且对一方或双方造成重大影响的客观事件，包括但
+不限于自然灾害如洪水、地震、风暴等以及社会事件如战争、动乱、政府行为等。）致使软件产品的使用出现中断或
+终止而产生的损失；
+
+（6）在太初科技已尽善意管理或善意提醒的情况下，因常规或紧急的设备与系统维护、设备与系统故障、网络信息与
+数据安全等因素产生的损失；
+
+（7）因您提供的产品反馈信息侵犯第三方权利致使软件产品侵权而发生的侵权索赔；
+
+（8）非因太初科技的原因引起的与软件产品有关的其它损失。
+
+
+
+责任限制：
+
+除法律规定不得排除或限制的赔偿责任外，无论相关责任是基于违约、违反保证、侵权（包括疏忽）、产品责任或任
+何其他诉讼或责任理论而产生的，太初科技在任何情况下都无需对用户因使用或无法使用产品和产品信息而产生的任
+何商业损害或间接经济损失承担赔偿责任（包括但不限于商誉损失、利润损失、信息损失、业务中断、计算机故障、
+第三方索赔或因无法使用软件产品而寻求替代方案的支出费用），即使太初科技已被告知出现这种损失、损害、索赔
+或费用的可能性。依据本声明以及太初科技的销售条款，太初科技在任何情况下承担的总体赔付金额仅限于用户购买
+产品所支付的款项（如有）。
+
+
+
+
+文档版本：v2.0.2          版权所有 © 太初(无锡)电子科技有限公司               I1
+性能优化手册-SDAA C篇                                         版权声明
+
+
+
+
+信息准确性：
+
+上述产品信息属于太初科技所有，且太初科技保留不经通知随时对产品信息或对任何产品和服务做出任何更改的权
+利，但不承诺更新产品信息。产品使用指南/手册列出的性能测试和等级要使用特定芯片或计算机系统或组件来测量。
+经该等测试，产品使用手册/指南所示结果反映了太初科技产品的测试性能。系统硬件或软件设计或配置的差异会影响
+产品的实际性能。如上所述，太初科技不担保或保证产品性能及特定用途，用户需就产品进行必要测试以确认产品适
+合并适用于用户计划或自行设计的应用及应用程序。
+
+
+
+知识产权通知：
+
+产品及其产品信息的著作权、商标权、专利权等知识产权以及商业秘密属于太初科技及/或相关权利人专属所有或持
+有，受《中华人民共和国著作权法》《计算机软件保护条例》《中华人民共和国商标法》《中华人民共和国专利法》
+及适用之国际公约中有关著作权、商标权、专利权及/或其他财产所有权法律的保护。
+
+任何单位和个人未经太初科技书面授权，不得以任何目的（包括但不限于学习、研究等非商业用途）修改、截取、编
+纂、上传、出版、发布等或以任何方式和媒介复制、转载和传播产品信息的任何部分，否则将视为侵权，太初科技保
+留依法追究其侵权损害赔偿责任。除了用户使用产品和产品信息的权利，太初科技不就任何专利、版权、商标、商业
+秘密或任何其他知识产权或所有权授予任何明示或暗示的权利或许可。
+
+太初科技的“太初元碁”“Tecorigin”等文字及/或标识，以及太初科技的其他标志、标识、徽记、产品和服务名称均为太
+初科技在中国和其他国家的商标，如有宣传、展示等使用需要，需事先取得太初科技的书面授权。
+
+版权声明
+
+© 2024 太初（无锡）电子科技有限公司 保留一切权利。
+
+
+
+
+文档版本：v2.0.2          版权所有 © 太初(无锡)电子科技有限公司                II
+                                                          2
+性能优化手册-SDAA C篇                                  目录
+
+
+
+
+目录
+1. 概述                                            1
+2. 最新动态                                          2
+ 2.1 v2.0.2更新记录                                  2
+ 2.2 v2.0.1更新记录                                  2
+ 2.3 v2.0.0更新记录                                  2
+ 2.4 v1.2.0更新记录                                  3
+ 2.5 v1.1.0更新记录                                  3
+ 2.6 v1.0.0更新记录                                  4
+
+3. 性能度量                                          5
+ 3.1 性能指标                                        5
+ 3.2 性能采样                                        6
+
+4. 性能优化                                          9
+ 4.1 程序并行                                        9
+   4.1.1 任务级并行                                   9
+   4.1.2 线程级并行（SPMD）                            13
+   4.1.3 指令级并行（SIMD）                            16
+ 4.2 函数接口                                       18
+   4.2.1 SPE同步接口                                19
+   4.2.2 DMA数据搬运                                20
+    4.2.2.1 SPE ID相关                            20
+    4.2.2.2 阻塞型DMA数据搬运                          25
+     4.2.2.2.1 概述                               25
+     4.2.2.2.2 搬运地址                             26
+     4.2.2.2.3 数据搬运量                            28
+     4.2.2.2.4 数据搬运方向                           31
+
+
+
+文档版本：v2.0.2             版权所有 © 太初(无锡)电子科技有限公司    III
+                                                  3
+性能优化手册-SDAA C篇                                   目录
+
+
+
+
+    4.2.2.3 非阻塞型DMA数据搬运                          34
+   4.2.3 RMA数据搬运                                 38
+    4.2.3.1 SPE ID相关                             38
+    4.2.3.2 非阻塞型RMA数据搬运                          39
+     4.2.3.2.1 优化策略                              39
+     4.2.3.2.2 rma_get 优化示例                      40
+     4.2.3.2.3 rma_put 优化示例                      45
+   4.2.4 Broadcast数据搬运                           50
+    4.2.4.1 SPE ID相关                             50
+    4.2.4.2 非阻塞型Broadcast数据搬运                    52
+   4.2.5 原子操作                                    55
+   4.2.6 矩阵乘                                     60
+    4.2.6.1 阻塞型矩阵乘                               60
+    4.2.6.2 非阻塞型矩阵乘                              62
+   4.2.7 向量操作                                    67
+    4.2.7.1 性能数据                                 67
+    4.2.7.2 优化策略                                 69
+ 4.3 数学函数                                        71
+   4.3.1 精度和性能数据                                 71
+   4.3.2 优化策略                                    77
+ 4.4 程序编译                                        79
+   4.4.1 循环展开                                    79
+   4.4.2 链接时优化（LTO）                              87
+   4.4.3 浮点融合                                    90
+
+
+
+
+文档版本：v2.0.2              版权所有 © 太初(无锡)电子科技有限公司    IV
+                                                   4
+性能优化手册-SDAA C篇                                                概述
+
+
+
+
+1. 概述
+本手册主要介绍基于SDAA C的性能调优方法，最大程度上利用SDAA异构并行计算平台的硬件资源实现最佳性能编
+程，主要结构如下：
+
+ 名称           说明
+
+              性能度量相关的指标和工具：
+
+ 性能度量              性能指标：指令周期和访存带宽，可以在一定程度上反应计算和访存相关操作的性能。
+
+                   SDAA C支持的性能采样工具以及性能分析工具。
+
+
+              具体的性能优化方法。
+                   程序并行：从任务级、线程级（SPMD）到指令级（SIMD）不同粒度的并行化方法。
+ 性能优化
+                   接口特性优化：介绍函数接口、数学函数等优化方法。
+
+                   程序编译：介绍SDAA C支持的一些编译优化方法。
+
+
+本手册主要面向具有一定编程经验且对程序性能有一定要求的用户。手册中讨论的内容主要基于SDAA C编程语言，因
+此您需要能阅读C/C++代码并且能够使用SDAA C进行编程，建议您先阅读《SDAA C编程指南》再阅读本手册以获得
+最佳的使用体验。
+
+
+
+
+文档版本：v2.0.2                版权所有 © 太初(无锡)电子科技有限公司               1
+性能优化手册-SDAA C篇                                                     最新动态
+
+
+
+
+2. 最新动态
+2.1 v2.0.2更新记录
+ 更新内容
+
+ 描述                                       文档
+
+ 更新DMA数据搬运章节内容：
+      更新SPE ID相关章节memcpy_async接口形式。            SPE ID相关
+
+      更新非阻塞型DMA数据搬运memcpy_async接口形             非阻塞型DMA数据搬运
+      式。
+
+
+ 更新Broadcast数据搬运章节内容：
+      更新SPE ID相关章节broadcast接口形式。               SPE ID相关
+
+      更新非阻塞型Broadcast数据搬运章节                    非阻塞型Broadcast数据搬运
+      broadcast_async接口形式。
+
+
+
+2.2 v2.0.1更新记录
+ 更新内容
+
+ 描述                                       文档
+
+ 性能优化，数学函数新增部分取整函数向量和128接口的精度
+ 和性能数据：
+       simd_round
+
+       simd_round128
+
+       simd_trunc                         精度和性能数据
+
+       simd_trunc128
+
+       simd_floor
+
+       simd_floor128
+
+
+
+2.3 v2.0.0更新记录
+ 更新内容
+
+
+文档版本：v2.0.2               版权所有 © 太初(无锡)电子科技有限公司                       2
+性能优化手册-SDAA C篇                                           最新动态
+
+
+
+
+ 描述                                     文档
+
+      性能采样的 perf_start 接口，使用方式更新。
+                                        性能采样
+      性能采样的 perf_print 接口，输出的内容更新。
+
+
+
+
+2.4 v1.2.0更新记录
+ 新增内容
+
+ 描述                                               文档
+
+ 向量操作的性能数据章节：
+      装入/存储类操作：新增simd_set接口及其性能数据。
+                                                  性能数据
+      新增算数运算类操作、比较类操作、逻辑运算类操作、按位运算类操作的接口及其性
+      能数据。
+
+ 数学函数，新增以下内容：
+      基础函数：新增指数减一的函数、加一的对数函数（以e为底）、判断是否非数函
+      数、绝对值函数、幂函数的精度和性能数据。
+                                                  精度和性能数据
+      新增浮点取整函数的精度和性能数据。
+
+      新增二元函数的精度和性能数据。
+
+
+
+ 更新内容
+
+ 描述                                     文档
+
+ 更新非阻塞型矩阵乘的接口性能。                        非阻塞型矩阵乘
+
+
+
+
+2.5 v1.1.0更新记录
+ 新增内容
+
+
+文档版本：v2.0.2             版权所有 © 太初(无锡)电子科技有限公司               3
+性能优化手册-SDAA C篇                                     最新动态
+
+
+
+
+ 描述                                      文档
+
+ 向量操作的性能数据章节，更新装入/存储类操作的以下接口性
+ 能数据：
+      simd_load
+
+      simd_loadu                         性能数据
+
+      simd_store
+
+      simd_load_widen
+
+
+ 向量操作的优化策略章节，更新测试代码和接口性能。                优化策略
+
+ 数学函数，新增以下接口的精度和性能数据：
+      simd_sin(x)
+
+      simd_cos(x)
+                                         精度和性能数据
+      simd_sin128(x)
+
+      simd_cos128(x)
+
+
+
+ 更新内容
+
+计算核心频率变更为2.36GHz，更新各章节的相关数据。
+
+
+
+
+2.6 v1.0.0更新记录
+ 更新内容
+
+本版本为首次正式发布版本。
+
+
+
+
+文档版本：v2.0.2             版权所有 © 太初(无锡)电子科技有限公司         4
+性能优化手册-SDAA C篇                                        性能度量
+
+
+
+
+3. 性能度量
+3.1 性能指标
+本文主要介绍衡量程序性能的关键指标：执行周期和访存带宽。
+
+ 执行周期
+
+在SDAA C中，使用执行周期作为衡量程序性能的关键指标。
+
+程序性能公式如下：
+
+      指令 执行周期    时间
+ 性能 = 程序 ⋅ 指令 ⋅ 执行周期 = 程序 ⋅ 执行周期 ⋅ 时钟周期
+  1 ​         ​   ​   ​
+                        1 ​
+
+
+
+
+其中：
+
+   时钟周期（单位：秒）：计算核心SPE基本的时间单位，指发生一个最小事件所需的时间，由计算核心SPE的时钟
+   频率决定。
+
+   时钟周期的公式： 时钟周期 = SPE 的时钟频率
+                        1       ​
+
+
+
+
+   执行周期（单位：拍）：程序运行所消耗的时钟周期个数（也称作拍数，一拍对应一个时钟周期）。
+
+由于时钟周期是由计算核心SPE的时钟频率所决定的固定值，那么执行周期越短，程序的运行效率越高效，程序性能越
+好。因此，执行周期是衡量程序性能的关键指标。
+
+
+        说明：
+
+          非访存类指令的执行周期通常是固定的。
+
+          访存类指令的执行周期与数据量、访存方式以及时钟频率有关。
+
+
+
+ 访存带宽
+
+对于以数据读写为主的程序，访存带宽（即IO带宽）是通用的性能指标。
+
+访存带宽是计算核心SPE在单位时间内读取或写入内存的数据量，通常以每秒传输的比特数或字节数进行衡量。
+
+ 理论带宽
+
+理论带宽的计算公式如下：
+
+理论带宽（Byte/s） = 内存最大频率×内存通道数×648（每次传输位宽，单位：bit）    ​
+
+
+
+
+ 访存带宽
+
+在实际使用中，由于算法效率、内存延迟等均会影响数据传输的效率，因此访存带宽通常低于理论带宽。
+
+
+文档版本：v2.0.2               版权所有 © 太初(无锡)电子科技有限公司           5
+性能优化手册-SDAA C篇                                                  性能度量
+
+
+
+
+访存带宽的计算公式如下：
+
+访存带宽（Byte/s） = 数据传输量（Byte）×频率（Hz ）
+                   执行周期（拍）                             ​
+
+
+
+
+由以上公式可以看出：执行周期越短，访存带宽越大。
+
+
+3.2 性能采样
+使用 perf_start 、 perf_stop 和 perf_print 函数可以对SDAA C程序进行性能采样，采集目标代码段
+的执行周期。目前，性能采样工具只输出两个主要的性能数据，一个是 perf_start 、 perf_stop 之间的执
+行周期（延时拍数），另一个是指令缓存脱靶次数（Instruction Cache Miss）。
+
+
+      说明：
+
+      使用性能采样函数前，需要手动包含 sdaa_perf.h 头文件。
+
+
+   perf_start（详情请参考《SDAA C编程指南》的perf_start章节）：开始性能采样接口，通过此接口标识性能
+   采样的起始位置。
+   perf_stop（详情请参考《SDAA C编程指南》的perf_stop章节）：结束性能采样接口，通过此接口标识性能
+   采样的结束位置。
+   perf_print（详情请参考《SDAA C编程指南》的perf_print章节）：在终端界面输出采集到的性能数据（延时
+   拍数和指令缓存脱靶次数）。
+
+ 性能采样示例
+
+      说明：
+
+      为准确测量性能，可以循环多次调用被测程序并计算执行周期的平均值，以减少缓存未命中（Cache Miss）
+      所带来的性能偏差。
+
+
+使用 perf_start 和 perf_stop 进行性能采样的示例如下：
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define NUM 51200
+  #define FSIZE (NUM * sizeof(float))
+
+
+  __global__ void kernel_sig(float *a, uint32_t num)
+  {
+      if (threadIdx == 0){
+          perf_start();
+          for (uint32_t i = 0; i < num; i++) {
+              a[i] = sigmoidf(a[i]);
+          }
+          perf_stop();
+          perf_print();
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司      6
+性能优化手册-SDAA C篇                                                                               性能度量
+
+
+
+
+      }
+  }
+
+
+  int main()
+  {
+      sdaaSetDevice(0);
+      // 主机端申请数据空间
+      float *host_data = (float *)malloc(FSIZE);
+      for (int i = 0; i < NUM; i++) {
+           host_data[i] = (float)i / NUM;
+      }
+      float *dev_input = NULL;
+      // 申请Device端数据空间
+      sdaaMalloc((void **)&dev_input, FSIZE);
+      // 将主机端数据复制到Device端
+      sdaaMemcpy(dev_input, host_data, FSIZE, sdaaMemcpyHostToDevice);
+      // 核函数运行计算
+      kernel_sig<<<1>>>(dev_input, NUM);
+      sdaaDeviceSynchronize();
+      // 将计算好的数据从Device端复制到主机端
+      sdaaMemcpy(host_data, dev_input, FSIZE, sdaaMemcpyDeviceToHost);
+
+
+      free(host_data);
+      sdaaFree(dev_input);
+      return 0;
+  }
+
+
+
+
+ 性能采样结果
+
+完成性能测试后，调用 perf_print 函数打印出性能采样结果。性能采样结果将提供关于代码性能的详细信息：
+
+  Kernel perf data of thread 0:
+   --------------------------------------------------------------------------------------
+  |START LINE NUM                       |10                                              |
+  |LATENCY                              |35004840                                        |
+  |CNT_L1IC_MISS                        |51205                                           |
+
+
+
+
+ 输出说明
+
+ 字段                          说明
+
+ START LINE NUM              测试开始的行号。
+
+                             延迟时间，即执行周期，单位：拍。
+
+
+ LATENCY                          说明：
+
+                                  具体结果可能随着不同的硬件上下波动。
+
+
+ CNT_L1IC_MISS               指令缓存脱靶次数。
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                                   7
+性能优化手册-SDAA C篇                           性能度量
+
+
+
+
+文档版本：v2.0.2      版权所有 © 太初(无锡)电子科技有限公司      8
+性能优化手册-SDAA C篇                                                   性能优化
+
+
+
+
+4. 性能优化
+4.1 程序并行
+4.1.1 任务级并行
+本文主要介绍任务级并行的性能优化策略和示例。
+
+ 优化策略
+
+太初AI加速卡目前提供多个计算核心阵列SPA，每个SPA构成一个独立的进程。任务级并行主要指：同时并行运行多个
+计算核心阵列SPA完成相应的计算任务。
+
+ 优化示例
+
+计算40000个数据的sigmoid输出值。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本                            计算核心频率
+
+ v1.2.0                                              2.36GHz
+
+
+ 优化前
+
+只使用一个SPA计算40000个数的sigmoid输出值。
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define DEV_NUM 4
+  #define NUM 10000
+  #define FSIZE (NUM * sizeof(float))
+
+
+  __global__ void kernel_sig(float *a, uint32_t num)
+  {
+          if (threadIdx == 0){
+              perf_start();
+              for (uint32_t i = 0; i < num; i++) {
+                  *(a + i) = sigmoidf(*(a + i));
+              }
+              perf_stop();
+              perf_print();
+          }
+  }
+
+
+  int main()
+  {
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司      9
+性能优化手册-SDAA C篇                                                                       性能优化
+
+
+
+
+      sdaaSetDevice(0);
+      // 主机端申请数据空间
+      float *host_data = (float *)malloc(DEV_NUM * FSIZE);
+      for (int i = 0; i < (DEV_NUM * NUM); i++) {
+          host_data[i] = (float)i / NUM;
+      }
+      float *dev_input = NULL;
+      // 申请Device端数据空间
+      sdaaMalloc((void **)&dev_input, (DEV_NUM * FSIZE));
+      // 将主机端数据复制到Device端
+      sdaaMemcpy(dev_input, host_data, (DEV_NUM * FSIZE), sdaaMemcpyHostToDevice);
+      // 核函数运行计算
+      kernel_sig<<<1>>>(dev_input, (DEV_NUM * NUM));
+      sdaaDeviceSynchronize();
+      // 将计算好的数据从Device端复制到主机端
+      sdaaMemcpy(host_data, dev_input, (DEV_NUM * FSIZE), sdaaMemcpyDeviceToHost);
+
+
+      free(host_data);
+      sdaaFree(dev_input);
+      return 0;
+  }
+
+
+
+
+ 优化后
+
+将40000个数改为进程间共享数据，本文以4等份为例，同时并行运行4个SPA计算40000个数的sigmoid输出值，每
+个SPA计算一份数据。
+
+  #include <sdaa_perf.h>
+  #include <fcntl.h>
+  #include <iostream>
+  #include <string>
+  #include <sys/mman.h>
+  #include <sys/types.h>
+  #include <sys/wait.h>
+  #include <unistd.h>
+  using namespace sdaa;
+
+
+  #define DEV_NUM 4
+  #define NUM 10000
+  #define FSIZE (NUM * sizeof(float))
+
+
+  __global__ void kernel_sig(float *a, uint32_t num)
+  {
+      if(threadIdx == 0){
+          perf_start();
+          for (uint32_t i = 0; i < num; i++) {
+               *(a + i) = sigmoidf(*(a + i));
+          }
+          perf_stop();
+          perf_print();
+      }
+  }
+
+
+  int main()
+  {
+      float *shared_mem;
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                           10
+性能优化手册-SDAA C篇                                                                       性能优化
+
+
+
+
+      // 创建共享内存
+      int fd = shm_open("/my_shared_memory", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+      ftruncate(fd, (DEV_NUM * FSIZE));
+
+
+      // 共享内存 大小分成 4 份
+      shared_mem = (float *)mmap(NULL, (DEV_NUM * FSIZE), PROT_READ | PROT_WRITE,
+                                 MAP_SHARED, fd, 0);
+
+
+      for (int i = 0; i < (DEV_NUM * NUM); i++) {
+          shared_mem[i] = (float)i / NUM;
+      }
+      // 创建第一个子进程
+      pid_t pid1 = fork();
+      if (pid1 == 0) {
+          // 第一个子进程中使用第一个计算核心阵列SPA
+          sdaaSetDevice(0);
+          // 在Device端申请内存，大小是 共享内存的 1/4
+          float *dev_input = NULL;
+          sdaaMalloc((void **)&dev_input, FSIZE);
+          // 将共享内存的第一个1/4数据复制到 第一个device 的内存上
+          sdaaMemcpy(dev_input, shared_mem, FSIZE, sdaaMemcpyHostToDevice);
+          // 运行kernel 函数 进行计算
+          kernel_sig<<<1>>>(dev_input, NUM);
+          sdaaDeviceSynchronize();
+          // 将计算过的 device 上的数据复制到第一个1/4的共享内存
+          sdaaMemcpy(shared_mem, dev_input, FSIZE, sdaaMemcpyDeviceToHost);
+          sdaaFree(dev_input);
+          exit(0);
+      }
+
+
+      // 创建第二个子进程
+      pid_t pid2 = fork();
+      if (pid2 == 0) {
+          // 第二个子进程中使用第二个计算核心阵列SPA
+          sdaaSetDevice(1);
+          // 在Device端申请内存，大小是 共享内存的 1/4
+          float *dev_input = NULL;
+          sdaaMalloc((void **)&dev_input, FSIZE);
+          // 将共享内存的第二个1/4数据复制到 第二个device 的内存上
+          sdaaMemcpy(dev_input, (shared_mem + NUM), FSIZE,
+                     sdaaMemcpyHostToDevice);
+          // 运行kernel 函数 进行计算
+          kernel_sig<<<1>>>(dev_input, NUM);
+          sdaaDeviceSynchronize();
+          // 将计算过的 device 上的数据复制到第二个1/4的共享内存
+          sdaaMemcpy((shared_mem + NUM), dev_input, FSIZE,
+                     sdaaMemcpyDeviceToHost);
+          sdaaFree(dev_input);
+          exit(0);
+      }
+
+
+      // 创建第三个子进程
+      pid_t pid3 = fork();
+      if (pid3 == 0) {
+          // 第三个子进程中使用第三个计算核心阵列SPA
+          sdaaSetDevice(2);
+          // 在Device端申请内存，大小是 共享内存的 1/4
+          float *dev_input = NULL;
+          sdaaMalloc((void **)&dev_input, FSIZE);
+
+
+
+
+文档版本：v2.0.2                          版权所有 © 太初(无锡)电子科技有限公司                              11
+性能优化手册-SDAA C篇                                                                        性能优化
+
+
+
+
+            // 将共享内存的第三个1/4数据复制到 第三个device 的内存上
+            sdaaMemcpy(dev_input, (shared_mem + 2 * NUM), FSIZE,
+                       sdaaMemcpyHostToDevice);
+            // 运行kernel 函数 进行计算
+            kernel_sig<<<1>>>(dev_input, NUM);
+            sdaaDeviceSynchronize();
+            // 将计算过的 device 上的数据复制到第三个1/4的共享内存
+            sdaaMemcpy((shared_mem + 2 * NUM), dev_input, FSIZE,
+                       sdaaMemcpyDeviceToHost);
+            sdaaFree(dev_input);
+            exit(0);
+        }
+
+
+        // 创建第四个子进程
+        pid_t pid4 = fork();
+        if (pid4 == 0) {
+            // 第四个子进程中使用第四个计算核心阵列SPA
+            sdaaSetDevice(3);
+            // 在Device端申请内存，大小是 共享内存的 1/4
+            float *dev_input = NULL;
+            sdaaMalloc((void **)&dev_input, FSIZE);
+            // 将共享内存的第四个1/4数据复制到 第四个device 的内存上
+            sdaaMemcpy(dev_input, (shared_mem + 3 * NUM), FSIZE,
+                       sdaaMemcpyHostToDevice);
+            // 运行kernel 函数 进行计算
+            kernel_sig<<<1>>>(dev_input, NUM);
+            sdaaDeviceSynchronize();
+            // 将计算过的 device 上的数据复制到第四个1/4的共享内存
+            sdaaMemcpy((shared_mem + 3 * NUM), dev_input, FSIZE,
+                       sdaaMemcpyDeviceToHost);
+            sdaaFree(dev_input);
+            exit(0);
+        }
+
+
+        pid_t pid;
+        int status = 0;
+        // 等待子进程全部执行完成
+        while ((pid = wait(&status)) > 0)
+            ;
+
+
+        // remove share memory
+        munmap(shared_mem, (4 * FSIZE));
+        shm_unlink("/my_shared_memory");
+
+
+        return 0;
+  }
+
+
+
+
+ 优化效果
+
+ SPA的ID                   优化前的计算任务的执行周期（拍）                         优化后的计算任务的执行周期（拍）
+
+ SPA0                     27351358                                 6818339
+
+ SPA1                     N/A                                      6830025
+
+
+
+
+文档版本：v2.0.2                            版权所有 © 太初(无锡)电子科技有限公司                             12
+性能优化手册-SDAA C篇                                                    性能优化
+
+
+
+
+ SPA的ID          优化前的计算任务的执行周期（拍）              优化后的计算任务的执行周期（拍）
+
+ SPA2            N/A                           6278515
+
+ SPA3            N/A                           6840136
+
+
+在本示例中， 同样的数据计算量，4个SPA同时并行运行的性能（取4个SPA执行周期中的最大值），是只使用1个SPA
+的约4倍。
+
+
+4.1.2 线程级并行（SPMD）
+本文主要介绍线程级并行（SPMD）的性能优化策略和示例。
+
+ 优化策略
+
+太初AI加速卡目前提供多个计算核心SPE，每个SPE构成一个独立的线程。线程级并行（SPMD（详情请参考《SDAA C
+编程指南》的SPMD章节））主要指：每个计算核心SPE并行完成不同数据的相同任务，从而发挥设备的并行处理能
+力。
+
+
+
+
+                                图1 线程级并行（SPMD）
+
+如上图，使用SPMD优化前是所有线程操作同一个数据，优化后是每个线程操作不同的数据。因此，线程级并行可以大
+幅度提高数据处理的性能。
+
+ 优化示例
+
+计算51200个数据的sigmoid输出值。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本            计算核心频率
+
+ v1.2.0                              2.36GHz
+
+
+ 优化前
+
+一个SPA的所有SPE均计算相同的51200个数的sigmoid输出值。
+
+
+
+
+文档版本：v2.0.2                 版权所有 © 太初(无锡)电子科技有限公司                    13
+性能优化手册-SDAA C篇                                                           性能优化
+
+
+
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define NUM 51200
+  #define FSIZE (NUM * sizeof(float))
+
+
+  __global__ void kernel_sig(float *a, uint32_t num)
+  {
+      if (threadIdx == 0){
+          perf_start();
+          for (uint32_t i = 0; i < num; i++) {
+               a[i] = sigmoidf(a[i]);
+          }
+          perf_stop();
+          perf_print();
+      }
+  }
+
+
+  int main()
+  {
+      sdaaSetDevice(0);
+      // 主机端申请数据空间
+      float *host_data = (float *)malloc(FSIZE);
+      for (int i = 0; i < NUM; i++) {
+          host_data[i] = (float)i / NUM;
+      }
+      float *dev_input = NULL;
+      // 申请Device端数据空间
+      sdaaMalloc((void **)&dev_input, FSIZE);
+      // 将主机端数据复制到Device端
+      sdaaMemcpy(dev_input, host_data, FSIZE, sdaaMemcpyHostToDevice);
+      // 核函数运行计算
+      kernel_sig<<<1>>>(dev_input, NUM);
+      sdaaDeviceSynchronize();
+      // 将计算好的数据从Device端复制到主机端
+      sdaaMemcpy(host_data, dev_input, FSIZE, sdaaMemcpyDeviceToHost);
+
+
+      free(host_data);
+      sdaaFree(dev_input);
+      return 0;
+  }
+
+
+
+
+ 优化后
+
+通过threadIdx（详情请参考《SDAA C编程指南》的threadIdx章节）给每个SPE（线程）分配不同的数据，从而实
+现threadDim（详情请参考《SDAA C编程指南》的threadDim章节）个数据的并行计算。
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define NUM 51200
+  #define FSIZE (NUM * sizeof(float))
+
+
+  __global__ void kernel_sig(float *a, uint32_t num)
+  {
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司               14
+性能优化手册-SDAA C篇                                                                    性能优化
+
+
+
+
+        perf_start();
+        // 每次循环计算是跨步为 threadDim，为每个SPE分配一个数据去计算
+        for (uint32_t i = 0; i < num; i += threadDim) {
+            // 用 i+threadIdx 作为坐标，每个SPE都参与计算
+            a[i + threadIdx] = sigmoidf(a[i + threadIdx]);
+        }
+        perf_stop();
+        perf_print();
+  }
+
+
+  int main()
+  {
+        sdaaSetDevice(0);
+        // 主机端申请数据空间
+        float *host_data = (float *)malloc(FSIZE);
+        for (int i = 0; i < NUM; i++) {
+            host_data[i] = (float)i / NUM;
+        }
+        float *dev_input = NULL;
+        // 申请Device端数据空间
+        sdaaMalloc((void **)&dev_input, FSIZE);
+        // 将主机端数据复制到Device端
+        sdaaMemcpy(dev_input, host_data, FSIZE, sdaaMemcpyHostToDevice);
+        // 核函数运行计算
+        kernel_sig<<<1>>>(dev_input, NUM);
+        sdaaDeviceSynchronize();
+        // 将计算好的数据从Device端复制到主机端
+        sdaaMemcpy(host_data, dev_input, FSIZE, sdaaMemcpyDeviceToHost);
+
+
+        free(host_data);
+        sdaaFree(dev_input);
+        return 0;
+  }
+
+
+
+
+ 优化效果
+
+ SPE的ID                 优化前的计算任务的执行周期（拍）                       优化后的计算任务的执行周期（拍）
+
+ SPE0                   35005118                               897947
+
+ SPE1                   N/A                                    897899
+
+ SPE2                   N/A                                    897852
+
+ SPE3                   N/A                                    898037
+
+ SPE4                   N/A                                    902568
+
+ SPE5                   N/A                                    902420
+
+ SPE6                   N/A                                    897938
+
+ SPE7                   N/A                                    898017
+
+
+
+
+文档版本：v2.0.2                               版权所有 © 太初(无锡)电子科技有限公司                      15
+性能优化手册-SDAA C篇                                                                 性能优化
+
+
+
+
+ SPE的ID                   优化前的计算任务的执行周期（拍）                  优化后的计算任务的执行周期（拍）
+
+ SPE8                     N/A                               902478
+
+ SPE9                     N/A                               897848
+
+
+在本示例中展示部分SPE性能数据，使用全部的SPE做线程级并行（SPMD）优化后的性能（取所有SPE执行周期中的最
+大值）是优化前的约39倍。
+
+
+
+
+4.1.3 指令级并行（SIMD）
+本文主要介绍指令级并行（SIMD）的性能优化策略和示例。
+
+ 优化策略
+
+太初AI加速卡的每个计算核心SPE都有多个向量寄存器，运用SIMD（Single Instruction Multiple Data，单指令流多
+数据流）向量指令的加速能力，不仅可以降低功耗，还可以提高性能，满足系统需要。
+
+ 优化示例
+
+计算51200次浮点加法。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本                         计算核心频率
+
+ v1.2.0                                           2.36GHz
+
+
+ 优化前
+
+使用SPMD编程模型，一个SPA内所有SPE分别执行1600次浮点标量计算，实现51200次浮点加法。
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define NUM 51200
+  #define FSIZE (NUM * sizeof(float))
+
+
+  __global__ void kernel_add(float *a, uint32_t num)
+  {
+          perf_start();
+          // 每次循环计算是跨步为 threadDim，为每个SPE分配一个数据去计算
+          for (uint32_t i = 0; i < num; i += threadDim) {
+              // 用 i+threadIdx 作为坐标，每个SPE都参与计算
+              a[i + threadIdx] = a[i + threadIdx] + 10;
+          }
+          perf_stop();
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司                    16
+性能优化手册-SDAA C篇                                                           性能优化
+
+
+
+
+      perf_print();
+  }
+
+
+  int main()
+  {
+      sdaaSetDevice(0);
+      // 主机端申请数据空间
+      float *host_data = (float *)malloc(FSIZE);
+      for (int i = 0; i < NUM; i++) {
+          host_data[i] = (float)i / NUM;
+      }
+      float *dev_input = NULL;
+      // 申请Device端数据空间
+      sdaaMalloc((void **)&dev_input, FSIZE);
+      // 将主机端数据复制到Device端
+      sdaaMemcpy(dev_input, host_data, FSIZE, sdaaMemcpyHostToDevice);
+      // 核函数运行计算
+      kernel_add<<<1>>>(dev_input, NUM);
+      sdaaDeviceSynchronize();
+      // 将计算好的数据从Device端复制到主机端
+      sdaaMemcpy(host_data, dev_input, FSIZE, sdaaMemcpyDeviceToHost);
+
+
+      free(host_data);
+      sdaaFree(dev_input);
+      return 0;
+  }
+
+
+
+
+ 优化后
+
+使用SPMD编程模型和SIMD优化，一个SPA内所有SPE分别执行100次浮点向量计算，实现51200次浮点加法。
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define NUM 51200
+  #define FSIZE (NUM * sizeof(float))
+  #define SIMD_NUM 16
+
+
+  __global__ void kernel_add(float *a, uint32_t num)
+  {
+      perf_start();
+      floatv16 va;
+      // 每次循环计算是跨步为 threadDim*16，为每个SPE分配16个数据去计算
+      for (uint32_t i = 0; i < num; i += (threadDim * SIMD_NUM)) {
+          // 用 i+threadIdx*SIMD_NUM
+          // 作为坐标，每个SPE都往向量寄存器装入16个float数
+          simd_load(va, (a + i + threadIdx * SIMD_NUM));
+          // 每个SPE 都做 add的运算
+          va = va + 10;
+          // 将 每个SPE的向量寄存器里的16个float数据， 存回到对应地址
+          simd_store(va, (a + i + threadIdx * SIMD_NUM));
+      }
+      perf_stop();
+      perf_print();
+  }
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司               17
+性能优化手册-SDAA C篇                                                                     性能优化
+
+
+
+
+  int main()
+  {
+        sdaaSetDevice(0);
+        // 主机端申请数据空间
+        float *host_data = (float *)malloc(FSIZE);
+        for (int i = 0; i < NUM; i++) {
+            host_data[i] = (float)i / NUM;
+        }
+        // simd_load/simd_store 需要做数据地址的 64Byte对齐
+        float __attribute__((aligned(64))) *dev_input = NULL;
+        // 申请Device端数据空间
+        sdaaMalloc((void **)&dev_input, FSIZE);
+        // 将主机端数据复制到Device端
+        sdaaMemcpy(dev_input, host_data, FSIZE, sdaaMemcpyHostToDevice);
+        // 核函数运行计算
+        kernel_add<<<1>>>(dev_input, NUM);
+        sdaaDeviceSynchronize();
+        // 将计算好的数据从Device端复制到主机端
+        sdaaMemcpy(host_data, dev_input, FSIZE, sdaaMemcpyDeviceToHost);
+
+
+        free(host_data);
+        sdaaFree(dev_input);
+        return 0;
+  }
+
+
+
+
+ 优化效果
+
+ SPE的ID                优化前的计算任务的执行周期（拍）                         优化后的计算任务的执行周期（拍）
+
+ SPE0                  638738                                   39531
+
+ SPE1                  638702                                   39369
+
+ SPE2                  638670                                   39689
+
+ SPE3                  638643                                   39727
+
+ SPE4                  638662                                   39014
+
+ SPE5                  642580                                   39209
+
+ SPE6                  638579                                   39032
+
+ SPE7                  638514                                   38981
+
+ SPE8                  638803                                   40509
+
+ SPE9                  640998                                   40473
+
+
+在本示例中展示部分SPE性能数据，采用指令级并行（SIMD）优化后的性能是优化前的约15.77倍。
+
+
+4.2 函数接口
+
+
+文档版本：v2.0.2                               版权所有 © 太初(无锡)电子科技有限公司                       18
+性能优化手册-SDAA C篇                                                               性能优化
+
+
+
+
+4.2.1 SPE同步接口
+本文主要介绍使用线程组同步SPE接口的性能优化策略和示例。
+
+ 优化策略
+
+使用线程组同步SPE接口，加入线程组的SPE在满足以下条件时，性能较好：
+
+SPE的ID号除以8所得的商或者余数相同。
+
+例如：使用包括4个SPE的线程组进行同步时，线程组A={0, 1, 2, 3}或B={0, 8, 16, 24}的性能要优于线程组C={0, 9, 18,
+27}。
+
+
+ 优化示例
+
+对使用线程组A={0, 1, 2, 3}、B={0, 8, 16, 24}和C={0, 9, 18, 27}同步SPE接口的执行周期进行测试并比较。
+
+每个测试均调用1000次sync_threads（详情请参考《SDAA C编程指南》的sync_threads章节）并计算平均值以
+消除初次调用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本                计算核心频率
+
+ v1.2.0                                  2.36GHz
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  __device__ void sync_perf(ThreadGroup &tg)
+  {
+          if (!thread_group_is_included(tg, threadIdx)) return;
+          perf_start();
+          for (int i = 0; i < 1000; i++) {
+              sync_threads(tg);
+          }
+          perf_stop();
+          perf_print();
+  }
+
+
+  // sync among SPE 0, 1, 2, 3
+  __global__ void test_a()
+  {
+          unsigned long thread_group[4] = {0, 1, 2, 3};
+          ThreadGroup tg(thread_group, 4);
+          sync_perf(tg);
+  }
+
+
+  // sync among SPE 0, 8, 16, 24
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司                  19
+性能优化手册-SDAA C篇                                                    性能优化
+
+
+
+
+  __global__ void test_b()
+  {
+        unsigned long thread_group[4] = {0, 8, 16, 24};
+        ThreadGroup tg(thread_group, 4);
+        sync_perf(tg);
+  }
+
+
+  // sync among SPE 0, 9, 18, 27
+  __global__ void test_c()
+  {
+        unsigned long thread_group[4] = {0, 9, 18, 27};
+        ThreadGroup tg(thread_group, 4);
+        sync_perf(tg);
+  }
+  int main()
+  {
+        sdaaSetDevice(2);
+        test_a<<<1>>>();
+        sdaaDeviceSynchronize();
+        test_b<<<1>>>();
+        sdaaDeviceSynchronize();
+        test_c<<<1>>>();
+        sdaaDeviceSynchronize();
+        return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 线程组中所有SPE的ID                                    平均每次同步的执行周期（拍）
+
+ 0, 1, 2, 3                                      226
+
+ 0, 8, 16, 24                                    218
+
+ 0, 9, 18, 27                                    495
+
+
+在本示例中，在满足优化策略的条件时，使用线程组同步SPE接口的性能是不满足条件时的约2.19倍。
+
+
+
+
+4.2.2 DMA数据搬运
+4.2.2.1 SPE ID相关
+本文主要介绍使用不同线程组进行DMA数据搬运的性能优化策略和示例。
+
+ 优化策略
+
+使用DMA数据搬运接口时，在数据搬运量一定的情况下，加入线程组的SPE满足以下条件时，性能较好：
+
+    SPE的ID号除以8所得的余数尽可能不相同。
+
+
+
+
+文档版本：v2.0.2                            版权所有 © 太初(无锡)电子科技有限公司         20
+性能优化手册-SDAA C篇                                                                          性能优化
+
+
+
+
+   在无法避免需使用有相同余数的SPE情况下，启用的有相同余数的SPE的数量尽可能小。
+
+例如：使用8个SPE的线程组进行数据搬运时：
+
+   线程组A={0, 1, 2, 3, 4, 5, 6, 7} 的性能要优于线程组B={0, 1, 2, 3, 8, 9, 10, 11}。
+
+   线程组B={0, 1, 2, 3, 8, 9, 10, 11}的性能要优于线程组C={0, 1, 8, 9, 16, 17, 24, 25}。
+
+
+      提示：
+
+      该优化策略适用于非阻塞型DMA数据搬运及阻塞型DMA数据搬运中非SPM存储空间之间的数据搬运。
+
+
+ 优化示例
+
+使用8个SPE的线程组进行非阻塞型DMA数据搬运时，测试以下几种线程组的执行周期并比较：
+
+   A={0, 1, 2, 3, 4, 5, 6, 7}，余数均不相同，即相同余数的SPE数量最大值为1。
+
+   B={0, 1, 2, 3, 8, 9, 10, 11}，有2组相同的余数（0, 1, 2, 3），相同余数的SPE数量最大值为2。
+
+   C={0, 1, 8, 9, 16, 17, 24, 25}，有4组相同的余数（0, 1），相同余数的SPE数量最大值为4。
+
+每个测例均调用10000次memcpy_async（详情请参考《SDAA C编程指南》的memcpy_async 老接口章节）计
+算平均值以消除初次调用时cache影响。
+
+ 测试环境
+
+ TecoDriver和
+                              计算核心频率           数据搬运量
+ TecoToolKit版本
+
+                                                8 × 10000 × 8 Bytes（启用8个SPE，每个SPE处理10000个
+ v1.2.0                       2.36GHz
+                                               double类型的数据）
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define THREADNUM 8
+  #define N 10000
+  #define NUM 10000
+  #define TESTNUM 3
+  #define SIZE (THREADNUM * NUM)
+  #define CALC(x) (sin(x) * sin(x) + cos(x) * cos(x))
+
+
+  __device__ void dma_a(double *src, ThreadGroup &tg)
+  {
+          if (!thread_group_is_included(tg, threadIdx)) {
+              return;
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司                              21
+性能优化手册-SDAA C篇                                                                     性能优化
+
+
+
+
+      }
+
+
+      unsigned long loc = 0;
+
+
+      loc = threadIdx;
+
+
+      double *data = (double *)malloc(NUM * sizeof(double));
+
+
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          memcpy_async(data, src + (loc * NUM), NUM * sizeof(double), 0, {0, 0},
+                         MemcpyGlobalToSpm);
+          memcpy_wait();
+      }
+      perf_stop();
+
+
+      for (int i = 0; i < NUM; i++) {
+          data[i] =   CALC(data[i]);
+      }
+
+
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          memcpy_async(src + (loc * NUM), data, NUM * sizeof(double), 0, {0, 0},
+                         MemcpySpmToGlobal);
+          memcpy_wait();
+      }
+      perf_stop();
+      perf_print();
+      free(data);
+  }
+
+
+  // use SPE 0, 1, 2, 3, 4, 5, 6, 7 to copy data
+  __global__ void test_a(double *src)
+  {
+      unsigned long thread_group[THREADNUM] = {0, 1, 2, 3, 4, 5, 6, 7};
+      ThreadGroup tg(thread_group, THREADNUM);
+      dma_a(src, tg);
+  }
+
+
+  __device__ void dma_b(double *src, ThreadGroup &tg)
+  {
+      if (!thread_group_is_included(tg, threadIdx)) {
+          return;
+      }
+
+
+      unsigned long loc = 0;
+
+
+      if (threadIdx < 4) {
+          loc = threadIdx;
+      } else {
+          loc = threadIdx - 4;
+      }
+
+
+      double *data = (double *)malloc(NUM * sizeof(double));
+
+
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          memcpy_async(data, src + (loc * NUM), NUM * sizeof(double), 0, {0, 0},
+                         MemcpyGlobalToSpm);
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                         22
+性能优化手册-SDAA C篇                                                                     性能优化
+
+
+
+
+          memcpy_wait();
+      }
+      perf_stop();
+
+
+      for (int i = 0; i < NUM; i++) {
+          data[i] =   CALC(data[i]);
+      }
+
+
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          memcpy_async(src + (loc * NUM), data, NUM * sizeof(double), 0, {0, 0},
+                        MemcpySpmToGlobal);
+          memcpy_wait();
+      }
+      perf_stop();
+      perf_print();
+      free(data);
+  }
+
+
+  // use SPE 0, 1, 2, 3, 8, 9, 10, 11 to copy data
+  __global__ void test_b(double *src)
+  {
+      unsigned long thread_group[THREADNUM] = {0, 1, 2, 3, 8, 9, 10, 11};
+      ThreadGroup tg(thread_group, THREADNUM);
+      dma_b(src, tg);
+  }
+
+
+
+  __device__ void dma_c(double *src, ThreadGroup &tg)
+  {
+      if (!thread_group_is_included(tg, threadIdx)) {
+          return;
+      }
+
+
+      unsigned long loc = 0;
+
+
+      if (threadIdx % 8 == 0) {
+          loc = threadIdx / 8;
+      } else {
+          loc = threadIdx / 8 + 4;
+      }
+
+
+      double *data = (double *)malloc(NUM * sizeof(double));
+
+
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          memcpy_async(data, src + (loc * NUM), NUM * sizeof(double), 0, {0, 0},
+                        MemcpyGlobalToSpm);
+          memcpy_wait();
+      }
+      perf_stop();
+
+
+      for (int i = 0; i < NUM; i++) {
+          data[i] =   CALC(data[i]);
+      }
+
+
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          memcpy_async(src + (loc * NUM), data, NUM * sizeof(double), 0, {0, 0},
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                         23
+性能优化手册-SDAA C篇                                                                 性能优化
+
+
+
+
+                         MemcpySpmToGlobal);
+          memcpy_wait();
+      }
+      perf_stop();
+      perf_print();
+      free(data);
+  }
+
+
+  // use SPE 0, 1, 8, 9, 16, 17, 24, 25 to copy data
+  __global__ void test_c(double *src)
+  {
+      unsigned long thread_group[THREADNUM] = {0, 1, 8, 9, 16, 17, 24, 25};
+      ThreadGroup tg(thread_group, THREADNUM);
+      dma_c(src, tg);
+  }
+
+
+  void call_kernel(double *src, double (*output)[SIZE])
+  {
+      double *dev_a = NULL;
+      double *dev_b = NULL;
+      double *dev_c = NULL;
+
+
+      sdaaSetDevice(0);
+      sdaaMalloc((void **)(&dev_a), SIZE * sizeof(double));
+      sdaaMemcpy(dev_a, src, SIZE * sizeof(double), sdaaMemcpyHostToDevice);
+      sdaaMalloc((void **)(&dev_b), SIZE * sizeof(double));
+      sdaaMemcpy(dev_b, src, SIZE * sizeof(double), sdaaMemcpyHostToDevice);
+      sdaaMalloc((void **)(&dev_c), SIZE * sizeof(double));
+      sdaaMemcpy(dev_c, src, SIZE * sizeof(double), sdaaMemcpyHostToDevice);
+
+
+      test_a<<<1>>>(dev_a);
+      sdaaDeviceSynchronize();
+
+
+      test_b<<<1>>>(dev_b);
+      sdaaDeviceSynchronize();
+
+
+      test_c<<<1>>>(dev_c);
+      sdaaDeviceSynchronize();
+
+
+      sdaaMemcpy(output[0], dev_a, SIZE * sizeof(double),
+                 sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(output[1], dev_b, SIZE * sizeof(double),
+                 sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(output[2], dev_c, SIZE * sizeof(double),
+                 sdaaMemcpyDeviceToHost);
+      sdaaFree(dev_a);
+      sdaaFree(dev_b);
+      sdaaFree(dev_c);
+  }
+
+
+  int main()
+  {
+      int errnum = 0;
+      double data[SIZE];
+      double output[TESTNUM][SIZE];
+
+
+      // init data
+      for (int i = 0; i < SIZE; i++) {
+          data[i] = rand();
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                     24
+性能优化手册-SDAA C篇                                                                             性能优化
+
+
+
+
+              for (int j = 0; j < TESTNUM; j++) {
+                     output[j][i] = 0;
+              }
+          }
+
+
+          call_kernel(data, output);
+
+
+          for (int i = 0; i < TESTNUM; i++) {
+              for (int j = 0; j < SIZE; j++) {
+                     if (fabs(output[i][j] - 1) > 1e-9) {
+                         errnum++;
+                         printf("data[%d] = %lf, output[%d][%d] = %lf\n", j, data[j], i,
+                                j, output[i][j]);
+                     }
+              }
+          }
+          if (!errnum) {
+              printf("all pass!\n");
+          }
+          return 0;
+   }
+
+
+
+
+ 优化效果
+
+ 线程组中所有                    Global到SPM存储空间的平均每次DMA                     SPM到Global存储空间的平均每次DMA操作
+ SPE的ID                    操作的执行周期（拍）                                 的执行周期（拍）
+
+ 0, 1, 2, 3, 4, 5,
+                           7060                                       5265
+ 6, 7
+
+ 0, 1, 2, 3, 8, 9,
+                           11340                                      9958
+ 10, 11
+
+ 0, 1, 8, 9, 16, 17,
+                           17466                                      17327
+ 24, 25
+
+
+在本示例中，使用非阻塞型DMA数据搬运接口进行数据搬运时，满足优化策略的性能相比最差情况：
+
+    Global向SPM存储空间进行数据搬运：约2.47倍。
+
+    SPM向Global存储空间进行数据搬运：约3.29倍。
+
+
+
+
+4.2.2.2 阻塞型DMA数据搬运
+4.2.2.2.1 概述
+阻塞型DMA数据搬运通常比非阻塞型DMA数据搬运的使用限制少、通用性高，但性能会低于非阻塞型接口。
+
+在数据搬运量相同的情况下，阻塞型DMA数据搬运可使用以下优化策略，性能会接近非阻塞型DMA数据搬运：
+
+
+
+文档版本：v2.0.2                                 版权所有 © 太初(无锡)电子科技有限公司                                25
+性能优化手册-SDAA C篇                                                        性能优化
+
+
+
+
+     搬运地址
+
+     数据搬运量
+
+     数据搬运方向
+
+
+
+
+4.2.2.2.2 搬运地址
+本文主要介绍阻塞型DMA数据搬运地址的性能优化策略和示例。
+
+ 优化策略
+
+阻塞型DMA数据搬运在数据搬运量相同、搬运方向相同的情况下：
+
+     当目的地址和源地址均满足4B对齐时，性能最好。
+
+     当目的地址和源地址的任意一个不满足4B对齐时，如果目标地址和源地址除以4所得的余数相同，性能较好。
+
+ 优化示例
+
+单一线程使用阻塞型DMA数据搬运的方式，从Global到SPM存储空间搬运相同的数据量时，测试以下情况的执行周期
+并比较：
+
+     目的地址和源地址均满足4B对齐。
+
+     目的地址和源地址的任意一个不满足4B对齐，但目的地址和源地址除以4所得的余数相同。
+
+     目的地址和源地址的任意一个不满足4B对齐，但目的地址和源地址除以4所得的余数不同。
+
+每个测试均调用1000次memcpy（详情请参考《SDAA C编程指南》的memcpy章节）并计算平均值以消除初次调
+用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版
+                                    计算核心频率                    数据搬运量
+ 本
+
+ v1.2.0                             2.36GHz                   128KB
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define SIZE 0x20000    // 128K
+
+
+  __device__ char global_arr[SIZE + 1];
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司              26
+性能优化手册-SDAA C篇                                                         性能优化
+
+
+
+
+  __device__ void memcpy_perf(char *dst, char *src)
+  {
+      // 打印内存拷贝的地址信息
+      printf("dst addr: %p, src addr: %p\n", dst, src);
+      // 数据初始化
+      for (int i = 0; i < SIZE; i++) {
+          dst[i] = 0;
+          src[i] = 10;
+      }
+      // 采集完成拷贝128KB数据量的性能数据
+      perf_start();
+      for (int i = 0; i < 1000; i++) {
+          memcpy(dst, src, SIZE * sizeof(char));
+      }
+      perf_stop();
+
+
+      // 检查数据拷贝结果是否正确
+      for (int i = 0; i < SIZE; i++) {
+          if (dst[i] != 10) printf("memcpy results not correct!\n");
+      }
+  }
+
+
+  // 地址为4B对齐场景下的数据拷贝
+  __global__ void test_aligned()
+  {
+      if (threadIdx != 0) return;
+      char *local_arr = (char *)malloc(SIZE * sizeof(char));
+      memcpy_perf(local_arr, global_arr);
+      free(local_arr);
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  // 地址部分4B对齐场景下的数据拷贝
+  __global__ void test_partial_aligned()
+  {
+      if (threadIdx != 0) return;
+      char *local_arr = (char *)malloc((SIZE + 1) * sizeof(char));
+      memcpy_perf(local_arr + 1, global_arr + 1);
+      free(local_arr);
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  // 地址不对齐场景下的数据拷贝
+  __global__ void test_unaligned()
+  {
+      if (threadIdx != 0) return;
+      char *local_arr = (char *)malloc((SIZE + 1) * sizeof(char));
+      memcpy_perf(local_arr + 1, global_arr);
+      free(local_arr);
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  int main()
+  {
+      // 设置使用2号SPA
+      sdaaSetDevice(2);
+
+
+
+
+文档版本：v2.0.2                          版权所有 © 太初(无锡)电子科技有限公司                27
+性能优化手册-SDAA C篇                                                                     性能优化
+
+
+
+
+      // kernel函数调用
+      test_aligned<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_partial_aligned<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_unaligned<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+                                        平均每次memcpy的执行周
+ 地址对齐方式                                                        对应单线程的访存带宽 (GB/s)
+                                        期（拍）
+
+ 方式一：目的地址和源地址均满足4B
+ 对齐，例如：
+                                        7362                   45.45
+   dst addr: 0x1400, src
+ addr: 0x6100040107e0
+
+ 方式二：目的地址和源地址的任意一
+ 个不满足4B对齐，但两者除以4所得
+ 的余数相同，例如：                              8704                   35.06
+   dst addr: 0x1401, src
+ addr: 0x6100040107e1
+
+ 方式三：目的地址和源地址的任意一
+ 个不满足4B对齐，且两者除以4所得
+ 的余数不同，例如：                              331260                 0.92
+   dst addr: 0x1401, src
+ addr: 0x6100040107e0
+
+
+在本示例中，阻塞型DMA数据搬运：
+
+   地址对齐方式一的访存带宽是方式三的约49.40倍。
+
+   地址对齐方式二的访存带宽是方式三的约38.10倍。
+
+
+
+
+4.2.2.2.3 数据搬运量
+本文主要介绍阻塞型DMA数据搬运量的性能优化策略和示例。
+
+
+
+文档版本：v2.0.2                            版权所有 © 太初(无锡)电子科技有限公司                          28
+性能优化手册-SDAA C篇                                                                性能优化
+
+
+
+
+ 优化策略
+
+阻塞型DMA数据搬运在搬运地址对齐、搬运方向相同的情况下，在满足以下条件时，性能较好：
+
+数据搬运量4B对齐，即数据搬运量的大小是4B的整数倍。
+
+ 优化示例
+
+单一线程使用阻塞型DMA数据搬运的方式，从Global到SPM存储空间的相同4B对齐地址搬运数据时，测试以下情况的
+执行周期并比较：
+
+   数据搬运量为128KB，是4B的整数倍。
+
+   数据搬运量为（128KB - 1B），不是4B的整数倍。
+
+   数据搬运量为（128KB - 2B），不是4B的整数倍。
+
+   数据搬运量为（128KB - 3B），不是4B的整数倍。
+
+   数据搬运量为（128KB - 4B），是4B的整数倍。
+
+每个测试均调用1000次memcpy（详情请参考《SDAA C编程指南》的memcpy章节）并计算平均值以消除初次调
+用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本                    计算核心频率
+
+ v1.2.0                                      2.36GHz
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define SIZE 0x20000       // 128K
+
+
+  __device__ char global_arr[SIZE];
+
+
+  __device__ void memcpy_perf(char *dst, char *src, unsigned int data_size)
+  {
+          // 打印内存拷贝的地址信息
+          printf("dst addr: %p, src addr: %p\n", dst, src);
+          // 数据初始化
+          for (int i = 0; i < data_size; i++) {
+              dst[i] = 0;
+              src[i] = 10;
+          }
+          // 采集完成拷贝128KB数据量的性能数据
+          perf_start();
+          for (int i = 0; i < 1000; i++) {
+              memcpy(dst, src, data_size * sizeof(char));
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司                   29
+性能优化手册-SDAA C篇                                                         性能优化
+
+
+
+
+      }
+      perf_stop();
+      // 检查数据拷贝结果是否正确
+      for (int i = 0; i < data_size; i++) {
+          if (dst[i] != 10) printf("memcpy results not correct!\n");
+      }
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  // 地址为4B对齐场景下的数据拷贝
+  __global__ void test_128kb()
+  {
+      if (threadIdx != 0) return;
+      const unsigned int data_size = SIZE;
+      char *local_arr = (char *)malloc(data_size * sizeof(char));
+      memcpy_perf(local_arr, global_arr, data_size);
+      free(local_arr);
+  }
+
+
+  // 地址为1B对齐场景下的数据拷贝
+  __global__ void test_128kb_m1b()
+  {
+      if (threadIdx != 0) return;
+      const unsigned int data_size = SIZE - 1;
+      char *local_arr = (char *)malloc(data_size * sizeof(char));
+      memcpy_perf(local_arr, global_arr, data_size);
+      free(local_arr);
+  }
+
+
+  // 地址为2B对齐场景下的数据拷贝
+  __global__ void test_128kb_m2b()
+  {
+      if (threadIdx != 0) return;
+      const unsigned int data_size = SIZE - 2;
+      char *local_arr = (char *)malloc(data_size * sizeof(char));
+      memcpy_perf(local_arr, global_arr, data_size);
+      free(local_arr);
+  }
+
+
+  // 地址为3B对齐场景下的数据拷贝
+  __global__ void test_128kb_m3b()
+  {
+      if (threadIdx != 0) return;
+      const unsigned int data_size = SIZE - 3;
+      char *local_arr = (char *)malloc(data_size * sizeof(char));
+      memcpy_perf(local_arr, global_arr, data_size);
+      free(local_arr);
+  }
+
+
+  // 地址为4B对齐场景下的数据拷贝
+  __global__ void test_128kb_m4b()
+  {
+      if (threadIdx != 0) return;
+      const unsigned int data_size = SIZE - 4;
+      char *local_arr = (char *)malloc(data_size * sizeof(char));
+      memcpy_perf(local_arr, global_arr, data_size);
+      free(local_arr);
+  }
+
+
+
+
+文档版本：v2.0.2                          版权所有 © 太初(无锡)电子科技有限公司                30
+性能优化手册-SDAA C篇                                                      性能优化
+
+
+
+
+  int main()
+  {
+      // 设置使用2号SPA
+      sdaaSetDevice(2);
+      // kernel函数调用
+      test_128kb<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_128kb_m1b<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_128kb_m2b<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_128kb_m3b<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_128kb_m4b<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 数据搬运量               平均每次memcpy的执行周期（拍）         对应单线程的访存带宽 (GB/s)
+
+ 128KB               7364                       41.44
+
+ 128KB - 1B          8283                       36.84
+
+ 128KB - 2B          7890                       38.67
+
+ 128KB - 3B          7673                       39.77
+
+ 128KB - 4B          7365                       41.43
+
+
+在本示例中，虽然数据搬运量满足4B对齐时所搬运的数据量比数据搬运量不满足4B对齐时大，但访存带宽是不对齐的
+最多约1.12倍。
+
+
+
+
+4.2.2.2.4 数据搬运方向
+本文主要介绍阻塞型DMA数据搬运方向的性能优化策略和示例。
+
+ 优化策略
+
+
+文档版本：v2.0.2                      版权所有 © 太初(无锡)电子科技有限公司                 31
+性能优化手册-SDAA C篇                                                           性能优化
+
+
+
+
+阻塞型DMA数据搬运在数据搬运量相同、搬运地址对齐的情况下，在不同的搬运方向下，性能由高到低排列如下：
+
+  1. 同一SPM到SPM存储空间
+
+ 2. Global到SPM存储空间
+
+ 3. SPM到Global存储空间
+
+ 4. Global到Global存储空间
+
+
+ 优化示例
+
+单一线程使用阻塞型DMA数据搬运的方式，在搬运数据量相同、搬运地址对齐时，测试以下不同数据搬运方向的执行
+周期并比较：
+
+  1. 同一SPM到SPM存储空间
+
+ 2. Global到SPM存储空间
+
+ 3. SPM到Global存储空间
+
+ 4. Global到Global存储空间
+
+每个测试均调用1000次memcpy（详情请参考《SDAA C编程指南》的memcpy章节）并计算平均值以消除初次调
+用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版
+                                      计算核心频率                     数据搬运量
+ 本
+
+ v1.2.0                               2.36GHz                    96KB
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define SIZE 0x18000       // 96K
+
+
+  __device__ char global_arr0[SIZE];
+  __device__ char global_arr1[SIZE];
+
+
+  __device__ void memcpy_perf(char *dst, char *src)
+  {
+          // 打印内存拷贝的地址信息
+          printf("dst addr: %p, src addr: %p\n", dst, src);
+          // 数据初始化
+          for (int i = 0; i < SIZE; i++) {
+              dst[i] = 0;
+              src[i] = 10;
+          }
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司              32
+性能优化手册-SDAA C篇                                                         性能优化
+
+
+
+
+      // 采集完成拷贝96KB数据量的性能数据
+      perf_start();
+      for (int i = 0; i < 1000; i++) {
+          memcpy(dst, src, SIZE * sizeof(char));
+      }
+      perf_stop();
+      // 检查数据拷贝结果是否正确
+      for (int i = 0; i < SIZE; i++) {
+          if (dst[i] != 10) printf("memcpy results not correct!\n");
+      }
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  // 从SPM空间向SPM空间进行数据拷贝
+  __global__ void test_s2s()
+  {
+      if (threadIdx != 0) return;
+      char *local_arr0 = (char *)malloc(SIZE * sizeof(char));
+      char *local_arr1 = (char *)malloc(SIZE * sizeof(char));
+      memcpy_perf(local_arr1, local_arr0);
+      free(local_arr1);
+      free(local_arr0);
+  }
+
+
+  // 从Global空间向SPM空间进行数据拷贝
+  __global__ void test_g2s()
+  {
+      if (threadIdx != 0) return;
+      char *local_arr = (char *)malloc(SIZE * sizeof(char));
+      memcpy_perf(local_arr, global_arr0);
+      free(local_arr);
+  }
+
+
+  // 从SPM空间向Global空间进行数据拷贝
+  __global__ void test_s2g()
+  {
+      if (threadIdx != 0) return;
+      char *local_arr = (char *)malloc(SIZE * sizeof(char));
+      memcpy_perf(global_arr0, local_arr);
+      free(local_arr);
+  }
+
+
+  // 从Global空间向Global空间进行数据拷贝
+  __global__ void test_g2g()
+  {
+      // 仅使用0号SPE进行性能测试
+      if (threadIdx != 0) return;
+      memcpy_perf(global_arr0, global_arr1);
+  }
+
+
+  int main()
+  {
+      // 设置使用2号SPA
+      sdaaSetDevice(2);
+      // kernel函数调用
+      test_s2s<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+
+
+
+
+文档版本：v2.0.2                          版权所有 © 太初(无锡)电子科技有限公司                33
+性能优化手册-SDAA C篇                                                        性能优化
+
+
+
+
+      // kernel函数调用
+      test_g2s<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_s2g<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_g2g<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 数据搬运方向                          平均每次memcpy的执行周期（拍）      对应单线程的访存带宽 (GB/s)
+
+ 方向一：同一SPM到SPM存储空间               3669                    62.38
+
+ 方向二：Global到SPM存储空间              5524                    41.43
+
+ 方向三：SPM到Global存储空间              5703                    40.13
+
+ 方向四：Global到Global存储空间           14340                   15.96
+
+
+在本示例中，在搬运地址4B对齐、搬运数据量为96KB时：
+
+  1. 搬运方向一的访存带宽是方向四的约3.90倍。
+
+ 2. 搬运方向二的访存带宽是方向四的约2.59倍。
+
+ 3. 搬运方向三的访存带宽是方向四的约2.53倍。
+
+
+4.2.2.3 非阻塞型DMA数据搬运
+本文主要介绍非阻塞型DMA数据搬运的性能优化策略和示例。
+
+ 优化策略
+
+如果搬运的数据与当前程序的后续操作不存在数据依赖时，使用非阻塞型接口（详情请参考《SDAA C编程指南》的非
+阻塞型DMA数据搬运章节）可以更好的进行流水排布，相对阻塞型接口（详情请参考《SDAA C编程指南》的阻塞型
+DMA数据搬运章节）性能更好。
+
+
+ 优化示例
+
+在设备端测试以下情况的数据计算总执行周期并比较：
+
+   使用阻塞型数据搬运接口：先执行数据搬运，再执行与搬运数据无依赖的计算操作。
+
+
+
+文档版本：v2.0.2                      版权所有 © 太初(无锡)电子科技有限公司                       34
+性能优化手册-SDAA C篇                                                                                  性能优化
+
+
+
+
+   使用非阻塞型数据搬运接口：同步执行数据搬运和与搬运数据无依赖的计算操作。
+
+每个测试均调用10000次数据搬运和与搬运数据无依赖的计算操作，从而计算平均值以消除初次调用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本               计算核心频率                                  数据搬运量
+
+ v1.2.0                                 2.36GHz                                 10KB
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define SIZE 2560
+  #define SIZE_CAL 256
+  #define TIME 10000
+
+
+  __device__ void test_async(int *d_dst, int *d_cal)
+  {
+          int *spm_src = (int *)malloc(SIZE * sizeof(int));
+          for (int i = 0; i < SIZE; i++) {
+              spm_src[i] = i;
+          }
+          // 统计性能数据
+          perf_start();
+
+
+          intv16 cal_src;
+          intv16 add = 1;
+
+
+          for (int time = 0; time < TIME; time++) {
+              // 发起非阻塞式数据搬运
+              memcpy_async(d_dst, spm_src, SIZE * sizeof(int), 0, {0, 0}, MemcpySpmToGlobal);
+
+
+              // 同步进行与数据搬运无数据依赖的计算
+              for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+                  // 使用向量进行计算
+                  simd_load(cal_src, d_cal + idx);
+                  intv16 tmp = cal_src + add;
+                  simd_store(tmp, d_cal + idx);
+              }
+
+
+              // 等待完成非阻塞式数据搬运
+              memcpy_wait();
+          }
+          // 统计性能数据
+          perf_stop();
+          free(spm_src);
+  }
+
+
+  __device__ void test_sync(int *d_dst, int *d_cal)
+  {
+          int *spm_src = (int *)malloc(SIZE * sizeof(int));
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司                                     35
+性能优化手册-SDAA C篇                                                                                 性能优化
+
+
+
+
+      for (int i = 0; i < SIZE; i++) {
+          spm_src[i] = i;
+      }
+      // 统计性能数据
+      perf_start();
+
+
+      intv16 cal_src;
+      intv16 add = 1;
+
+
+      for (int time = 0; time < TIME; time++) {
+          // 发起阻塞式数据搬运
+          memcpy(d_dst, spm_src, SIZE * sizeof(int));
+
+
+          // 异步进行与数据搬运无数据依赖的计算
+          for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+               // 使用向量进行计算
+               simd_load(cal_src, d_cal + idx);
+               intv16 tmp = cal_src + add;
+               simd_store(tmp, d_cal + idx);
+          }
+      }
+      // 统计性能数据
+      perf_stop();
+      free(spm_src);
+  }
+
+
+  __global__ void test(int *d_dst_async, int *d_cal_async, int *d_dst_sync, int *d_cal_sync)
+  {
+      if (threadIdx != 0) {
+          return;
+      }
+
+
+      test_async(d_dst_async, d_cal_async);
+      test_sync(d_dst_sync, d_cal_sync);
+
+
+      // 打印性能数据
+      perf_print();
+  }
+
+
+  int main()
+  {
+      int h_dst_async[SIZE] = { 0 };
+      int h_cal_async[SIZE_CAL];
+      int h_dst_sync[SIZE] = { 0 };
+      int h_cal_sync[SIZE_CAL];
+
+
+      for (int i = 0; i < SIZE_CAL; i++) {
+          h_cal_async[i] = i;
+          h_cal_sync[i] = i;
+      }
+
+
+      // 设置使用0号SPA
+      sdaaSetDevice(0);
+      int *d_dst_async = NULL;
+      int *d_cal_async = NULL;
+      int *d_dst_sync = NULL;
+      int *d_cal_sync = NULL;
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void**)&d_dst_async, SIZE * sizeof(int));
+
+
+
+
+文档版本：v2.0.2                            版权所有 © 太初(无锡)电子科技有限公司                                      36
+性能优化手册-SDAA C篇                                                                                       性能优化
+
+
+
+
+      sdaaMalloc((void**)&d_cal_async, SIZE_CAL * sizeof(int));
+      sdaaMalloc((void**)&d_dst_sync, SIZE * sizeof(int));
+      sdaaMalloc((void**)&d_cal_sync, SIZE_CAL * sizeof(int));
+
+
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(d_dst_async, h_dst_async, SIZE * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_cal_async, h_cal_async, SIZE_CAL * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_dst_sync, h_dst_sync, SIZE * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_cal_sync, h_cal_sync, SIZE_CAL * sizeof(int), sdaaMemcpyHostToDevice);
+
+
+      // kernel函数调用
+      test<<<1>>>(d_dst_async, d_cal_async, d_dst_sync, d_cal_sync);
+
+
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // 将数据从Device端拷贝到Host端
+      sdaaMemcpy(h_dst_async, d_dst_async, SIZE * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_cal_async, d_cal_async, SIZE_CAL * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_dst_sync, d_dst_sync, SIZE * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_cal_sync, d_cal_sync, SIZE_CAL * sizeof(int), sdaaMemcpyDeviceToHost);
+
+
+      for (int i = 0; i < SIZE; i++) {
+          if ((h_dst_async[i] != i) || (h_dst_sync[i] != i)) {
+              printf("h_dst_async[%d] = %d, h_dst_sync[%d] = %d\n", i, h_dst_async[i], i, h_dst_sync[i]);
+          }
+      }
+
+
+      for (int i = 0; i < SIZE_CAL; i++) {
+          if ((h_cal_async[i] != (i + TIME)) || (h_cal_sync[i] != (i + TIME))) {
+              printf("h_cal_async[%d] = %d, h_cal_sync[%d] = %d\n", i, h_cal_async[i], i, h_cal_sync[i]);
+          }
+      }
+
+
+      // 释放申请的Global内存
+      sdaaFree(d_dst_async);
+      sdaaFree(d_cal_async);
+      sdaaFree(d_dst_sync);
+      sdaaFree(d_cal_sync);
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 接口类型                                    数据计算总执行周期（拍）
+
+ 阻塞型接口                                   2301
+
+ 非阻塞型接口                                  1292
+
+
+在本示例中，使用非阻塞型接口，相对于阻塞型接口的数据计算总执行周期减少了1009拍左右，使用非阻塞型接口的
+性能是使用阻塞型接口的约1.72倍。
+
+
+
+
+文档版本：v2.0.2                          版权所有 © 太初(无锡)电子科技有限公司                                                  37
+性能优化手册-SDAA C篇                                                       性能优化
+
+
+
+
+4.2.3 RMA数据搬运
+4.2.3.1 SPE ID相关
+本文主要介绍RMA数据搬运的性能优化策略和示例。
+
+ 优化策略
+
+进行RMA数据搬运的两个SPE的ID号x和y，在满足以下条件时，性能较好：
+
+令D(x, y) = abs(x/8 - y/8) + abs(x%8 - y%8)，则D(x, y)的值越小，性能越好。
+
+例如：SPE0 和 SPE9 的RMA数据搬运性能要优于 SPE0 和 SPE31 的RMA数据搬运性能。
+
+ 优化示例
+
+测试并比较以下两种场景的阻塞型RMA数据搬运的执行周期：
+
+   SPE0 和 SPE9
+
+   SPE0 和 SPE31
+
+每个测试均调用1000次rma_put（详情请参考《SDAA C编程指南》的rma_put章节）并计算平均值以消除初次调
+用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本                                  计算核心频率
+
+ v1.2.0                                                    2.36GHz
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  __local__ int src;
+  __local__ int dst;
+
+
+  __device__ void rma_perf(unsigned long target_id)
+  {
+          if (threadIdx != 0 && threadIdx != target_id) return;
+          // data init
+          src = 0;
+          dst = 0;
+          if (threadIdx == 0) src = 100;
+          ThreadGroup tg(0x1);
+          thread_group_include(tg, target_id);
+          sync_threads(tg);
+          // start rma_put
+          perf_start();
+
+
+
+
+文档版本：v2.0.2                                版权所有 © 太初(无锡)电子科技有限公司        38
+性能优化手册-SDAA C篇                                                      性能优化
+
+
+
+
+         for (int i = 0; i < 1000; i++) {
+             rma_put(&src, &dst, sizeof(int), 0, target_id);
+         }
+         perf_stop();
+         perf_print();
+  }
+
+
+  // SPE 0 put to SPE 9
+  __global__ void test_a()
+  {
+         rma_perf(9);
+  }
+
+
+  // SPE 0 put to SPE 31
+  __global__ void test_b()
+  {
+         rma_perf(31);
+  }
+
+
+  int main() {
+         sdaaSetDevice(2);
+         test_a<<<1>>>();
+         sdaaDeviceSynchronize();
+         test_b<<<1>>>();
+         sdaaDeviceSynchronize();
+         return 0;
+  }
+
+
+
+
+ 优化效果
+
+ RMA数据搬运的SPE ID                                 平均每次RMA操作的执行周期（拍）
+
+ 0, 9                                           186
+
+ 0, 31                                          259
+
+
+在本示例中，在满足优化策略（SPE0 和 SPE9）的性能，是不满足（SPE0 和 SPE31）的约1.39倍。
+
+
+
+
+4.2.3.2 非阻塞型RMA数据搬运
+4.2.3.2.1 优化策略
+  1. 如果搬运的数据与当前程序的后续操作不存在数据依赖时，使用非阻塞型接口（详情请参考《SDAA C编程指南》
+   的非阻塞型RMA数据搬运章节）可以更好的进行流水排布，相对阻塞型接口（详情请参考《SDAA C编程指南》
+   的阻塞型RMA数据搬运章节）性能更好。
+ 2. 当使用非阻塞型接口（详情请参考《SDAA C编程指南》的非阻塞型RMA数据搬运章节）进行数据搬运时，使用
+   RmaCustomizeMode（详情请参考《SDAA C编程指南》的rma_complete章节）模式相对于
+   RmaNormalMode（详情请参考《SDAA C编程指南》的rma_complete章节）模式，性能更好。
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司          39
+性能优化手册-SDAA C篇                                                           性能优化
+
+
+
+
+4.2.3.2.2 rma_get 优化示例
+在设备端测试以下情况的数据计算总执行周期并比较：
+
+   使用阻塞型数据搬运接口：先使用rma_get（详情请参考《SDAA C编程指南》的rma_get章节）进行数据搬
+   运，再执行与数搬运数据无依赖的计算操作。
+   使用非阻塞型数据搬运接口：使用rma_async_get（详情请参考《SDAA C编程指南》的rma_async_get章
+   节）的RmaNormalMode模式，同步执行数据搬运和与搬运数据无依赖的计算操作。
+   使用非阻塞型数据搬运接口：使用rma_async_get（详情请参考《SDAA C编程指南》的rma_async_get章
+   节）的RmaCustomizeMode模式，同步执行数据搬运和与搬运数据无依赖的计算操作。
+
+每个测试均调用10000次数据搬运和与搬运数据无依赖的计算操作，从而计算平均值以消除初次调用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit
+                                    计算核心频率                       数据搬运量
+ 版本
+
+ v1.2.0                             2.36GHz                      10KB
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define SIZE 2560
+  #define SIZE_CAL 480
+  #define TIME 10000
+
+
+  __device__ void test_sync(int *dst, int *src, int *cal)
+  {
+          intv16 cal_src;
+          intv16 add = 1;
+          // 统计性能数据
+          perf_start();
+
+
+          for (int time = 0; time < TIME; time++) {
+              // 发起阻塞型rma_get
+              rma_get(dst, src, SIZE * sizeof(int), 0, 1);
+
+
+              for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+                  // 使用向量进行计算
+                  simd_load(cal_src, cal + idx);
+                  intv16 tmp = cal_src + add;
+                  simd_store(tmp, cal + idx);
+              }
+          }
+          // 统计性能数据
+          perf_stop();
+  }
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司              40
+性能优化手册-SDAA C篇                                                       性能优化
+
+
+
+
+  __device__ void test_async_normal(int *dst, int *src, int *cal)
+  {
+      RmaHandle handle;
+      ThreadGroup thread_group(3);
+      // 部分SPE同步
+      sync_threads(thread_group);
+
+
+      intv16 cal_src;
+      intv16 add = 1;
+
+
+      if ((threadIdx == 0)) {
+          // 统计性能数据
+          perf_start();
+
+
+          for (int time = 0; time < TIME; time++) {
+              // 配置远端计算核心ID
+              rma_set_thread_id(handle, 1);
+              // 发起非阻塞数据搬运
+              rma_async_get(dst, src, SIZE * sizeof(int), handle);
+
+
+              for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+                  // 使用向量进行计算
+                  simd_load(cal_src, cal + idx);
+                  intv16 tmp = cal_src + add;
+                  simd_store(tmp, cal + idx);
+              }
+              // 本端计算核心等待数据搬运完成
+              rma_complete(handle);
+          }
+          // 统计性能数据
+          perf_stop();
+      }
+
+
+      if (threadIdx == 1) {
+          // 配置远端计算核心ID
+          rma_set_thread_id(handle, 0);
+
+
+          // 等待当前计算核心完成RMA操作
+          for (int time = 0; time < TIME; time++) {
+              rma_wait(handle);
+          }
+      }
+  }
+
+
+  __device__ void test_async_cust(int *dst, int *src, int *cal)
+  {
+      RmaHandle handle;
+      ThreadGroup thread_group(3);
+      // 部分SPE同步
+      sync_threads(thread_group);
+
+
+      intv16 cal_src;
+      intv16 add = 1;
+
+
+      if ((threadIdx == 0)) {
+          // 统计性能数据
+          perf_start();
+
+
+          for (int time = 0; time < TIME; time++) {
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司             41
+性能优化手册-SDAA C篇                                                                              性能优化
+
+
+
+
+              // 配置远端计算核心ID
+              rma_set_thread_id(handle, 1);
+              // 发起非阻塞数据搬运
+              rma_async_get(dst, src, SIZE * sizeof(int), handle);
+
+
+              for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+                    // 使用向量进行计算
+                    simd_load(cal_src, cal + idx);
+                    intv16 tmp = cal_src + add;
+                    simd_store(tmp, cal + idx);
+              }
+              // 本端计算核心等待数据搬运完成
+              rma_complete(handle, RmaCustomizeMode);
+          }
+          // 统计性能数据
+          perf_stop();
+      }
+
+
+      if (threadIdx == 1) {
+          rma_set_thread_id(handle, 0);
+          rma_wait(handle, TIME);
+      }
+  }
+
+
+  __global__ void test(int *d_sync, int *d_async_cust, int *d_async_normal,
+                         int *d_sync_cal, int *d_async_cust_cal, int *d_async_normal_cal)
+  {
+      if ((threadIdx != 0) && (threadIdx != 1)) {
+          return;
+      }
+
+
+      int *spm = (int *)malloc(SIZE * sizeof(int));
+
+
+      if (threadIdx == 0) {
+          for (int i = 0; i < SIZE; i++) {
+              spm[i] = 0;
+          }
+      }
+
+
+      if (threadIdx == 1) {
+          for (int i = 0; i < SIZE; i++) {
+              spm[i] = i;
+          }
+      }
+
+
+      // 配置线程组内包含SP0和SPE1
+      ThreadGroup thread_group(3);
+
+
+      sync_threads(thread_group);
+      // 测试阻塞接口
+      test_sync(spm, spm, d_sync_cal);
+      if (threadIdx == 0) {
+          memcpy(d_sync, spm, SIZE * sizeof(int));
+      }
+
+
+      // 测试非阻塞接口的RmaNormalMode模式
+      test_async_normal(spm, spm, d_async_normal_cal);
+      if (threadIdx == 0) {
+          memcpy(d_async_normal, spm, SIZE * sizeof(int));
+
+
+
+
+文档版本：v2.0.2                            版权所有 © 太初(无锡)电子科技有限公司                                   42
+性能优化手册-SDAA C篇                                                                                          性能优化
+
+
+
+
+      }
+
+
+      // 测试非阻塞接口的RmaCustomizeMode
+      test_async_cust(spm, spm, d_async_cust_cal);
+      if (threadIdx == 0) {
+          memcpy(d_async_cust, spm, SIZE * sizeof(int));
+      }
+
+
+      // 打印性能数据
+      perf_print();
+      free(spm);
+  }
+
+
+  int main()
+  {
+      int h_sync[SIZE] = { 0 };
+      int h_async_cust[SIZE] = { 0 };
+      int h_async_normal[SIZE] = { 0 };
+
+
+      int h_sync_cal[SIZE_CAL] = { 0 };
+      int h_async_cust_cal[SIZE_CAL] = { 0 };
+      int h_async_normal_cal[SIZE_CAL] = { 0 };
+
+
+      for (int i = 0; i < SIZE_CAL; i++) {
+          h_sync_cal[i] = i;
+          h_async_cust_cal[i] = i;
+          h_async_normal_cal[i] = i;
+      }
+
+
+      // 设置使用0号SPA
+      sdaaSetDevice(0);
+      int *d_sync = NULL;
+      int *d_async_cust = NULL;
+      int *d_async_normal = NULL;
+
+
+      int *d_sync_cal = NULL;
+      int *d_async_cust_cal = NULL;
+      int *d_async_normal_cal = NULL;
+
+
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void**)&d_sync, SIZE * sizeof(int));
+      sdaaMalloc((void**)&d_async_cust, SIZE * sizeof(int));
+      sdaaMalloc((void**)&d_async_normal, SIZE * sizeof(int));
+
+
+      sdaaMalloc((void**)&d_sync_cal, SIZE_CAL * sizeof(int));
+      sdaaMalloc((void**)&d_async_cust_cal, SIZE_CAL * sizeof(int));
+      sdaaMalloc((void**)&d_async_normal_cal, SIZE_CAL * sizeof(int));
+
+
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(d_sync, h_sync, SIZE * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_async_cust, h_async_cust, SIZE * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_async_normal, h_async_normal, SIZE * sizeof(int), sdaaMemcpyHostToDevice);
+
+
+      sdaaMemcpy(d_sync_cal, h_sync_cal, SIZE_CAL * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_async_cust_cal, h_async_cust_cal, SIZE_CAL * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_async_normal_cal, h_async_normal_cal, SIZE_CAL * sizeof(int), sdaaMemcpyHostToDevice);
+
+
+      // kernel函数调用
+      test<<<1>>>(d_sync, d_async_cust, d_async_normal,
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                                               43
+性能优化手册-SDAA C篇                                                                                          性能优化
+
+
+
+
+                    d_sync_cal, d_async_cust_cal, d_async_normal_cal);
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+
+
+      // 将数据从Device端拷贝到Host端
+      sdaaMemcpy(h_sync, d_sync, SIZE * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_async_cust, d_async_cust, SIZE * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_async_normal, d_async_normal, SIZE * sizeof(int), sdaaMemcpyDeviceToHost);
+
+
+      sdaaMemcpy(h_sync_cal, d_sync_cal, SIZE_CAL * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_async_cust_cal, d_async_cust_cal, SIZE_CAL * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_async_normal_cal, d_async_normal_cal, SIZE_CAL * sizeof(int), sdaaMemcpyDeviceToHost);
+
+
+      for (int i = 0; i < SIZE; i++) {
+          if ((h_sync[i] != i) || (h_async_cust[i] != i) || (h_async_normal[i] != i)) {
+              printf("h_sync[%d] = %d, h_async_cust[%d] = %d, h_async_normal[%d] = %d\n",
+                       i, h_sync[i], i, h_async_cust[i], i, h_async_normal[i]);
+          }
+      }
+
+
+      for (int i = 0; i < SIZE_CAL; i++) {
+          if ((h_sync_cal[i] != i + TIME) || (h_async_cust_cal[i] != i + TIME) || (h_async_normal_cal[i]
+  != i + TIME)) {
+              printf("h_sync_cal[%d] = %d, h_async_cust_cal[%d] = %d, h_async_normal_cal[%d] = %d\n",
+                       i, h_sync_cal[i], i, h_async_cust_cal[i], i, h_async_normal_cal[i]);
+          }
+      }
+
+
+      // 释放申请的Global内存
+      sdaaFree(d_sync_cal);
+      sdaaFree(d_async_cust_cal);
+      sdaaFree(d_async_normal_cal);
+      sdaaFree(d_sync);
+      sdaaFree(d_async_cust);
+      sdaaFree(d_async_normal);
+
+
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 接口及模式                                                 数据计算总执行周期（拍）
+
+ 阻塞型接口 rma_get                                         13292
+
+ 非阻塞型接口 rma_async_get 的
+                                                       13036
+ RmaNormalMode 模式
+
+ 非阻塞型接口 rma_async_get 的
+                                                       11937
+ RmaCustomizeMode 模式
+
+
+在本示例这个能，使用非阻塞型接口 rma_async_get 的 RmaCustomizeMode 模式，相对于阻塞型接口
+rma_get，数据计算总执行周期减少了1355拍左右，性能是其约1.11倍。
+
+
+
+
+文档版本：v2.0.2                            版权所有 © 太初(无锡)电子科技有限公司                                                44
+性能优化手册-SDAA C篇                                                              性能优化
+
+
+
+
+4.2.3.2.3 rma_put 优化示例
+在设备端测试以下情况的数据计算总执行周期并比较：
+
+   使用阻塞型数据搬运接口：先使用rma_put（详情请参考《SDAA C编程指南》的rma_put章节）进行数据搬
+   运，再执行与搬运数据无依赖的计算操作。
+   使用非阻塞型数据搬运接口：使用rma_async_put（详情请参考《SDAA C编程指南》的rma_async_put章
+   节）的RmaNormalMode模式，同步执行数据搬运和与搬运数据无依赖的计算操作。
+   使用非阻塞型数据搬运接口：使用rma_async_put（详情请参考《SDAA C编程指南》的rma_async_put章
+   节）的RmaCustomizeMode模式，同步执行数据搬运和与搬运数据无依赖的计算操作。
+
+每个测试均调用10000次数据搬运和与搬运数据无依赖的计算操作，从而计算平均值以消除初次调用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本               计算核心频率                      数据搬运量
+
+ v1.2.0                                 2.36GHz                     10KB
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define SIZE 2560
+  #define SIZE_CAL 480
+  #define TIME 10000
+
+
+  __device__ void test_sync(int *dst, int *src, int *cal)
+  {
+          intv16 cal_src;
+          intv16 add = 1;
+          // 统计性能数据
+          perf_start();
+
+
+          for (int time = 0; time < TIME; time++) {
+              // 发起阻塞型rma_put
+              rma_put(dst, src, SIZE * sizeof(int), 1, 0);
+
+
+              for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+                  // 使用向量进行计算
+                  simd_load(cal_src, cal + idx);
+                  intv16 tmp = cal_src + add;
+                  simd_store(tmp, cal + idx);
+              }
+          }
+          // 统计性能数据
+          perf_stop();
+  }
+
+
+  __device__ void test_async_normal(int *dst, int *src, int *cal)
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司                 45
+性能优化手册-SDAA C篇                                                       性能优化
+
+
+
+
+  {
+      RmaHandle handle;
+      ThreadGroup thread_group(3);
+      // 部分SPE同步
+      sync_threads(thread_group);
+
+
+      intv16 cal_src;
+      intv16 add = 1;
+
+
+      if ((threadIdx == 1)) {
+          // 统计性能数据
+          perf_start();
+
+
+          for (int time = 0; time < TIME; time++) {
+              // 配置远端计算核心ID
+              rma_set_thread_id(handle, 0);
+              // 发起非阻塞数据搬运
+              rma_async_put(dst, src, SIZE * sizeof(int), handle);
+
+
+              for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+                  // 使用向量进行计算
+                  simd_load(cal_src, cal + idx);
+                  intv16 tmp = cal_src + add;
+                  simd_store(tmp, cal + idx);
+              }
+              // 本端计算核心等待数据搬运完成
+              rma_complete(handle);
+          }
+          // 统计性能数据
+          perf_stop();
+      }
+
+
+      if (threadIdx == 0) {
+          // 配置远端计算核心ID
+          rma_set_thread_id(handle, 1);
+
+
+          // 等待当前计算核心完成RMA操作
+          for (int time = 0; time < TIME; time++) {
+              rma_wait(handle);
+          }
+      }
+  }
+
+
+  __device__ void test_async_cust(int *dst, int *src, int *cal)
+  {
+      RmaHandle handle;
+      ThreadGroup thread_group(3);
+      // 部分SPE同步
+      sync_threads(thread_group);
+
+
+      intv16 cal_src;
+      intv16 add = 1;
+
+
+      if ((threadIdx == 1)) {
+          // 统计性能数据
+          perf_start();
+
+
+          for (int time = 0; time < TIME; time++) {
+              // 配置远端计算核心ID
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司             46
+性能优化手册-SDAA C篇                                                                              性能优化
+
+
+
+
+              rma_set_thread_id(handle, 0);
+              // 发起非阻塞数据搬运
+              rma_async_put(dst, src, SIZE * sizeof(int), handle);
+
+
+              for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+                    // 使用向量进行计算
+                    simd_load(cal_src, cal + idx);
+                    intv16 tmp = cal_src + add;
+                    simd_store(tmp, cal + idx);
+              }
+              // 本端计算核心等待数据搬运完成
+              rma_complete(handle, RmaCustomizeMode);
+          }
+          // 统计性能数据
+          perf_stop();
+      }
+
+
+      if (threadIdx == 0) {
+          rma_set_thread_id(handle, 1);
+          rma_wait(handle, TIME);
+      }
+  }
+
+
+  __global__ void test(int *d_sync, int *d_async_cust, int *d_async_normal,
+                         int *d_sync_cal, int *d_async_cust_cal, int *d_async_normal_cal)
+  {
+      if ((threadIdx != 0) && (threadIdx != 1)) {
+          return;
+      }
+
+
+      int *spm = (int *)malloc(SIZE * sizeof(int));
+
+
+      if (threadIdx == 0) {
+          for (int i = 0; i < SIZE; i++) {
+              spm[i] = 0;
+          }
+      }
+
+
+      if (threadIdx == 1) {
+          for (int i = 0; i < SIZE; i++) {
+              spm[i] = i;
+          }
+      }
+
+
+      // 配置线程组内包含SP0和SPE1
+      ThreadGroup thread_group(3);
+
+
+      sync_threads(thread_group);
+      // 测试阻塞接口
+      test_sync(spm, spm, d_sync_cal);
+      if (threadIdx == 0) {
+          memcpy(d_sync, spm, SIZE * sizeof(int));
+      }
+
+
+      // 测试非阻塞接口的RmaNormalMode模式
+      test_async_normal(spm, spm, d_async_normal_cal);
+      if (threadIdx == 0) {
+          memcpy(d_async_normal, spm, SIZE * sizeof(int));
+      }
+
+
+
+
+文档版本：v2.0.2                            版权所有 © 太初(无锡)电子科技有限公司                                   47
+性能优化手册-SDAA C篇                                                                                          性能优化
+
+
+
+
+      // 测试非阻塞接口的RmaCustomizeMode
+      test_async_cust(spm, spm, d_async_cust_cal);
+      if (threadIdx == 0) {
+          memcpy(d_async_cust, spm, SIZE * sizeof(int));
+      }
+
+
+      // 打印性能数据
+      perf_print();
+      free(spm);
+  }
+
+
+  int main()
+  {
+      int h_sync[SIZE] = { 0 };
+      int h_async_cust[SIZE] = { 0 };
+      int h_async_normal[SIZE] = { 0 };
+
+
+      int h_sync_cal[SIZE_CAL] = { 0 };
+      int h_async_cust_cal[SIZE_CAL] = { 0 };
+      int h_async_normal_cal[SIZE_CAL] = { 0 };
+
+
+      for (int i = 0; i < SIZE_CAL; i++) {
+          h_sync_cal[i] = i;
+          h_async_cust_cal[i] = i;
+          h_async_normal_cal[i] = i;
+      }
+
+
+      // 设置使用0号SPA
+      sdaaSetDevice(0);
+      int *d_sync = NULL;
+      int *d_async_cust = NULL;
+      int *d_async_normal = NULL;
+
+
+      int *d_sync_cal = NULL;
+      int *d_async_cust_cal = NULL;
+      int *d_async_normal_cal = NULL;
+
+
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void**)&d_sync, SIZE * sizeof(int));
+      sdaaMalloc((void**)&d_async_cust, SIZE * sizeof(int));
+      sdaaMalloc((void**)&d_async_normal, SIZE * sizeof(int));
+
+
+      sdaaMalloc((void**)&d_sync_cal, SIZE_CAL * sizeof(int));
+      sdaaMalloc((void**)&d_async_cust_cal, SIZE_CAL * sizeof(int));
+      sdaaMalloc((void**)&d_async_normal_cal, SIZE_CAL * sizeof(int));
+
+
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(d_sync, h_sync, SIZE * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_async_cust, h_async_cust, SIZE * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_async_normal, h_async_normal, SIZE * sizeof(int), sdaaMemcpyHostToDevice);
+
+
+      sdaaMemcpy(d_sync_cal, h_sync_cal, SIZE_CAL * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_async_cust_cal, h_async_cust_cal, SIZE_CAL * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_async_normal_cal, h_async_normal_cal, SIZE_CAL * sizeof(int), sdaaMemcpyHostToDevice);
+
+
+      // kernel函数调用
+      test<<<1>>>(d_sync, d_async_cust, d_async_normal,
+                   d_sync_cal, d_async_cust_cal, d_async_normal_cal);
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                                               48
+性能优化手册-SDAA C篇                                                                                          性能优化
+
+
+
+
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+
+
+      // 将数据从Device端拷贝到Host端
+      sdaaMemcpy(h_sync, d_sync, SIZE * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_async_cust, d_async_cust, SIZE * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_async_normal, d_async_normal, SIZE * sizeof(int), sdaaMemcpyDeviceToHost);
+
+
+      sdaaMemcpy(h_sync_cal, d_sync_cal, SIZE_CAL * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_async_cust_cal, d_async_cust_cal, SIZE_CAL * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_async_normal_cal, d_async_normal_cal, SIZE_CAL * sizeof(int), sdaaMemcpyDeviceToHost);
+
+
+      for (int i = 0; i < SIZE; i++) {
+          if ((h_sync[i] != i) || (h_async_cust[i] != i) || (h_async_normal[i] != i)) {
+              printf("h_sync[%d] = %d, h_async_cust[%d] = %d, h_async_normal[%d] = %d\n",
+                     i, h_sync[i], i, h_async_cust[i], i, h_async_normal[i]);
+          }
+      }
+
+
+      for (int i = 0; i < SIZE_CAL; i++) {
+          if ((h_sync_cal[i] != i + TIME) || (h_async_cust_cal[i] != i + TIME) || (h_async_normal_cal[i]
+  != i + TIME)) {
+              printf("h_sync_cal[%d] = %d, h_async_cust_cal[%d] = %d, h_async_normal_cal[%d] = %d\n",
+                     i, h_sync_cal[i], i, h_async_cust_cal[i], i, h_async_normal_cal[i]);
+          }
+      }
+
+
+      // 释放申请的Global内存
+      sdaaFree(d_sync_cal);
+      sdaaFree(d_async_cust_cal);
+      sdaaFree(d_async_normal_cal);
+      sdaaFree(d_sync);
+      sdaaFree(d_async_cust);
+      sdaaFree(d_async_normal);
+
+
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 接口及模式                                             数据计算总执行周期（拍）
+
+ 阻塞接口 rma_put                                      13291
+
+ 非阻塞接口 rma_async_put 的
+                                                   13035
+ RmaNormalMode 模式
+
+ 非阻塞接口 rma_async_put 的
+                                                   11906
+ RmaCustomizeMode 模式
+
+
+在本示例中，使用非阻塞型接口 rma_async_put 的 RmaCustomizeMode 模式，相对于阻塞接口 rma_put，数
+据计算总执行周期减少了1385拍左右，性能是其约1.11倍。
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司                                                 49
+性能优化手册-SDAA C篇                                                                                   性能优化
+
+
+
+
+4.2.4 Broadcast数据搬运
+4.2.4.1 SPE ID相关
+本文主要介绍使用线程组进行Broadcast数据搬运的性能优化策略和示例。
+
+ 优化策略
+
+使用线程组进行Broadcast数据搬运时，当线程组内的所有SPE满足以下任意一种条件时，性能较好：
+
+    线程组内所有SPE刚好能被划分为：{0~7}，{8~15}，{16~23}，{24~31}中的一组或多组。
+
+    线程组内所有SPE刚好能被划分为：{0, 8, 16, 24}，{1, 9, 17, 25}，{2, 10, 18, 26}，{3, 11, 19, 27}，{4, 12, 20,
+    28}，{5, 13, 21, 29}，{6, 14, 22, 30}，{7, 15, 23, 31}中的一组或多组。
+
+例如：对包含8个SPE的线程组进行广播时，线程组A={0, 1, 2, 3, 4, 5, 6, 7}或B={0, 1, 8, 9, 16, 17, 24, 25}的性能要优于
+线程组C={0, 1, 9, 10, 18, 19, 27, 28}。
+
+ 优化示例
+
+对使用线程组A={0, 1, 2, 3, 4, 5, 6, 7}、B={0, 1, 8, 9, 16, 17, 24, 25}和C={0, 1, 9, 10, 18, 19, 27, 28}进行阻塞型广播的
+执行周期进行测试并比较。
+
+每个测试均调用1000次broadcast（详情请参考《SDAA C编程指南》的broadcast 老接口章节）并计算平均值以消
+除初次调用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本                                  计算核心频率
+
+ v1.2.0                                                    2.36GHz
+
+
+ 测试代码
+
+   #include <sdaa_perf.h>
+   using namespace sdaa;
+
+
+   __local__ int src;
+   __local__ int dst;
+
+
+   __device__ void broadcast_perf(ThreadGroup &tg)
+   {
+          if (threadIdx != 0 && !thread_group_is_included(tg, threadIdx)) return;
+          // data init
+          BroadcastHandle handle(&tg);
+          src = 0;
+          dst = 0;
+          if (threadIdx == 0) src = 100;
+          sync_threads(tg);
+          // start broadcast
+
+
+
+
+文档版本：v2.0.2                                版权所有 © 太初(无锡)电子科技有限公司                                      50
+性能优化手册-SDAA C篇                                                                              性能优化
+
+
+
+
+        perf_start();
+        for (int i = 0; i < 1000; i++) {
+             broadcast(&dst, &src, sizeof(int), 0, {0, 0}, 0, BroadcastSpmToSpm, handle);
+        }
+        perf_stop();
+        perf_print();
+  }
+
+
+  // broadcast to 0, 1, 2, 3, 4, 5, 6, 7
+  __global__ void test_a()
+  {
+        unsigned long thread_group[8] = {0, 1, 2, 3, 4, 5, 6, 7};
+        ThreadGroup tg(thread_group, 8);
+        broadcast_perf(tg);
+  }
+
+
+  // broadcast to 0, 1, 8, 9, 16, 17, 24, 25
+  __global__ void test_b()
+  {
+        unsigned long thread_group[8] = {0, 1, 8, 9, 16, 17, 24, 25};
+        ThreadGroup tg(thread_group, 8);
+        broadcast_perf(tg);
+  }
+
+
+  // broadcast to 0, 1, 9, 10, 18, 19, 27, 28
+  __global__ void test_c()
+  {
+        unsigned long thread_group[8] = {0, 1, 9, 10, 18, 19, 27, 28};
+        ThreadGroup tg(thread_group, 8);
+        broadcast_perf(tg);
+  }
+  int main()
+  {
+        sdaaSetDevice(2);
+        test_a<<<1>>>();
+        sdaaDeviceSynchronize();
+        test_b<<<1>>>();
+        sdaaDeviceSynchronize();
+        test_c<<<1>>>();
+        sdaaDeviceSynchronize();
+        return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 线程组中所有SPE的ID                                     平均每次Broadcast操作的执行周期（拍）
+
+ 0, 1, 2, 3, 4, 5, 6, 7                           266
+
+ 0, 1, 8, 9, 16, 17, 24, 25                       322
+
+ 0, 1, 9, 10, 18, 19, 27, 28                      1362
+
+
+在本示例中，满足优化策略的条件时使用线程组进行阻塞型Broadcast数据搬运的性能，是不满足条件时的约5.12
+倍。
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                                  51
+性能优化手册-SDAA C篇                                                                                          性能优化
+
+
+
+
+4.2.4.2 非阻塞型Broadcast数据搬运
+本文主要介绍非阻塞型Broadcast数据搬运的性能优化策略和示例。
+
+ 优化策略
+
+如果搬运的数据与当前程序的后续操作不存在数据依赖时，使用非阻塞型接口（详情请参考《SDAA C编程指南》的非
+阻塞型Broadcast数据搬运章节）可以更好的进行流水排布，相对阻塞式接口（详情请参考《SDAA C编程指南》的
+阻塞型Broadcast数据搬运章节）性能更好。
+
+ 优化示例
+
+在设备端使用阻塞型广播接口将SPE0中的数据广播到SPE0~SPE7内然后执行与数据搬运无数据依赖的计算，与使用非
+阻塞型数据搬运接口同步执行将SPE0中的数据广播到SPE0~SPE7的数据搬运操作和与数据搬运无数据依赖的计算进行
+性能测试并比较。
+
+每个测试均调用10000次数据搬运和与搬运数据无依赖的计算操作，从而计算平均值以消除初次调用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版
+                                        计算核心频率                             数据搬运量
+ 本
+
+ v1.2.0                                 2.36GHz                            10KB
+
+
+ 测试代码
+
+  #include<sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define SIZE 2560
+  #define SIZE_CAL 256
+  #define TIME 10000
+
+
+  __device__ __attribute__((noinline)) void test_sync(int *dst, int *bc_dst, int *bc_src, int *d_cal)
+  {
+          // 设置线程组 SPE0~SPE7
+          ThreadGroup thread_group(0xff);
+          BroadcastHandle handle(&thread_group);
+          // 初始化目的地址数据
+          if (thread_group_is_included(thread_group, threadIdx)) {
+              memset(bc_dst, 0, SIZE * sizeof(int));
+          }
+
+
+          intv16 cal_src;
+          intv16 add = 1;
+          // 执行SPE0~SPE7同步
+          sync_threads(thread_group);
+
+
+
+
+文档版本：v2.0.2                                 版权所有 © 太初(无锡)电子科技有限公司                                          52
+性能优化手册-SDAA C篇                                                                                          性能优化
+
+
+
+
+      if (thread_group_is_included(thread_group, threadIdx)) {
+          // 统计性能数据
+          perf_start();
+
+
+          for (int time = 0; time < TIME; time++) {
+              broadcast(bc_dst, bc_src, SIZE * sizeof(int), 0, {0, 0}, 0, BroadcastSpmToSpm, handle);
+
+
+              // 异步进行与数据搬运无数据依赖的计算
+              for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+                  // 使用向量进行计算
+                  simd_load(cal_src, d_cal + (SIZE_CAL * threadIdx) + idx);
+                  intv16 tmp = cal_src + add;
+                  simd_store(tmp, d_cal + (SIZE_CAL * threadIdx) + idx);
+              }
+          }
+          // 统计性能数据
+          perf_stop();
+      }
+
+
+      // 将广播数据拷贝到SPE0~SPE7的目的地址
+      if (thread_group_is_included(thread_group, threadIdx)) {
+          memcpy(dst + threadIdx * SIZE, bc_dst, SIZE * sizeof(int));
+      }
+  }
+
+
+  __device__ __attribute__((noinline)) void test_async(int *dst, int *bc_dst, int *bc_src, int *d_cal)
+  {
+      // 设置线程组 SPE0~SPE7
+      ThreadGroup thread_group(0xff);
+      BroadcastHandle handle(&thread_group);
+      // 初始化目的地址数据
+      if (thread_group_is_included(thread_group, threadIdx)) {
+          memset(bc_dst, 0, SIZE * sizeof(int));
+      }
+
+
+      intv16 cal_src;
+      intv16 add = 1;
+      // 执行SPE0~SPE7同步
+      sync_threads(thread_group);
+
+
+      if (thread_group_is_included(thread_group, threadIdx)) {
+          // 统计性能数据
+          perf_start();
+
+
+          for (int time = 0; time < TIME; time++) {
+              // 发起非阻塞广播操作
+              broadcast_async(bc_dst, bc_src, SIZE * sizeof(int), 0, {0, 0}, 0, BroadcastSpmToSpm,
+  handle);
+
+
+              // 同步进行与数据搬运无数据依赖的计算
+              for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+                  // 使用向量进行计算
+                  simd_load(cal_src, d_cal + (SIZE_CAL * threadIdx) + idx);
+                  intv16 tmp = cal_src + add;
+                  simd_store(tmp, d_cal + (SIZE_CAL * threadIdx) + idx);
+              }
+              // 等待非阻塞广播操作完成
+              broadcast_wait(handle);
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                                              53
+性能优化手册-SDAA C篇                                                                                         性能优化
+
+
+
+
+          }
+          // 统计性能数据
+          perf_stop();
+      }
+
+
+      // 将广播数据拷贝到SPE0~SPE7的目的地址
+      if (thread_group_is_included(thread_group, threadIdx)) {
+          memcpy(dst + threadIdx * SIZE, bc_dst, SIZE * sizeof(int));
+      }
+  }
+
+
+  __global__ void test(int *d_sync, int *d_async, int *d_sync_cal, int *d_async_cal)
+  {
+      int *src = (int *)malloc(SIZE * sizeof(int));
+      int *dst = (int *)malloc(SIZE * sizeof(int));
+      if (threadIdx == 0) {
+          for (int i = 0; i < SIZE; i++) {
+               src[i] = i;
+          }
+      }
+      // 阻塞接口测试
+      test_sync(d_sync, dst, src, d_sync_cal);
+      // 非阻塞接口测试
+      test_async(d_async, dst, src, d_async_cal);
+
+
+      // 打印性能数据
+      perf_print();
+      free(dst);
+      free(src);
+  }
+
+
+  int main()
+  {
+      const int thread_cnt = 8;
+      int h_dst_async[SIZE * thread_cnt] = { 0 };
+      int h_dst_sync[SIZE * thread_cnt] = { 0 };
+      int h_sync_cal[SIZE_CAL * thread_cnt] = { 0 };
+      int h_async_cal[SIZE_CAL * thread_cnt] = { 0 };
+
+
+      for (int i = 0; i < SIZE_CAL * thread_cnt; i++) {
+          h_sync_cal[i] = i;
+          h_async_cal[i] = i;
+      }
+
+
+      // 设置使用0号SPA
+      sdaaSetDevice(0);
+      int *d_dst_async = NULL;
+      int *d_dst_sync = NULL;
+      int *d_sync_cal = NULL;
+      int *d_async_cal = NULL;
+
+
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void**)&d_dst_async, SIZE * thread_cnt * sizeof(int));
+      sdaaMalloc((void**)&d_dst_sync, SIZE * thread_cnt * sizeof(int));
+      sdaaMalloc((void**)&d_sync_cal, SIZE_CAL * thread_cnt * sizeof(int));
+      sdaaMalloc((void**)&d_async_cal, SIZE_CAL * thread_cnt * sizeof(int));
+
+
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(d_dst_async, h_dst_async, SIZE * thread_cnt * sizeof(int), sdaaMemcpyHostToDevice);
+
+
+
+
+文档版本：v2.0.2                          版权所有 © 太初(无锡)电子科技有限公司                                                54
+性能优化手册-SDAA C篇                                                                                         性能优化
+
+
+
+
+      sdaaMemcpy(d_dst_sync, h_dst_sync, SIZE * thread_cnt * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_sync_cal, h_sync_cal, SIZE_CAL * thread_cnt * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(d_async_cal, h_async_cal, SIZE_CAL * thread_cnt * sizeof(int), sdaaMemcpyHostToDevice);
+
+
+      // kernel函数调用
+      test<<<1>>>(d_dst_sync, d_dst_async, d_sync_cal, d_async_cal);
+
+
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // 将数据从Device端拷贝到Host端
+      sdaaMemcpy(h_dst_async, d_dst_async, SIZE * thread_cnt * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_dst_sync, d_dst_sync, SIZE * thread_cnt * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_sync_cal, d_sync_cal, SIZE_CAL * thread_cnt * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_async_cal, d_async_cal, SIZE_CAL * thread_cnt * sizeof(int), sdaaMemcpyDeviceToHost);
+
+
+      for (int i = 0; i < SIZE * thread_cnt; i++) {
+          if ((h_dst_sync[i] != i % SIZE) || (h_dst_async[i] != i % SIZE)) {
+              printf("h_dst_sync[%d] = %d, h_dst_async[%d] = %d\n", i, h_dst_sync[i], i, h_dst_async[i]);
+          }
+      }
+
+
+      for (int i = 0; i < SIZE_CAL * thread_cnt; i++) {
+          if ((h_sync_cal[i] != i + TIME) || (h_async_cal[i] != i + TIME)) {
+              printf("h_sync_cal[%d] = %d, h_async_cal[%d] = %d\n",
+                     i, h_sync_cal[i], i, h_async_cal[i]);
+          }
+      }
+
+
+      // 释放申请的Global内存
+      sdaaFree(d_sync_cal);
+      sdaaFree(d_async_cal);
+      sdaaFree(d_dst_async);
+      sdaaFree(d_dst_sync);
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 接口类型                                   数据计算总执行周期（拍）
+
+ 阻塞型接口                                  2301
+
+ 非阻塞型接口                                 1395
+
+
+在本示例中，使用非阻塞型接口，相对于阻塞型接口的数据计算总执行周期减少了906拍左右，性能是其约1.64倍。
+
+
+4.2.5 原子操作
+本文主要介绍原子操作的性能优化策略和示例。
+
+原子操作除atomic_inc（详情请参考《SDAA C编程指南》的atomic_inc章节）外，返回旧值的接口相比不返回旧
+值的接口会多一些操作，导致性能上的差别。
+
+
+
+
+文档版本：v2.0.2                          版权所有 © 太初(无锡)电子科技有限公司                                                  55
+性能优化手册-SDAA C篇                                                    性能优化
+
+
+
+
+ 优化策略
+
+当不需要返回指定地址上的旧值时，可以使用不返回旧值的原子操作接口提升性能：
+
+   使用atomic_add_noret（详情请参考《SDAA C编程指南》的atomic_add_noret章节）代替
+   atomic_add（详情请参考《SDAA C编程指南》的atomic_add章节）。
+
+   使用atomic_sub_noret（详情请参考《SDAA C编程指南》的atomic_sub_noret章节）代替atomic_sub
+   （详情请参考《SDAA C编程指南》的atomic_sub章节）。
+   使用atomic_cas_bool（详情请参考《SDAA C编程指南》的atomic_cas_bool章节）代替atomic_cas
+   （详情请参考《SDAA C编程指南》的atomic_cas章节）。
+
+ 优化示例
+
+同一SPA上的所有SPE分别使用有返回值的原子操作接口和没有返回值的原子操作接口，测试并比较以下操作的执行周
+期：
+
+   所有SPE均执行1000次atomic_add_noret（详情请参考《SDAA C编程指南》的atomic_add_noret章节）
+   和atomic_add（详情请参考《SDAA C编程指南》的atomic_add章节）。
+   所有SPE均执行1000次atomic_sub_noret（详情请参考《SDAA C编程指南》的atomic_sub_noret章节）
+   和atomic_sub（详情请参考《SDAA C编程指南》的atomic_sub章节）。
+   所有SPE均执行1000次atomic_cas_bool（详情请参考《SDAA C编程指南》的atomic_cas_bool章节）和
+   atomic_cas（详情请参考《SDAA C编程指南》的atomic_cas章节）。
+
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本                       计算核心频率
+
+ v1.2.0                                         2.36GHz
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  #include <sdaa_atomic.h>
+  using namespace sdaa;
+
+
+  __device__ int global_val;
+
+
+  // 使用atomic_add接口
+  __global__ void test_atomic_add()
+  {
+          // 数据初始化
+          const int step = 10;
+          if (threadIdx == 0) global_val = 0;
+          // 对每个线程执行1000次atomic_add
+          sync_threads();
+          perf_start();
+          for (int i = 0; i < 1000; i++) {
+              atomic_add(&global_val, step);
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司          56
+性能优化手册-SDAA C篇                                                           性能优化
+
+
+
+
+      }
+      perf_stop();
+
+
+      // 检查结果的正确性
+      sync_threads();
+      if (threadIdx != 0) return;
+      if (global_val != 1000 * threadDim * step) {
+          printf("Error: atomic operations not working correctly!\n");
+      }
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  // 使用atomic_add_noret接口
+  __global__ void test_atomic_add_noret()
+  {
+      // 数据初始化
+      const int step = 10;
+      if (threadIdx == 0) global_val = 0;
+      // 对每个线程执行1000次atomic_add_noret
+      sync_threads();
+      perf_start();
+      for (int i = 0; i < 1000; i++) {
+          atomic_add_noret(&global_val, step);
+      }
+      perf_stop();
+
+
+      // 检查结果的正确性
+      sync_threads();
+      if (threadIdx != 0) return;
+      if (global_val != 1000 * threadDim * step) {
+          printf("Error: atomic operations not working correctly!\n");
+      }
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  // 使用atomic_sub接口
+  __global__ void test_atomic_sub()
+  {
+      // 数据初始化
+      const int step = 10;
+      if (threadIdx == 0) global_val = 0;
+      // 对每个线程执行1000次atomic_sub
+      sync_threads();
+      perf_start();
+      for (int i = 0; i < 1000; i++) {
+          atomic_sub(&global_val, step);
+      }
+      perf_stop();
+
+
+      // 检查结果的正确性
+      sync_threads();
+      if (threadIdx != 0) return;
+      if (global_val != -1000 * threadDim * step) {
+          printf("Error: atomic operations not working correctly!\n");
+      }
+      // 输出性能数据
+      perf_print();
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司                 57
+性能优化手册-SDAA C篇                                                           性能优化
+
+
+
+
+  }
+
+
+  // 使用atomic_sub_noret接口
+  __global__ void test_atomic_sub_noret()
+  {
+      // 数据初始化
+      const int step = 10;
+      if (threadIdx == 0) global_val = 0;
+      // 对每个线程执行1000次atomic_sub_noret
+      sync_threads();
+      perf_start();
+      for (int i = 0; i < 1000; i++) {
+          atomic_sub_noret(&global_val, step);
+      }
+      perf_stop();
+
+
+      // 检查结果的正确性
+      sync_threads();
+      if (threadIdx != 0) return;
+      if (global_val != -1000 * threadDim * step) {
+          printf("Error: atomic operations not working correctly!\n");
+      }
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  // 使用atomic_cas接口
+  __global__ void test_atomic_cas()
+  {
+      // 数据初始化
+      const int step = 10;
+      if (threadIdx == 0) global_val = 0;
+      // 对每个线程执行1000次atomic_cas
+      sync_threads();
+      perf_start();
+      for (int i = 0; i < 1000; i++) {
+          atomic_cas(&global_val, step * i, step * (i + 1));
+      }
+      perf_stop();
+
+
+      // 检查结果的正确性
+      sync_threads();
+      if (threadIdx != 0) return;
+      if (global_val != 1000 * step) {
+          printf("Error: atomic operations not working correctly!\n");
+      }
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  // 使用atomic_cas_bool接口
+  __global__ void test_atomic_cas_bool()
+  {
+      // 数据初始化
+      const int step = 10;
+      if (threadIdx == 0) global_val = 0;
+      // 对每个线程执行1000次atomic_cas_bool
+      sync_threads();
+      perf_start();
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司                 58
+性能优化手册-SDAA C篇                                                           性能优化
+
+
+
+
+      for (int i = 0; i < 1000; i++) {
+          atomic_cas_bool(&global_val, step * i, step * (i + 1));
+      }
+      perf_stop();
+
+
+      // 检查结果的正确性
+      sync_threads();
+      if (threadIdx != 0) return;
+      if (global_val != 1000 * step) {
+          printf("Error: atomic operations not working correctly!\n");
+      }
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  int main()
+  {
+      // 设置使用2号SPA
+      sdaaSetDevice(2);
+      // kernel函数调用
+      test_atomic_add<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_atomic_add_noret<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_atomic_sub<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_atomic_sub_noret<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_atomic_cas<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_atomic_cas_bool<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 接口名称                                                平均每个SPE每次执行周期（拍）
+
+ atomic_add                                          125666
+
+ atomic_add_noret                                    7193
+
+ atomic_sub                                          126857
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司               59
+性能优化手册-SDAA C篇                                                    性能优化
+
+
+
+
+ 接口名称                                 平均每个SPE每次执行周期（拍）
+
+ atomic_sub_noret                     7259
+
+ atomic_cas                           15423
+
+ atomic_cas_bool                      7404
+
+
+在本示例中，测试平均每个SPE每次执行原子操作的执行周期：
+
+   atomic_add_noret（详情请参考《SDAA C编程指南》的atomic_add_noret章节）接口的性能是
+   atomic_add（详情请参考《SDAA C编程指南》的atomic_add章节）接口的约17.47倍。
+
+   atomic_sub_noret（详情请参考《SDAA C编程指南》的atomic_sub_noret章节）接口的性能是
+   atomic_sub（详情请参考《SDAA C编程指南》的atomic_sub章节）接口的约17.47倍。
+
+   atomic_cas_bool（详情请参考《SDAA C编程指南》的atomic_cas_bool章节）接口的性能是
+   atomic_cas（详情请参考《SDAA C编程指南》的atomic_cas章节）接口的约2.08倍。
+
+
+4.2.6 矩阵乘
+4.2.6.1 阻塞型矩阵乘
+矩阵乘阻塞型接口相比非阻塞型接口具有更少的使用限制和更高的通用性，但相应地性能也会差于非阻塞型接口。当
+满足一定对齐条件时，矩阵乘阻塞型接口的性能可以提升到接近非阻塞型接口的性能。
+
+ 优化策略
+
+当阻塞型矩阵乘接口满足一下条件时，性能较好：
+
+k（输入矩阵列数、权重矩阵行数）和n（权重矩阵列数）均是32的整数倍。
+
+当使用阻塞型矩阵乘接口时，预先将矩阵分块为32大小的整数倍，可以有效提高矩阵乘接口的性能。
+
+ 优化示例
+
+单一线程使用阻塞型矩阵乘接口计算SPM上矩阵的乘积时，测试以下两种情况的执行周期并比较：
+
+   k和n均为32的整数倍（m=128，k=64，n=32）。
+
+   k和n不是32的整数倍（m=128，k=60，n=30）。
+
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本           计算核心频率
+
+ v1.2.0                             2.36GHz
+
+
+
+
+文档版本：v2.0.2                 版权所有 © 太初(无锡)电子科技有限公司                    60
+性能优化手册-SDAA C篇                                                                  性能优化
+
+
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  #include <sdaa_matmul.h>
+  using namespace sdaa;
+
+
+  __device__ void matmul_perf(half *output, half *input, half *weight,
+                              unsigned int m, unsigned int k, unsigned int n)
+  {
+      // 获取性能数据起始值
+      perf_start();
+      for (int i = 0; i < 1000; i++) {
+          matmul(MatmulHalfToHalf, output, input, weight, m, k, n);
+      }
+      // 获取性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  __device__ void init_matrix(half *mat, unsigned int m, unsigned int n)
+  {
+      // 初始化矩阵数组
+      for (unsigned int i = 0; i < m; i++) {
+          for (unsigned int j = 0; j < n; j++) {
+              mat[i * n + j] = (half) m / (half) n;
+          }
+      }
+  }
+
+
+  __global__ void test_aligned()
+  {
+      if (threadIdx != 0) return;
+      const unsigned int m = 128, k = 64, n = 32;
+      half *input = (half *)malloc(m * k * sizeof(half));
+      half *weight = (half *)malloc(k * n * sizeof(half));
+      half *output = (half *)malloc(m * n * sizeof(half));
+      init_matrix(input, m, k);
+      init_matrix(weight, k, n);
+      matmul_perf(output, input, weight, m, k, n);
+      free(output);
+      free(weight);
+      free(input);
+  }
+
+
+  __global__ void test_unaligned()
+  {
+      if (threadIdx != 0) return;
+      const unsigned int m = 128, k = 60, n = 30;
+      half *input = (half *)malloc(m * k * sizeof(half));
+      half *weight = (half *)malloc(k * n * sizeof(half));
+      half *output = (half *)malloc(m * n * sizeof(half));
+      init_matrix(input, m, k);
+      init_matrix(weight, k, n);
+      matmul_perf(output, input, weight, m, k, n);
+      free(output);
+      free(weight);
+
+
+
+
+文档版本：v2.0.2                          版权所有 © 太初(无锡)电子科技有限公司                         61
+性能优化手册-SDAA C篇                                               性能优化
+
+
+
+
+      free(input);
+  }
+
+
+  int main()
+  {
+      // 设置使用0号SPA
+      sdaaSetDevice(2);
+      // kernel函数调用
+      test_aligned<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_unaligned<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 矩阵维度大小                               平均每次阻塞型矩阵乘接口的执行周期（拍）
+
+ m=128，k=64，n=32                      26993
+
+ m=128，k=60，n=30                      146818
+
+
+在本示例中，k和n非32整数倍（k=60，n=30）的矩阵乘数据量更小，但执行周期更长。k和n是32整数倍（k=64，
+n=32）的矩阵乘虽然多了一些数据，但性能却是非32整数倍的矩阵乘的5.43倍。出现这个性能差距的原因是非32整
+数倍的矩阵需要重新切分组装数据，耗时较多。
+
+
+
+
+4.2.6.2 非阻塞型矩阵乘
+本文主要介绍非阻塞型矩阵乘的性能优化策略和示例。
+
+ 优化策略
+
+如果搬运的数据与当前程序的后续操作不存在数据依赖时，使用非阻塞式接口（详情请参考《SDAA C编程指南》的非
+阻塞型矩阵乘章节）可以更好的进行流水排布，相对阻塞式接口（详情请参考《SDAA C编程指南》的阻塞型矩阵乘章
+节）性能更好。
+
+ 优化示例
+
+在设备端测试以下情况的数据计算总执行周期并比较：
+
+   使用阻塞型矩阵乘接口：先执行矩阵乘，再执行与矩阵乘无数据依赖的计算操作。
+
+   使用非阻塞型矩阵乘接口：同步执行矩阵乘和与矩阵乘无数据依赖的计算操作。
+
+
+
+
+文档版本：v2.0.2                      版权所有 © 太初(无锡)电子科技有限公司          62
+性能优化手册-SDAA C篇                                                                                             性能优化
+
+
+
+
+每个测试均调用10000次矩阵乘操作和与矩阵乘无数据依赖的计算操作，从而计算平均值以消除初次调用时cache影
+响。
+
+ 测试环境
+
+ TecoDriver和
+                                 计算核心频率                        输入矩阵大小                  权重矩阵大小
+ TecoToolKit版本
+
+ v1.2.0                          2.36GHz                       128 × 32                32 × 32
+
+
+ 测试代码
+
+  #include <sdaa_matmul.h>
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define WEIGHT_ROW 32
+  #define WEIGHT_COL 32
+  #define INTPUT_ROW 128
+  #define INTPUT_COL 32
+  #define OUTPUT_ROW 128
+  #define OUTPUT_COL 32
+  #define SIZE_CAL 256
+  #define TIME 10000
+
+
+  #define INTPUT_SIZE (INTPUT_ROW * INTPUT_COL * sizeof(short))
+  #define WEIGHT_SIZE (WEIGHT_ROW * WEIGHT_COL * sizeof(short))
+  #define OUTPUT_SIZE (OUTPUT_ROW * OUTPUT_COL * sizeof(short))
+
+
+
+  __device__ void test_sync(short *input, short *weight, short *output, int *cal)
+  {
+          short *ibuffer = (short *)malloc(INTPUT_SIZE);
+          short *wbuffer = (short *)malloc(WEIGHT_SIZE);
+          short *obuffer = (short *)malloc(OUTPUT_SIZE);
+
+
+          memcpy(ibuffer, input, INTPUT_SIZE);
+          memcpy(wbuffer, weight, WEIGHT_SIZE);
+          memcpy(obuffer, output, OUTPUT_SIZE);
+
+
+          intv16 cal_src;
+          intv16 add = 1;
+          // 统计性能数据
+          perf_start();
+
+
+          for (int time = 0; time < TIME; time++) {
+              matmul(MatmulShortToShort, obuffer, ibuffer, wbuffer, INTPUT_ROW, WEIGHT_ROW, OUTPUT_COL);
+              // 异步进行与数据搬运无数据依赖的计算
+              for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+                  // 使用向量进行计算
+                  simd_load(cal_src, cal + idx);
+                  intv16 tmp = cal_src + add;
+                  simd_store(tmp, cal + idx);
+              }
+
+
+
+
+文档版本：v2.0.2                                版权所有 © 太初(无锡)电子科技有限公司                                              63
+性能优化手册-SDAA C篇                                                                       性能优化
+
+
+
+
+      }
+      // 统计性能数据
+      perf_stop();
+
+
+      memcpy(output, obuffer, OUTPUT_SIZE);
+
+
+      free(ibuffer);
+      free(wbuffer);
+      free(obuffer);
+  }
+
+
+  __device__ void test_async(short *input, short *weight, short *output, int *cal)
+  {
+      short *ibuffer = (short *)malloc(INTPUT_SIZE);
+      short *wbuffer = (short *)malloc(WEIGHT_SIZE);
+      short *obuffer = (short *)malloc(OUTPUT_SIZE);
+
+
+      memcpy(ibuffer, input, INTPUT_SIZE);
+      memcpy(wbuffer, weight, WEIGHT_SIZE);
+      memcpy(obuffer, output, OUTPUT_SIZE);
+
+
+      MatmulHandle handle;
+      intv16 cal_src;
+      intv16 add = 1;
+      // 统计性能数据
+      perf_start();
+
+
+      for (int time = 0; time < TIME; time++) {
+          // 初始化handle
+          matmul_init(handle, MatmulShortToShort);
+          // 加载权重矩阵
+          matmul_load_weight(handle, wbuffer, MatmulK32, MatmulN32);
+          // 加载输入矩阵并与权重矩阵进行矩阵乘运算
+          matmul_compute(handle, ibuffer, INTPUT_ROW, MatmulK32);
+          // 将矩阵乘运算结果写回到指定地址
+          matmul_store(handle, obuffer, OUTPUT_ROW, MatmulN32);
+
+
+          for (int idx = 0; idx < SIZE_CAL; idx += 16) {
+              // 使用向量进行计算
+              simd_load(cal_src, cal + idx);
+              intv16 tmp = cal_src + add;
+              simd_store(tmp, cal + idx);
+          }
+          // 等待矩阵乘写回操作完成
+          matmul_wait(handle);
+      }
+      // 统计性能数据
+      perf_stop();
+
+
+      memcpy(output, obuffer, OUTPUT_SIZE);
+
+
+      free(ibuffer);
+      free(wbuffer);
+      free(obuffer);
+  }
+
+
+  __global__ void test(short *input, short *weight, short *output_sync,
+                        short *output_async, int *cal_sync, int *cal_async)
+  {
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司                             64
+性能优化手册-SDAA C篇                                                                                  性能优化
+
+
+
+
+      if (threadIdx != 0) {
+          return;
+      }
+
+
+      // 测试同步接口
+      test_sync(input, weight, output_sync, cal_sync);
+      // 测试异步接口
+      test_async(input, weight, output_async, cal_async);
+
+
+      perf_print();
+  }
+
+
+  // 初始化数组
+  void SetArrayVal(short *array, int num, short val) {
+      for (int i = 0; i < num; i++) {
+          array[i] = val;
+      }
+  }
+
+
+  void entry(short *h_intput, short *h_weight, short *h_output_sync,
+              short *h_output_async, int *h_cal_sync, int *h_cal_async)
+  {
+      // 设置使用0号SPA
+      sdaaSetDevice(0);
+      short *dev_intput = NULL;
+      short *dev_weight = NULL;
+      short *dev_output_sync = NULL;
+      short *dev_output_async = NULL;
+      int *dev_cal_sync = NULL;
+      int *dev_cal_async = NULL;
+
+
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void **)(&dev_intput), INTPUT_SIZE);
+      sdaaMalloc((void **)(&dev_weight), WEIGHT_SIZE);
+      sdaaMalloc((void **)(&dev_output_sync), OUTPUT_SIZE);
+      sdaaMalloc((void **)(&dev_output_async), OUTPUT_SIZE);
+      sdaaMalloc((void **)(&dev_cal_sync), SIZE_CAL * sizeof(int));
+      sdaaMalloc((void **)(&dev_cal_async), SIZE_CAL * sizeof(int));
+
+
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(dev_intput, h_intput, INTPUT_SIZE, sdaaMemcpyHostToDevice);
+      sdaaMemcpy(dev_weight, h_weight, WEIGHT_SIZE, sdaaMemcpyHostToDevice);
+      sdaaMemcpy(dev_output_sync, h_output_sync, OUTPUT_SIZE, sdaaMemcpyHostToDevice);
+      sdaaMemcpy(dev_output_async, h_output_async, OUTPUT_SIZE, sdaaMemcpyHostToDevice);
+      sdaaMemcpy(dev_cal_sync, h_cal_sync, SIZE_CAL * sizeof(int), sdaaMemcpyHostToDevice);
+      sdaaMemcpy(dev_cal_async, h_cal_async, SIZE_CAL * sizeof(int), sdaaMemcpyHostToDevice);
+
+
+      // kernel函数调用
+      test<<<1>>>(dev_intput, dev_weight, dev_output_sync, dev_output_async,
+                    dev_cal_sync,   dev_cal_async);
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+
+
+      // 将数据从Device端拷贝到Host端
+      sdaaMemcpy(h_output_sync, dev_output_sync, OUTPUT_SIZE, sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_output_async, dev_output_async, OUTPUT_SIZE, sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_cal_sync, dev_cal_sync, SIZE_CAL * sizeof(int), sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(h_cal_async, dev_cal_async, SIZE_CAL * sizeof(int), sdaaMemcpyDeviceToHost);
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                                      65
+性能优化手册-SDAA C篇                                                                                性能优化
+
+
+
+
+      // 释放申请的Global内存
+      sdaaFree(dev_intput);
+      sdaaFree(dev_weight);
+      sdaaFree(dev_output_sync);
+      sdaaFree(dev_output_async);
+      sdaaFree(dev_cal_sync);
+      sdaaFree(dev_cal_async);
+  }
+
+
+  int main()
+  {
+      short *h_intput = (short *)malloc(INTPUT_SIZE);
+      short *h_weight = (short *)malloc(WEIGHT_SIZE);
+      short *h_output_sync = (short *)malloc(OUTPUT_SIZE);
+      short *h_output_async = (short *)malloc(OUTPUT_SIZE);
+
+
+      int *h_cal_sync = (int *)malloc(SIZE_CAL * sizeof(int));
+      int *h_cal_async = (int *)malloc(SIZE_CAL * sizeof(int));
+
+
+      SetArrayVal(h_intput, INTPUT_ROW * INTPUT_COL, 1);
+      SetArrayVal(h_weight, WEIGHT_ROW * WEIGHT_COL, 2);
+      memset(h_output_sync, 0, OUTPUT_SIZE);
+      memset(h_output_async, 0, OUTPUT_SIZE);
+      memset(h_cal_sync, 0, SIZE_CAL * sizeof(int));
+      memset(h_cal_async, 0, SIZE_CAL * sizeof(int));
+      const short REFEROUT = 64;
+
+
+      entry(h_intput, h_weight, h_output_sync, h_output_async, h_cal_sync, h_cal_async);
+
+
+      for (int row = 0; row < OUTPUT_ROW; row++) {
+          for (int col = 0; col < OUTPUT_COL; col++) {
+               if ((h_output_sync[row * OUTPUT_COL + col] != REFEROUT) ||
+                   (h_output_async[row * OUTPUT_COL + col] != REFEROUT)) {
+                   printf("h_output_sync[%d] = %d, h_output_async[%d] = %d\n",
+                           row * OUTPUT_COL + col, h_output_sync[row * OUTPUT_COL + col],
+                           row * OUTPUT_COL + col, h_output_async[row * OUTPUT_COL + col]);
+               }
+          }
+      }
+
+
+      for (int i = 0; i < SIZE_CAL; i++) {
+          if ((h_cal_sync[i] != TIME) || (h_cal_async[i] != TIME)) {
+               printf("h_cal_sync[%d] = %d, h_cal_async[%d] = %d\n",
+                      i, h_cal_sync[i], i, h_cal_async[i]);
+          }
+      }
+
+
+      free(h_intput);
+      free(h_weight);
+      free(h_output_sync);
+      free(h_output_async);
+      free(h_cal_sync);
+      free(h_cal_async);
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司                                      66
+性能优化手册-SDAA C篇                                                性能优化
+
+
+
+
+ 矩阵乘类型                               计算总执行周期（拍）
+
+ 阻塞型矩阵乘                              3347
+
+ 非阻塞型矩阵乘                             1453
+
+
+在本示例中，使用非阻塞型矩阵乘，相对于使用阻塞型矩阵乘的计算总执行周期减少了1894拍左右，性能是其约2.30
+倍。
+
+
+4.2.7 向量操作
+4.2.7.1 性能数据
+本文主要介绍不同向量接口的性能数据。
+
+
+     说明：
+
+     本文的向量接口性能数值会有10%左右的波动，具体请以实际情况为准。
+
+
+使用SIMD接口，源地址和目的地址的数据均位于SPM存储空间，各向量接口的性能如下：
+
+ 接口类别            接口名称                       接口性能（执行周期，单位：拍）
+
+                 simd_load                  12
+
+                 simd_loadu                 16
+
+                 simd_store                 7
+
+ 装入/存储类操作        simd_storeu                18
+
+                 simd_load_widen            12
+
+                 simd_store_narrow          7
+
+                 simd_set                   3
+
+ 标量扩展类操作         simd_stretch               10
+
+                 simd_seleq                 15
+
+ 比较选择类操作         simd_selle                 15
+
+                 simd_sellt                 15
+
+
+
+
+文档版本：v2.0.2                   版权所有 © 太初(无锡)电子科技有限公司              67
+性能优化手册-SDAA C篇                                             性能优化
+
+
+
+
+ 接口类别            接口名称                    接口性能（执行周期，单位：拍）
+
+                 simd_concat             10
+ 元素整理类操作
+                 simd_ins                7
+
+ 符号拷贝类操作         simd_copy_sign          10
+
+                 simd_cvt_f2h            5
+ 类型转换类操作
+                 simd_cvt_h2f            5
+
+                 simd_fma                15
+
+                 simd_fms                15
+ 融合乘加类操作
+                 simd_fnma               15
+
+                 simd_fnms               15
+
+                 simd_add                12
+
+                 simd_sub                12
+
+                 simd_mul                12
+
+ 算数运算类操作         simd_div                1723
+
+                 simd_mod                1670
+
+                 simd_fabs               3
+
+                 simd_redsum             3
+
+
+
+
+文档版本：v2.0.2                  版权所有 © 太初(无锡)电子科技有限公司            68
+性能优化手册-SDAA C篇                                             性能优化
+
+
+
+
+ 接口类别            接口名称                    接口性能（执行周期，单位：拍）
+
+                 simd_cmplt              12
+
+                 simd_cmple              12
+
+                 simd_cmpgt              12
+
+                 simd_cmpge              12
+
+ 比较类操作           simd_cmpeq              12
+
+                 simd_cmpne              15
+
+                 simd_isnan              21
+
+                 simd_max                22
+
+                 simd_min                22
+
+                 simd_and                100
+
+                 simd_or                 16
+ 逻辑运算类操作
+                 simd_not                11
+
+                 simd_neg                11
+
+                 simd_band               10
+
+                 simd_bxor               10
+
+ 按位运算类操作         simd_bor                10
+
+                 simd_bnor               11
+
+                 simd_bnot               10
+
+
+
+4.2.7.2 优化策略
+本文主要介绍向量操作的性能优化策略和示例。
+
+ 优化策略
+
+在使用SIMD接口时，源地址和目的地址的数据均位于SPM存储空间，性能更好。
+
+ 优化示例
+
+
+
+
+文档版本：v2.0.2                  版权所有 © 太初(无锡)电子科技有限公司            69
+性能优化手册-SDAA C篇                                                         性能优化
+
+
+
+
+使用simd_load（详情请参考《SDAA C编程指南》的simd_load章节）接口，测试并比较以下两种情况，一个SPE
+执行1000次的执行周期：
+
+   源地址和目的地址的数据均位于SPM存储空间。
+
+   源地址和目的地址的数据均位于Global存储空间。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本                                    计算核心频率
+
+ v1.2.0                                                      2.36GHz
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+  // 在Global内存空间定义变量
+  volatile __device__ intv16 glb_vdata;
+
+
+  __device__ void test_simd_load_in_global(int *glb_data)
+  {
+          // 收集性能数据起始值
+          perf_start();
+          for (int i = 0; i < 1000; i++){
+              simd_load(glb_vdata, glb_data);
+          }
+          // 收集性能数据结束值
+          perf_stop();
+  }
+
+
+  __device__ void test_simd_load_in_spm(int *glb_data)
+  {
+          int *spm_data = (int *)malloc(16 * sizeof(int));
+          memcpy(spm_data, glb_data, 16 * sizeof(int));
+          volatile intv16 spm_vdata;
+
+
+          perf_start();
+          for (int i = 0; i < 1000; i++) {
+              simd_load(spm_vdata, spm_data);
+          }
+          perf_stop();
+
+
+          free(spm_data);
+  }
+
+
+  __global__ void test_func(int *glb_data)
+  {
+          if (threadIdx != 0) return;
+
+
+          test_simd_load_in_global(glb_data);
+          test_simd_load_in_spm(glb_data);
+          // 输出性能数据
+          perf_print();
+
+
+
+
+文档版本：v2.0.2                                 版权所有 © 太初(无锡)电子科技有限公司         70
+性能优化手册-SDAA C篇                                                                      性能优化
+
+
+
+
+  }
+
+
+  int main()
+  {
+      // 设置使用0号SPA
+      sdaaSetDevice(0);
+      int h_glb_data[16] = { 0 };
+
+
+      for (int i = 0; i < 16; i++){
+          h_glb_data[i] = i;
+      }
+
+
+      int *glb_data = NULL;
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void **)&glb_data, 16 * sizeof(int));
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(glb_data, h_glb_data, 16 * sizeof(int), sdaaMemcpyHostToDevice);
+
+
+      // kernel函数调用
+      test_func<<<1>>>(glb_data);
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+
+
+      // 释放申请的Global内存
+      sdaaFree(glb_data);
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+                   接口性能（执行周期，单位：拍）                                接口性能（执行周期，单位：拍）
+ 接口名称              （源地址和目的地址的数据均位于Global存                         （源地址和目的地址的数据均位于SPM存储
+                   储空间）                                           空间）
+
+ simd_load         758                                            12
+
+
+在本示例中，源地址和目的地址的数据均位于SPM存储空间，比源地址和目的地址的数据均位于Global存储空间，向
+量接口性能快约63倍。
+
+
+
+
+4.3 数学函数
+4.3.1 精度和性能数据
+本文主要介绍不同数学函数接口的精度和性能。
+
+
+      说明：
+
+      本文的接口性能数值会有10%左右的波动，具体请以实际情况为准。
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司                              71
+性能优化手册-SDAA C篇                                                              性能优化
+
+
+
+
+ 基础函数
+
+                                                           接口性能（执行周期，单
+ 类别                 函数名           精度
+                                                           位：拍）
+
+                                  [-103.97, 88.72]内最大
+              双精度   exp(x)                                 151
+                                  ULP为150
+
+              单精度   expf(x)       最大ULP为1                  158
+
+                    simd_exp(x
+              向量                  最大ULP为5                  205
+ 指数函数               )
+
+                                       [-19.4, 88.72]内最大
+                                                                  满足128个输入全部小
+                                       ULP为197
+                    simd_exp12                                    于2.77时：523
+              128
+                    8(x)               否则最大绝对误差为
+                                                                  否则：1214
+                                       4e-9
+
+
+              双精度   expm1(x)      最大ULP为1                  330
+ 指数减一的函
+ 数
+              单精度   expm1f(x)     最大ULP为1                  352
+
+              双精度   log(x)        最大ULP为4                  218
+
+              单精度   logf(x)       最大ULP为4                  188
+ 对数函数
+ （以e为底）       向量    simd_log(x)   最大ULP为5                  218
+
+                    simd_log12
+              128                 最大ULP为5                  1145
+                    8(x)
+
+ 加一的对数函       双精度   log1p(x)      最大ULP为1                  334
+ 数（以e为
+ 底）           单精度   log1pf(x)     最大ULP为1                  356
+
+              双精度   log2(x)       最大ULP为6                  217
+
+              单精度   log2f(x)      最大ULP为5                  166
+
+ 对数函数（以
+                    simd_log2(
+ 2为底）         向量                  最大ULP为6                  197
+                    x)
+
+                    simd_log2_
+              128                 最大ULP为6                  1146
+                    128(x)
+
+
+
+
+文档版本：v2.0.2              版权所有 © 太初(无锡)电子科技有限公司                                  72
+性能优化手册-SDAA C篇                                                                   性能优化
+
+
+
+
+                                                                    接口性能（执行周期，单
+ 类别                       函数名                  精度
+                                                                    位：拍）
+
+              双精度         sqrt(x)              最大ULP为0              45
+
+              单精度         sqrtf(x)             最大ULP为0              31
+ 平方根函数
+                          simd_sqrt(x
+              向量                               最大ULP为2              98
+                          )
+
+              双精度         1/x                  最大ULP为0              47
+
+              单精度         1/x                  最大ULP为0              32
+
+ 倒数函数                     simd_vinv(x
+              向量                               最大ULP为1              69
+                          )
+
+                          simd_vinv12
+              128                              最大ULP为1              176
+                          8(x)
+
+              双精度         isnan(x)             最大ULP为0              351
+ 判断是否非数
+ 函数
+              单精度         isnan(x)             最大ULP为0              351
+
+              双精度         fabs(x)              最大ULP为0              14
+ 绝对值函数
+              单精度         fabsf(x)             最大ULP为0              14
+
+              双精度         pow(x)               最大ULP为1              1579
+ 幂函数
+              单精度         powf(x)              最大ULP为3              1602
+
+
+ 激活函数和误差函数
+
+                                                                           接口性能（执行周
+ 类别                                  函数名                 精度
+                                                                           期，单位：拍）
+
+                    双精度              tanh(x)             最大ULP为3           761
+
+                    单精度              tanhf(x)            最大ULP为2           251
+
+ 双曲正切函数
+                    向量               simd_tanh(x)        最大ULP为32          251
+
+                                     simd_tanh128(x
+                    128                                  最大ULP为32          635
+                                     )
+
+
+
+
+文档版本：v2.0.2                     版权所有 © 太初(无锡)电子科技有限公司                                 73
+性能优化手册-SDAA C篇                                                                性能优化
+
+
+
+
+                                                                  接口性能（执行周
+ 类别                         函数名                精度
+                                                                  期，单位：拍）
+
+                                                                  [1.25, 5.999)内：
+                  双精度       erf(x)             最大ULP为1
+                                                                  1079，否则：184
+
+                                                                  [1.25, 5.999)内：
+                  单精度       erff(x)            最大ULP为1
+ 高斯误差函数                                                           1103，否则：206
+
+                  向量        simd_erf(x)        最大ULP为17           253
+
+                  128       simd_erf128(x)     最大ULP为17           1083
+
+                                               [-10,10]内最大ULP
+                  双精度       sigmoid(x)         为124，否则最大          219
+                                               绝对误差为5e-5
+
+                                               [-10,10]内最大ULP
+                  单精度       sigmoidf(x)        为3，否则最大绝           205
+                                               对误差为5e-5
+ sigmoid函数
+                                               [-10,10]内最大ULP
+                            simd_sigmoid(x
+                  向量                           为8，否则最大绝           204
+                            )
+                                               对误差为1e-6
+
+                                               [-10,10]内最大ULP
+                            simd_sigmoid12
+                  128                          为8，否则最大绝           506
+                            8(x)
+                                               对误差为1e-6
+
+
+ 三角函数、反三角函数
+
+                                                            接口性能（执行周期，单
+ 类别                       函数名                精度
+                                                            位：拍）
+
+                 双精度      sin(x)             最大ULP为1        请以实际情况为准
+
+                 单精度      sinf(x)            最大ULP为1        请以实际情况为准
+ 正弦函数
+                 向量       simd_sin(x)        最大ULP为2        140
+
+                 128      simd_sin128(x)     最大ULP为2        473
+
+
+
+
+文档版本：v2.0.2             版权所有 © 太初(无锡)电子科技有限公司                                       74
+性能优化手册-SDAA C篇                                                              性能优化
+
+
+
+
+                                                                 接口性能（执行周期，单
+ 类别                      函数名                精度
+                                                                 位：拍）
+
+                 双精度     cos(x)             最大ULP为1              请以实际情况为准
+
+                 单精度     cosf(x)            最大ULP为1              请以实际情况为准
+
+                                            [-2000,2000]内
+                                            最大ULP为2，否
+                 向量      simd_cos(x)                             278
+ 余弦函数                                       则最大绝对误差
+                                            为1.28e-7
+
+                                            [-2000,2000]内
+                         simd_cos128(x      最大ULP为2，否
+                 128                                             1774
+                         )                  则最大绝对误差
+                                            为1.28e-7
+
+                 双精度     tan(x)             最大ULP为1              请以实际情况为准
+ 正切函数
+                 单精度     tanf(x)            最大ULP为1              请以实际情况为准
+
+                 双精度     atan(x)            最大ULP为2              208
+
+                 单精度     atanf(x)           最大ULP为2              214
+
+ 反正切函数
+                 向量      simd_atan(x)       最大ULP为5              148
+
+                         simd_atan128(
+                 128                        最大ULP为5              523
+                         x)
+
+
+ 浮点取整函数
+
+                                                            接口性能（执行周期，单位：
+ 类别                    函数名             精度
+                                                            拍）
+
+                 双精度   ceil(x)         最大ULP为0              77
+ 向上取整函数
+                 单精度   ceilf(x)        最大ULP为0              99
+
+
+
+
+文档版本：v2.0.2            版权所有 © 太初(无锡)电子科技有限公司                                   75
+性能优化手册-SDAA C篇                                             性能优化
+
+
+
+
+                                                接口性能（执行周期，单位：
+ 类别                     函数名           精度
+                                                拍）
+
+                 双精度    floor(x)      最大ULP为0   73
+
+                 单精度    floorf(x)     最大ULP为0   95
+
+
+ 向下取整函数                 simd_floor(
+                 向量                   最大ULP为0   57
+                        x)
+
+                        simd_floor1
+                 128                  最大ULP为0   205
+                        28(x)
+
+                 双精度    round(x)      最大ULP为0   72
+
+                 单精度    roundf(x)     最大ULP为0   99
+
+ 就近取整函数                 simd_roun
+                 向量                   最大ULP为0   53
+                        d(x)
+
+                        simd_roun
+                 128                  最大ULP为0   131
+                        d128(x)
+
+                        simd_trunc
+                 向量                   最大ULP为0   47
+                        (x)
+ 向零取整函数
+                        simd_trunc
+                 128                  最大ULP为0   121
+                        128(x)
+
+
+ 二元函数
+
+                                                 接口性能（执行周期，单
+ 类别                    函数名            精度
+                                                 位：拍）
+
+                 双精度   fma(x)         最大ULP为0    54
+ 浮点乘加函数
+                 单精度   fmaf(x)        最大ULP为0    39
+
+                 双精度   fmax(x)        最大ULP为0    101
+ 最大值函数
+                 单精度   fmaxf(x)       最大ULP为0    124
+
+                 双精度   fmin(x)        最大ULP为0    101
+ 最小值函数
+                 单精度   fminf(x)       最大ULP为0    129
+
+
+
+
+文档版本：v2.0.2            版权所有 © 太初(无锡)电子科技有限公司                    76
+性能优化手册-SDAA C篇                                                      性能优化
+
+
+
+
+4.3.2 优化策略
+SDAA C提供的数学函数接口，除标量（单精度（详情请参考《SDAA C编程指南》的单精度标量接口章节）、双精度
+（详情请参考《SDAA C编程指南》的双精度标量接口章节））外还提供了向量接口和128接口（详情请参考《SDAA
+C编程指南》的向量接口章节）：
+
+
+ 接口类别         输入类型         输出类型         说明
+
+ 单精度标         单精度浮点
+                           单精度浮点数       与标准库一致，计算一个单精度浮点数的数学函数值。
+ 量接口          数
+
+ 双精度标         双精度浮点
+                           双精度浮点数       与标准库一致，计算一个双精度浮点数的数学函数值。
+ 量接口          数
+
+              floatv16向    floatv16向量
+ 向量接口                                   利用SIMD指令，一次计算16个单精度浮点数的数学函数值。
+              量类型          类型
+
+                                        利用SIMD指令和循环展开，一次计算128个单精度浮点数的数学
+ 128接口        float型指针     无
+                                        函数值，并返回覆盖原地址上数据。
+
+
+ 优化策略
+
+需要计算大量连续的单精度浮点数时，采用向量接口或者128接口相比使用单精度标量接口计算每个元素，性能更好。
+
+ 优化示例
+
+以指数函数exp为例，使用一个SPE对51200个单精度浮点数进行计算，测试并比较以下三种接口的执行周期：
+
+   单精度标量接口expf（详情请参考《SDAA C编程指南》的expf章节）。
+
+   向量接口simd_exp（详情请参考《SDAA C编程指南》的simd_exp章节）。
+
+   128接口simd_exp128（详情请参考《SDAA C编程指南》的simd_exp128章节）。
+
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本                    计算核心频率
+
+ v1.2.0                                      2.36GHz
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define NUM 51200
+  #define MIN -80
+  #define MAX 80
+
+
+
+
+文档版本：v2.0.2                      版权所有 © 太初(无锡)电子科技有限公司                    77
+性能优化手册-SDAA C篇                                                    性能优化
+
+
+
+
+  __device__ void init_arr(float *arr)
+  {
+      for (int i = 0; i < NUM; i++) {
+          arr[i] = ((float)(MAX - MIN) / (float)NUM) * i + MIN;
+      }
+  }
+
+
+  __global__ void test_expf()
+  {
+      if (threadIdx != 0) return;
+      // 在SPM内存中申请一段空间
+      float *arr = (float *)malloc(NUM * sizeof(float));
+      init_arr(arr);
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < NUM; i++) {
+          arr[i] = expf(arr[i]);
+      }
+      // 收集性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+      // 释放申请的SPM内存空间
+      free(arr);
+  }
+
+
+  __global__ void test_simd_exp()
+  {
+      if (threadIdx != 0) return;
+      // 在SPM内存中申请一段空间
+      float *arr = (float *)malloc(NUM * sizeof(float));
+      init_arr(arr);
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < NUM; i += 16) {
+          floatv16 input;
+          simd_load(input, arr + i);
+          input = simd_exp(input);
+          simd_store(input, arr + i);
+      }
+      // 收集性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+      // 释放申请的SPM内存空间
+      free(arr);
+  }
+
+
+  __global__ void test_simd_exp128()
+  {
+      if (threadIdx != 0) return;
+      // 在SPM内存中申请一段空间
+      float *arr = (float *)malloc(NUM * sizeof(float));
+      init_arr(arr);
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < NUM; i += 128) {
+          simd_exp128(arr + i);
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司        78
+性能优化手册-SDAA C篇                                                           性能优化
+
+
+
+
+      }
+      // 收集性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+      // 释放申请的SPM内存空间
+      free(arr);
+  }
+
+
+  int main()
+  {
+      // 设置使用2号SPA
+      sdaaSetDevice(2);
+      // kernel函数调用
+      test_expf<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_simd_exp<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      // kernel函数调用
+      test_simd_exp128<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 接口名称                       51200次数学函数计算的指令周期（拍）          平均每次数学函数计算的指令周期（拍）
+
+ 单精度标量接口 expf               7885552                       154.02
+
+ 向量接口 simd_exp              650860                        12.71
+
+ 128接口 simd_exp128          354080                        6.92
+
+
+在本示例中，使用向量接口的性能是标量接口的约12.11倍，使用128接口的性能是标量接口的约22.26倍。
+
+
+
+
+4.4 程序编译
+
+
+
+
+4.4.1 循环展开
+本文主要介绍使用循环展开的方式提高性能的优化策略和示例。
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司                 79
+性能优化手册-SDAA C篇                                                  性能优化
+
+
+
+
+ 原理介绍
+
+循环展开是在编译程序中，通过减少循环迭代次数进而提高程序执行速度的方法。
+
+其核心思想是将操作对象线性化，在一次迭代中访问线性数据中的一组而非单个，使程序在执行更少的迭代次数后，
+能够有效降地低循环的开销。同时，循环展开可以减少指令的相关性，增加循环体内语句并发执行的可能性，有助于
+进行更好的指令调度；使用循环展开还可以减少分支预测失败的可能性。但循环展开也会使代码膨胀；代码的可读性
+降低，以及寄存器压力增大。
+
+循环展开可以在程序编写时完成，也可以由编译器自动完成。由于编译器可以更好地了解目标体系结构的工作原理，
+并能够在有益的情况下展开循环。因此，建议您使用编译器自动展开，如果您手动展开，建议您在测试手动循环展开
+确实有效再进行。
+
+ 优化策略
+
+通过以下编译指示，控制是否需启用循环展开功能，以及展开的次数：
+
+     #pragma clang loop unroll(enable) ：启用基于自动诊断的展开功能。
+
+     #pragma clang loop unroll(disable) ：禁用基于自动诊断的展开功能。
+
+     #pragma clang loop unroll(full) ：完全展开一个循环。
+
+     #pragma clang loop unroll_count(N) ：显式指定展开N次，其中N是编译时的常量。
+
+
+ 优化示例
+
+使用不同的编译指示，在 for 循环内对1000个整型数进行“+1”的操作，测试以下情况的执行周期并比较：
+
+   不做任何操作
+
+     #pragma clang loop unroll(enable) ：启用基于自动诊断的展开功能。
+
+     #pragma clang loop unroll(disable) ：禁用基于自动诊断的展开功能。
+
+     #pragma clang loop unroll(full) ：完全展开一个循环。
+
+     #pragma clang loop unroll_count(1) ：显式指定展开1次。
+
+     #pragma clang loop unroll_count(2) ：显式指定展开2次。
+
+     #pragma clang loop unroll_count(3) ：显式指定展开3次。
+
+     #pragma clang loop unroll_count(4) ：显式指定展开4次。
+
+     #pragma clang loop unroll_count(5) ：显式指定展开5次。
+
+     #pragma clang loop unroll_count(6) ：显式指定展开6次。
+
+     #pragma clang loop unroll_count(7) ：显式指定展开7次。
+
+     #pragma clang loop unroll_count(8) ：显式指定展开8次。
+
+     #pragma clang loop unroll_count(9) ：显式指定展开9次。
+
+
+
+文档版本：v2.0.2                版权所有 © 太初(无锡)电子科技有限公司                   80
+性能优化手册-SDAA C篇                                                       性能优化
+
+
+
+
+      #pragma clang loop unroll_count(10) ：显式指定展开10次。
+
+每个测例均调用10000次“+1”的操作计算平均值以消除初次调用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本                             计算核心频率
+
+ v1.2.0                                               2.36GHz
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define N 10000
+  #define SIZE 1000
+
+
+  __device__ void init_data(int *data)
+  {
+          for (int i = 0; i < SIZE; i++) {
+              data[i] = i;
+          }
+  }
+
+
+  __device__ void check_result(int *data)
+  {
+          for (int i = 0; i < SIZE; i++) {
+              if (data[i] != i + N) {
+                    printf("calculate error\n");
+              }
+          }
+  }
+
+
+  __device__ void loop_unroll_do_nothing()
+  {
+          int data[SIZE];
+          init_data(data);
+
+
+          // 收集性能数据起始值
+          perf_start();
+          for (int i = 0; i < N; i++) {
+              for (int j = 0; j < SIZE; j++) {
+                    data[j] = data[j] + 1;
+              }
+          }
+          // 收集性能数据结束值
+          perf_stop();
+
+
+          check_result(data);
+          return;
+  }
+
+
+  __device__ void loop_unroll_enable()
+
+
+
+
+文档版本：v2.0.2                                  版权所有 © 太初(无锡)电子科技有限公司      81
+性能优化手册-SDAA C篇                                                   性能优化
+
+
+
+
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll(enable)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+  }
+
+
+  __device__ void loop_unroll_disable()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll(disable)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+  }
+
+
+  __device__ void loop_unroll_full()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll(full)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+  }
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司      82
+性能优化手册-SDAA C篇                                                   性能优化
+
+
+
+
+  __device__ void loop_unroll_count_1()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll_count(1)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+  }
+
+
+  __device__ void loop_unroll_count_2()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll_count(2)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+  }
+
+
+  __device__ void loop_unroll_count_3()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll_count(3)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+  }
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司      83
+性能优化手册-SDAA C篇                                                   性能优化
+
+
+
+
+  __device__ void loop_unroll_count_4()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll_count(4)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+  }
+
+
+  __device__ void loop_unroll_count_5()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll_count(5)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+  }
+
+
+  __device__ void loop_unroll_count_6()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll_count(6)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司      84
+性能优化手册-SDAA C篇                                                   性能优化
+
+
+
+
+  }
+
+
+  __device__ void loop_unroll_count_7()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll_count(7)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+  }
+
+
+  __device__ void loop_unroll_count_8()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll_count(8)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+  }
+
+
+  __device__ void loop_unroll_count_9()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll_count(9)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司      85
+性能优化手册-SDAA C篇                                                   性能优化
+
+
+
+
+      return;
+  }
+
+
+  __device__ void loop_unroll_count_10()
+  {
+      int data[SIZE];
+      init_data(data);
+
+
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          #pragma clang loop unroll_count(10)
+          for (int j = 0; j < SIZE; j++) {
+                data[j] = data[j] + 1;
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+
+
+      check_result(data);
+      return;
+  }
+
+
+  __global__ void call_kernel()
+  {
+      if (threadIdx != 0) {
+          return;
+      }
+      loop_unroll_do_nothing();
+      loop_unroll_enable();
+      loop_unroll_disable();
+      loop_unroll_full();
+      loop_unroll_count_1();
+      loop_unroll_count_2();
+      loop_unroll_count_3();
+      // 输出性能数据
+      perf_print();
+      loop_unroll_count_4();
+      loop_unroll_count_5();
+      loop_unroll_count_6();
+      loop_unroll_count_7();
+      loop_unroll_count_8();
+      loop_unroll_count_9();
+      loop_unroll_count_10();
+      // 输出性能数据
+      perf_print();
+      return;
+  }
+
+
+  int main()
+  {
+      // 设置使用2号SPA
+      sdaaSetDevice(0);
+      // kernel函数调用
+      call_kernel<<<1>>>();
+      // 等待kernel函数执行完成
+      sdaaDeviceSynchronize();
+      return 0;
+  }
+
+
+
+
+文档版本：v2.0.2                              版权所有 © 太初(无锡)电子科技有限公司      86
+性能优化手册-SDAA C篇                                              性能优化
+
+
+
+
+ 优化效果
+
+ 编译指示                                      平均每次运算的执行周期（拍）
+
+ 无                                         9016
+
+     #pragma clang loop_unroll_enable      2840
+
+     #pragma clang loop_unroll_disable     9016
+
+     #pragma clang loop_unroll_full        2840
+
+     #pragma clang loop unroll_count(1)    9016
+
+     #pragma clang loop unroll_count(2)    6016
+
+     #pragma clang loop unroll_count(3)    3688
+
+     #pragma clang loop unroll_count(4)    3515
+
+     #pragma clang loop unroll_count(5)    2816
+
+     #pragma clang loop unroll_count(6)    5164
+
+     #pragma clang loop unroll_count(7)    4564
+
+     #pragma clang loop unroll_count(8)    2514
+
+     #pragma clang loop unroll_count(9)    3019
+
+     #pragma clang loop unroll_count(10)   3016
+
+
+在本示例中，循环展开8次时的效果最佳，性能是不做循环展开的约3.58倍。
+
+
+4.4.2 链接时优化（LTO）
+本文主要介绍使用链接时优化（LTO）提高性能的优化策略和示例。
+
+ 原理介绍
+
+链接时优化（LTO）是对整个SDAA C程序在链接时进行的跨模块间优化，聚焦于分析整个程序代码，属于过程间优化
+（IPO）的一种。
+
+具体实现原理是将一些pass的优化推迟到链接时再进行，从而使得这些pass具有可跨模块优化的能力。
+
+LTO可以实现：
+
+     更好的内联：LTO可以在链接阶段分析整个程序的调用关系，从而实现智能的函数内联决策，提高程序性能。
+
+
+
+文档版本：v2.0.2                     版权所有 © 太初(无锡)电子科技有限公司          87
+性能优化手册-SDAA C篇                                                                              性能优化
+
+
+
+
+   消除死代码：LTO可以分析整个程序的数据流和控制流，检测并删除不会被执行的代码，从而减小程序大小。
+
+   传播跨模块的常量：LTO可以在整个程序范围内传播已知的常量值，从而提高程序性能。
+
+   消除跨模块的重复代码：LTO可以在整个程序范围内检测并消除重复的代码片段，从而减小程序大小。
+
+ 优化策略
+
+通过以下编译选项，控制是否需启用LTO优化：
+
+     -flto ：启用LTO优化，编译和链接时使用。
+
+     --sdaa-link ：启用LTO优化，链接时使用，指示链接SDAA C的                            clang-offload-bundler 捆绑包。
+
+
+ 优化示例
+
+分别使用以下两种方式编译示例程序，测试执行周期并比较：
+
+   不使用LTO优化
+
+   使用LTO优化
+
+每个测试均调用10000次 foo1 函数并计算平均值以消除初次调用时cache影响。
+
+ 不使用LTO优化
+
+执行以下编译命令，将 lib.scpp 编译成静态库，并使用 main.scpp 链接该静态库生成可执行文件：
+
+  # 将lib.scpp编译生成.o
+  tecocc lib.scpp --sdaa-device-only -c -o nonlto.o
+  # 将生成的.o打包成静态库
+  ar -rcs nonlto.a nonlto.o
+  # 编译main.scpp并链接静态库nonlto.a生成可执行文件
+  tecocc main.scpp --sdaa-static-device-lib=nonlto.a -o nonlto.out
+
+
+
+
+ 使用LTO优化
+
+执行以下编译命令，将 lib.scpp 编译成静态库，并使用 main.scpp 链接该静态库生成可执行文件：
+
+  # 将lib.scpp编译生成.o
+  tecocc lib.scpp --sdaa-device-only -flto -c -o lto.o
+  # 将生成的.o打包成静态库
+  ar -rcs lto.a lto.o
+  # 编译main.scpp并链接静态库lto.a生成可执行文件
+  tecocc main.scpp --sdaa-static-device-lib=lto.a -flto --sdaa-link -o lto.out
+
+
+
+
+ 测试环境
+
+
+
+
+文档版本：v2.0.2                          版权所有 © 太初(无锡)电子科技有限公司                                      88
+性能优化手册-SDAA C篇                                                    性能优化
+
+
+
+
+ TecoDriver和TecoToolKit版本                         计算核心频率
+
+ v1.2.0                                           2.36GHz
+
+
+ 测试代码
+
+  // main.scpp
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define N 10000
+
+
+  extern __device__ int foo1();
+
+
+  __device__ void foo4()
+  {
+          printf("this is foo4\n");
+  }
+
+
+  __device__ void call_foo1()
+  {
+          int retval;
+          // 收集性能数据起始值
+          perf_start();
+          for (int i = 0; i < N; i++) {
+              retval = foo1();
+          }
+          // 收集性能数据结束值
+          perf_stop();
+          // 输出性能数据
+          perf_print();
+          if (retval != 42) {
+              printf("failed!\n");
+          } else {
+              printf("pass!\n");
+          }
+  }
+
+
+  __global__ void call_kernel()
+  {
+          // 仅使用0号SPE
+          if (threadIdx != 0) {
+              return;
+          }
+          call_foo1();
+          return;
+  }
+
+
+  int main()
+  {
+          // 设置使用0号SPA
+          sdaaSetDevice(0);
+          // kernel函数调用
+          call_kernel<<<1>>>();
+          // 等待kernel函数执行完成
+          sdaaDeviceSynchronize();
+
+
+
+
+文档版本：v2.0.2                               版权所有 © 太初(无锡)电子科技有限公司      89
+性能优化手册-SDAA C篇                                             性能优化
+
+
+
+
+      return 0;
+  }
+
+
+  // lib.scpp
+  extern __device__ void foo4();
+
+
+  __device__    int val = 0;
+
+
+  __device__ void foo2()
+  {
+      val = -1;
+  }
+
+
+  __device__ int foo3()
+  {
+      foo4();
+      return 10;
+  }
+
+
+  __device__ int foo1()
+  {
+      int data = 0;
+      if (val < 0) {
+          data = foo3();
+      }
+      data += 42;
+      return data;
+  }
+
+
+
+
+ 优化效果
+
+ 是否使用LTO优化                            平均每次运算的执行周期（拍）
+
+ 使用                                   341
+
+ 不使用                                  707
+
+
+在本示例中，使用LTO优化的性能是不使用LTO优化的性能约2.07倍。
+
+
+
+
+4.4.3 浮点融合
+本文主要介绍使用浮点融合提高性能的优化策略和示例。
+
+ 原理介绍
+
+浮点融合是使用一条乘加/乘减运算操作代替乘法和加/减法两条运算的操作，从而提高程序性能并减小误差。
+
+ 优化策略
+
+通过以下编译选项控制是否需启用浮点融合功能：
+
+
+
+文档版本：v2.0.2                        版权所有 © 太初(无锡)电子科技有限公司      90
+性能优化手册-SDAA C篇                                                 性能优化
+
+
+
+
+     -ffp-contract=fast ：启用浮点融合，忽略     #pragma FP_CONTRACT 。
+
+     -ffp-contract=on ：根据   #pragma FP_CONTRACT 决定是否启用浮点融合。
+
+     -ffp-contract=off ：禁用浮点融合，忽略     #pragma FP_CONTRACT 。
+
+默认为启用浮点融合，您可以调整浮点运算写法，拼凑尽量多的乘加类操作，帮助编译器优化。
+
+目前支持以下几种操作的融合：
+
+   单精度乘加（单精度同号相乘再做加法）
+
+   双精度乘加（双精度同号相乘再做加法）
+
+   单精度乘减（单精度同号相乘再做减法）
+
+   双精度乘减（双精度同号相乘再做减法）
+
+   单精度负乘加（单精度异号相乘再做加法）
+
+   双精度负乘加（双精度异号相乘再做加法）
+
+   单精度负乘减（单精度异号相乘再做减法）
+
+   双精度负乘减（双精度异号相乘再做减法）
+
+ 优化示例
+
+使用不同的编译选项，在 for 循环内进行100次乘法和加/减操作，测试以下情况的执行周期并比较：
+
+   单精度乘加
+
+   双精度乘加
+
+   单精度乘减
+
+   双精度乘减
+
+   单精度负乘加
+
+   双精度负乘加
+
+   单精度负乘减
+
+   双精度负乘减
+
+每个测例均调用10000次乘法和加/减操作计算平均值以消除初次调用时cache影响。
+
+ 测试环境
+
+ TecoDriver和TecoToolKit版本            计算核心频率
+
+ v1.2.0                              2.36GHz
+
+
+
+
+文档版本：v2.0.2                  版权所有 © 太初(无锡)电子科技有限公司                91
+性能优化手册-SDAA C篇                                                                性能优化
+
+
+
+
+ 测试代码
+
+  #include <sdaa_perf.h>
+  using namespace sdaa;
+
+
+  #define N 10000
+  #define SIZE 100
+  #define NUM 4
+  #define MAX 200
+  #define MIN 10
+
+
+  __global__ void test_fmas(float *data)
+  {
+      if (threadIdx != 0) {
+          return;
+      }
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          for (int j = 0; j < SIZE; j++) {
+              data[0 * SIZE + j] = data[1 * SIZE + j] * data[2 * SIZE +j] +
+                                   data[3 * SIZE + j];
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  __global__ void test_fmss(float *data)
+  {
+      if (threadIdx != 0) {
+          return;
+      }
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          for (int j = 0; j < SIZE; j++) {
+              data[0 * SIZE + j] = data[1 * SIZE + j] * data[2 * SIZE +j] -
+                                   data[3 * SIZE + j];
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  __global__ void test_fnmas(float *data)
+  {
+      if (threadIdx != 0) {
+          return;
+      }
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司                      92
+性能优化手册-SDAA C篇                                                                      性能优化
+
+
+
+
+          for (int j = 0; j < SIZE; j++) {
+              data[0 * SIZE + j] = -((data[1 * SIZE + j]) * data[2 * SIZE + j]) +
+                                   data[3 * SIZE + j];
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  __global__ void test_fnmss(float *data)
+  {
+      if (threadIdx != 0) {
+          return;
+      }
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          for (int j = 0; j < SIZE; j++) {
+              data[0 * SIZE + j] = -((data[1 * SIZE + j]) * data[2 * SIZE + j]) -
+                                   data[3 * SIZE + j];
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  __global__ void test_fmad(double *data)
+  {
+      if (threadIdx != 0) {
+          return;
+      }
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          for (int j = 0; j < SIZE; j++) {
+              data[0 * SIZE + j] = data[1 * SIZE + j] * data[2 * SIZE +j] +
+                                   data[3 * SIZE + j];
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  __global__ void test_fmsd(double *data)
+  {
+      if (threadIdx != 0) {
+          return;
+      }
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          for (int j = 0; j < SIZE; j++) {
+              data[0 * SIZE + j] = data[1 * SIZE + j] * data[2 * SIZE +j] -
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司                            93
+性能优化手册-SDAA C篇                                                                      性能优化
+
+
+
+
+                                   data[3 * SIZE + j];
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  __global__ void test_fnmad(double *data)
+  {
+      if (threadIdx != 0) {
+          return;
+      }
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          for (int j = 0; j < SIZE; j++) {
+              data[0 * SIZE + j] = -((data[1 * SIZE + j]) * data[2 * SIZE + j]) +
+                                   data[3 * SIZE + j];
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  __global__ void test_fnmsd(double *data)
+  {
+      if (threadIdx != 0) {
+          return;
+      }
+      // 收集性能数据起始值
+      perf_start();
+      for (int i = 0; i < N; i++) {
+          for (int j = 0; j < SIZE; j++) {
+              data[0 * SIZE + j] = -((data[1 * SIZE + j]) * data[2 * SIZE + j]) -
+                                   data[3 * SIZE + j];
+          }
+      }
+      // 收集性能数据结束值
+      perf_stop();
+      // 输出性能数据
+      perf_print();
+  }
+
+
+  void call_kernel_float(float *src, float (*output)[SIZE])
+  {
+      float *dev_fmas = NULL;
+      float *dev_fmss = NULL;
+      float *dev_fnmas = NULL;
+      float *dev_fnmss = NULL;
+      // 设置使用0号SPA
+      sdaaSetDevice(0);
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void **)(&dev_fmas), NUM * SIZE * sizeof(float));
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(dev_fmas, src, NUM * SIZE * sizeof(float),
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司                            94
+性能优化手册-SDAA C篇                                                          性能优化
+
+
+
+
+                 sdaaMemcpyHostToDevice);
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void **)(&dev_fmss), NUM * SIZE * sizeof(float));
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(dev_fmss, src, NUM * SIZE * sizeof(float),
+                 sdaaMemcpyHostToDevice);
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void **)(&dev_fnmas), NUM * SIZE * sizeof(float));
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(dev_fnmas, src, NUM * SIZE * sizeof(float),
+                 sdaaMemcpyHostToDevice);
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void **)(&dev_fnmss), NUM * SIZE * sizeof(float));
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(dev_fnmss, src, NUM * SIZE * sizeof(float),
+                 sdaaMemcpyHostToDevice);
+
+
+      test_fmas<<<1>>>(dev_fmas);
+      test_fmss<<<1>>>(dev_fmss);
+      test_fnmas<<<1>>>(dev_fnmas);
+      test_fnmss<<<1>>>(dev_fnmss);
+
+
+      // 将数据从Device端拷贝到Host端
+      sdaaMemcpy(output[0], dev_fmas, SIZE * sizeof(float),
+                 sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(output[1], dev_fmss, SIZE * sizeof(float),
+                 sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(output[2], dev_fnmas, SIZE * sizeof(float),
+                 sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(output[3], dev_fnmss, SIZE * sizeof(float),
+                 sdaaMemcpyDeviceToHost);
+
+
+      // 释放申请的Global内存
+      sdaaFree(dev_fmas);
+      sdaaFree(dev_fmss);
+      sdaaFree(dev_fnmas);
+      sdaaFree(dev_fnmss);
+  }
+
+
+  void call_kernel_double(double *src, double (*output)[SIZE])
+  {
+      double *dev_fmad = NULL;
+      double *dev_fmsd = NULL;
+      double *dev_fnmad = NULL;
+      double *dev_fnmsd = NULL;
+      // 设置使用0号SPA
+      sdaaSetDevice(0);
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void **)(&dev_fmad), NUM * SIZE * sizeof(double));
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(dev_fmad, src, NUM * SIZE * sizeof(double),
+                 sdaaMemcpyHostToDevice);
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void **)(&dev_fmsd), NUM * SIZE * sizeof(double));
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(dev_fmsd, src, NUM * SIZE * sizeof(double),
+                 sdaaMemcpyHostToDevice);
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void **)(&dev_fnmad), NUM * SIZE * sizeof(double));
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司                95
+性能优化手册-SDAA C篇                                                                 性能优化
+
+
+
+
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(dev_fnmad, src, NUM * SIZE * sizeof(double),
+                 sdaaMemcpyHostToDevice);
+      // 在Global内存中malloc一段空间
+      sdaaMalloc((void **)(&dev_fnmsd), NUM * SIZE * sizeof(double));
+      // 将数据从Host端拷贝到Device端
+      sdaaMemcpy(dev_fnmsd, src, NUM * SIZE * sizeof(double),
+                 sdaaMemcpyHostToDevice);
+
+
+      // kernel函数调用
+      test_fmad<<<1>>>(dev_fmad);
+      test_fmsd<<<1>>>(dev_fmsd);
+      test_fnmad<<<1>>>(dev_fnmad);
+      test_fnmsd<<<1>>>(dev_fnmsd);
+
+
+      // 将数据从Device端拷贝到Host端
+      sdaaMemcpy(output[0], dev_fmad, SIZE * sizeof(double),
+                 sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(output[1], dev_fmsd, SIZE * sizeof(double),
+                 sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(output[2], dev_fnmad, SIZE * sizeof(double),
+                 sdaaMemcpyDeviceToHost);
+      sdaaMemcpy(output[3], dev_fnmsd, SIZE * sizeof(double),
+                 sdaaMemcpyDeviceToHost);
+
+
+      // 释放申请的Global内存
+      sdaaFree(dev_fmad);
+      sdaaFree(dev_fmsd);
+      sdaaFree(dev_fnmad);
+      sdaaFree(dev_fnmsd);
+  }
+
+
+  void test_float()
+  {
+      int errnum = 0;
+      float data[NUM * SIZE];
+      float dev_output[NUM][SIZE];
+      float host_output[NUM][SIZE];
+
+
+      // init data
+      for (int i = 0; i < NUM * SIZE; i++) {
+          data[i] = (((float)rand()) / (float)RAND_MAX) * (MAX - MIN) + MIN;
+      }
+      for (int i = 0; i < NUM; i++) {
+          for (int j = 0; j < SIZE; j++) {
+              dev_output[i][j] = 0;
+              host_output[i][j] = 0;
+          }
+      }
+      // calculate in host
+      for (int i = 0; i < SIZE; i++) {
+          host_output[0][i] = data[1 * SIZE + i] * data[2 * SIZE + i] +
+                                data[3 * SIZE + i];
+          host_output[1][i] = data[1 * SIZE + i] * data[2 * SIZE + i] -
+                                data[3 * SIZE + i];
+          host_output[2][i] = -(data[1 * SIZE + i] * data[2 * SIZE + i]) +
+                                data[3 * SIZE + i];
+          host_output[3][i] = -(data[1 * SIZE + i] * data[2 * SIZE + i]) -
+                                data[3 * SIZE + i];
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                     96
+性能优化手册-SDAA C篇                                                                        性能优化
+
+
+
+
+      }
+
+
+      call_kernel_float(data, dev_output);
+
+
+      for (int i= 0; i < NUM; i++) {
+          for (int j = 0; j < SIZE; j++) {
+              if (fabs(host_output[i][j] - dev_output[i][j]) > 1e-2) {
+                     printf("host_output[%d][%d] = %f dev_output[%d][%d] = %f\n",
+                            i, j, host_output[i][j], i, j, dev_output[i][j]);
+                     errnum++;
+              }
+          }
+      }
+
+
+      if (!errnum) {
+          printf("all pass in float!\n");
+      } else {
+          printf("error in float!\n");
+      }
+  }
+
+
+  void test_double()
+  {
+      int errnum = 0;
+      double data[NUM * SIZE];
+      double dev_output[NUM][SIZE];
+      double host_output[NUM][SIZE];
+
+
+      // init data
+      for (int i = 0; i < NUM * SIZE; i++) {
+          data[i] = (((double)rand()) / (double)RAND_MAX) * (MAX - MIN) + MIN;
+      }
+      for (int i = 0; i < NUM; i++) {
+          for (int j = 0; j < SIZE; j++) {
+              dev_output[i][j] = 0;
+              host_output[i][j] = 0;
+          }
+      }
+      // calculate in host
+      for (int i = 0; i < SIZE; i++) {
+          host_output[0][i] = data[1 * SIZE + i] * data[2 * SIZE + i] +
+                                 data[3 * SIZE + i];
+          host_output[1][i] = data[1 * SIZE + i] * data[2 * SIZE + i] -
+                                 data[3 * SIZE + i];
+          host_output[2][i] = -(data[1 * SIZE + i] * data[2 * SIZE + i]) +
+                                 data[3 * SIZE + i];
+          host_output[3][i] = -(data[1 * SIZE + i] * data[2 * SIZE + i]) -
+                                 data[3 * SIZE + i];
+      }
+
+
+      call_kernel_double(data, dev_output);
+
+
+      for (int i= 0; i < NUM; i++) {
+          for (int j = 0; j < SIZE; j++) {
+              if (fabs(host_output[i][j] - dev_output[i][j]) > 1e-9) {
+                     printf("host_output[%d][%d] = %lf dev_output[%d][%d] = %lf\n",
+                            i, j, host_output[i][j], i, j, dev_output[i][j]);
+                     errnum++;
+              }
+
+
+
+
+文档版本：v2.0.2                             版权所有 © 太初(无锡)电子科技有限公司                            97
+性能优化手册-SDAA C篇                                                   性能优化
+
+
+
+
+           }
+      }
+
+
+      if (!errnum) {
+           printf("all pass in double!\n");
+      } else {
+           printf("error in double!\n");
+      }
+  }
+
+
+  int main()
+  {
+      test_float();
+      test_double();
+      return 0;
+  }
+
+
+
+
+ 优化效果
+
+ 编译选项                   运算类型                    平均每次运算的执行周期（拍）
+
+                        单精度乘加                   35389
+
+                        单精度乘减                   35421
+
+                        单精度负乘加                  35389
+
+                        单精度负乘减                  35392
+   -ffp-
+ contract=fast
+                        双精度乘加                   35738
+
+                        双精度乘减                   35851
+
+                        双精度负乘加                  35742
+
+                        双精度负乘减                  35856
+
+
+
+
+文档版本：v2.0.2                           版权所有 © 太初(无锡)电子科技有限公司         98
+性能优化手册-SDAA C篇                                       性能优化
+
+
+
+
+ 编译选项            运算类型               平均每次运算的执行周期（拍）
+
+                 单精度乘加              69008
+
+                 单精度乘减              69003
+
+                 单精度负乘加             69008
+
+                 单精度负乘减             69009
+   -ffp-
+ contract=on
+                 双精度乘加              69752
+
+                 双精度乘减              69751
+
+                 双精度负乘加             69721
+
+                 双精度负乘减             69852
+
+                 单精度乘加              69008
+
+                 单精度乘减              69009
+
+                 单精度负乘加             69008
+
+                 单精度负乘减             69007
+   -ffp-
+ contract=off
+                 双精度乘加              69728
+
+                 双精度乘减              69727
+
+                 双精度负乘加             69756
+
+                 双精度负乘减             69847
+
+
+在本示例中，使用浮点融合的性能是不使用浮点融合的性能约1.95倍，不同的数据的类型与不同的操作类型之间性能差
+异不大。
+
+
+
+
+文档版本：v2.0.2               版权所有 © 太初(无锡)电子科技有限公司         99
+

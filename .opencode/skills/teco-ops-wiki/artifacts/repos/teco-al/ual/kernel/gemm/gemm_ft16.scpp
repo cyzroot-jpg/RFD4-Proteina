@@ -1,0 +1,1105 @@
+// BSD 3- Clause License Copyright (c) 2024, Tecorigin Co., Ltd. All rights
+// reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// Redistributions of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+// Neither the name of the copyright holder nor the names of its contributors
+// may be used to endorse or promote products derived from this software
+// without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)  ARISING IN ANY
+// WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
+#include <sdaa_matmul.h>
+#include "ual/kernel/gemm/gemm.h"
+#include "ual/kernel/macro.h"
+#include "ual/kernel/device.hpp"
+#include "ual/com/check.h"
+#include "ual/com/rt.h"
+
+using namespace sdaa;
+using namespace tecoal::ual::common;
+
+namespace tecoal {
+namespace ual {
+namespace kernel {
+
+#define SIMDSIZE 32
+typedef _Float16 Type;
+typedef floatv16 SIMDType;
+
+template <typename TYPE_C>
+__device__ void tecoKernelGemmFT16SingleThreadImpl(GEMMArgs pGemm) {
+    int M, N, K;
+    int lda, ldb, ldc;
+    const _Float16 *pA, *pB;
+    TYPE_C *pC;
+    float temp;
+
+    if (threadIdx == 0) {
+        M = pGemm.m;
+        N = pGemm.n;
+        K = pGemm.k;
+        lda = pGemm.lda;
+        ldb = pGemm.ldb;
+        ldc = pGemm.ldc;
+        pA = (const _Float16 *)pGemm.A;  // [M][K]
+        pB = (const _Float16 *)pGemm.B;  // [K][N]
+        pC = (TYPE_C *)pGemm.C;          // [M][N]
+        int idx, idy, idz;
+
+        for (idx = 0; idx < M; idx++) {
+            for (idy = 0; idy < N; idy++) {
+                temp = 0;
+                for (idz = 0; idz < K; idz++) {
+                    temp += (float)pA[idx * lda + idz] * (float)pB[idz * ldb + idy];
+                }
+                pC[idx * ldc + idy] = (TYPE_C)temp;
+            }
+        }
+    }
+}
+
+template <typename TYPE_C>
+__device__ void tecoKernelGemmFT16MultiThreadsImpl(GEMMArgs pGemm) {
+    const int rid = threadIdx / 8;
+    const int cid = threadIdx % 8;
+
+    const int M = pGemm.m;
+    const int N = pGemm.n;
+    const int K = pGemm.k;
+
+    const int lda = pGemm.lda;
+    const int ldb = pGemm.ldb;
+    const int ldc = pGemm.ldc;
+
+    const UALDataType Ctype = pGemm.Ctype;
+
+    const Type *A = (const Type *)pGemm.A;
+    const Type *B = (const Type *)pGemm.B;
+    TYPE_C *C = (TYPE_C *)pGemm.C;
+
+    // outer block size
+    const int bM = pGemm.bM;
+    const int bN = pGemm.bN;
+    const int bK = pGemm.bK;
+
+    // outer block num
+    int nM = M / bM;
+    int nN = N / bN;
+    int nK = K / bK;
+
+    // inner block size
+    int LocalbM = bM / 8;
+    int LocalbN = bN / 4;
+    int LocalbK = bK;
+
+    // inner block located
+    const Type *pA = A + cid * LocalbM * lda;
+    const Type *pB = B + rid * LocalbN;
+    TYPE_C *pC = C + cid * LocalbM * ldc + rid * LocalbN;
+
+    const Type *pCurrA;
+    const Type *pCurrB;
+    TYPE_C *pCurrC;
+
+    CHECK(LocalbM * LocalbN * sizeof(float) < SPM_MAX_BYTE, "SPM heap space exceeded!\n");
+
+    float *TempC = (float *)rt_spm_malloc(LocalbM * LocalbN * sizeof(float));
+
+    int idM, idN, idK;
+
+    for (int idx = 0; idx < nM * nN; ++idx) {
+        idM = idx / nN;
+        idN = idx % nN;
+        pCurrC = pC + idM * bM * ldc + idN * bN;
+        memset(TempC, 0, LocalbM * LocalbN * sizeof(float));
+        for (idK = 0; idK < nK; ++idK) {
+            pCurrA = pA + idM * bM * lda + idK * bK;  // A[idM][idK]
+            pCurrB = pB + idK * bK * ldb + idN * bN;  // B[idK][idN]
+            for (int ibx = 0; ibx < LocalbM; ibx++) {
+                for (int iby = 0; iby < LocalbN; iby++) {
+                    for (int ibz = 0; ibz < LocalbK; ibz++) {
+                        TempC[ibx * LocalbN + iby] +=
+                            (float)pCurrA[ibx * lda + ibz] * (float)pCurrB[ibz * ldb + iby];
+                    }
+                }
+            }
+        }
+        for (int ibx = 0; ibx < LocalbM; ibx++) {
+            for (int iby = 0; iby < LocalbN; iby++) {
+                pCurrC[ibx * ldc + iby] = (TYPE_C)TempC[ibx * LocalbN + iby];
+            }
+        }
+    }
+
+    rt_spm_free(TempC);
+}
+
+template <typename TYPE_C>
+__device__ void tecoKernelGemmFT16DMAImpl(GEMMArgs pGemm) {
+    const int rid = threadIdx / 8;
+    const int cid = threadIdx % 8;
+
+    const int M = pGemm.m;
+    const int N = pGemm.n;
+    const int K = pGemm.k;
+
+    const int lda = pGemm.lda;
+    const int ldb = pGemm.ldb;
+    const int ldc = pGemm.ldc;
+
+    const UALDataType Ctype = pGemm.Ctype;
+
+    const Type *A = (const Type *)pGemm.A;
+    const Type *B = (const Type *)pGemm.B;
+    TYPE_C *C = (TYPE_C *)pGemm.C;
+
+    // outer block size
+    const int bM = pGemm.bM;
+    const int bN = pGemm.bN;
+    const int bK = pGemm.bK;
+
+    // outer block num
+    int nM = M / bM;
+    int nN = N / bN;
+    int nK = K / bK;
+
+    // inner block size
+    int LocalbM = bM / 8;
+    int LocalbN = bN / 4;
+    int LocalbK = bK;
+
+    // inner block located
+    const Type *pA = A + cid * LocalbM * lda;
+    const Type *pB = B + rid * LocalbN;
+    TYPE_C *pC = C + cid * LocalbM * ldc + rid * LocalbN;
+
+    const Type *pCurrA;
+    const Type *pCurrB;
+    TYPE_C *pCurrC;
+
+    const size_t LenA = LocalbM * LocalbK * sizeof(Type);
+    const size_t BsizeA = LocalbK * sizeof(Type);
+    const size_t StrideA = (lda - LocalbK) * sizeof(Type);
+
+    const size_t LenB = LocalbK * LocalbN * sizeof(Type);
+    const size_t BsizeB = LocalbN * sizeof(Type);
+    const size_t StrideB = (ldb - LocalbN) * sizeof(Type);
+
+    const size_t LenC = LocalbM * LocalbN * sizeof(TYPE_C);
+    const size_t BsizeC = LocalbN * sizeof(TYPE_C);
+    const size_t StrideC = (ldc - LocalbN) * sizeof(TYPE_C);
+
+    size_t spm_size = LenA + LenB + LenC + LocalbM * LocalbN * sizeof(float);
+    CHECK(spm_size < SPM_MAX_BYTE, "SPM heap space exceeded!\n");
+
+    Type *LocalA = (Type *)rt_spm_malloc(LenA);
+    Type *LocalB = (Type *)rt_spm_malloc(LenB);
+    TYPE_C *LocalC = (TYPE_C *)rt_spm_malloc(LenC);
+    float *TempC = (float *)rt_spm_malloc(LocalbM * LocalbN * sizeof(float));
+
+    int idM, idN, idK;
+
+    for (int idx = 0; idx < nM * nN; ++idx) {
+        idM = idx / nN;
+        idN = idx % nN;
+        pCurrC = pC + idM * bM * ldc + idN * bN;
+        memset(TempC, 0, LocalbM * LocalbN * sizeof(float));
+        for (idK = 0; idK < nK; ++idK) {
+            pCurrA = pA + idM * bM * lda + idK * bK;  // A[idM][idK]
+            pCurrB = pB + idK * bK * ldb + idN * bN;  // B[idK][idN]
+            memcpy_stride(LocalA, pCurrA, LenA, BsizeA, {0, StrideA});
+            memcpy_stride(LocalB, pCurrB, LenB, BsizeB, {0, StrideB});
+            for (int ibx = 0; ibx < LocalbM; ibx++) {
+                for (int iby = 0; iby < LocalbN; iby++) {
+                    for (int ibz = 0; ibz < LocalbK; ibz++) {
+                        TempC[ibx * LocalbN + iby] +=
+                            (float)LocalA[ibx * LocalbK + ibz] * (float)LocalB[ibz * LocalbN + iby];
+                    }
+                }
+            }
+        }
+        if (std::is_same<TYPE_C, float>::value) {
+            LocalC = (TYPE_C *)TempC;
+        } else {
+            batch_S2H(TempC, (half *)LocalC, LocalbM * LocalbN);
+        }
+        memcpy_stride(pCurrC, LocalC, LenC, BsizeC, {StrideC, 0});
+    }  // Loop idx
+    rt_spm_free(LocalA);
+    rt_spm_free(LocalB);
+    rt_spm_free(LocalC);
+    rt_spm_free(TempC);
+}
+
+template <typename TYPE_C>
+__device__ void tecoKernelGemmFT16SIMDImpl(GEMMArgs pGemm) {
+    const int rid = threadIdx / 8;
+    const int cid = threadIdx % 8;
+
+    const int M = pGemm.m;
+    const int N = pGemm.n;
+    const int K = pGemm.k;
+
+    const int lda = pGemm.lda;
+    const int ldb = pGemm.ldb;
+    const int ldc = pGemm.ldc;
+
+    const UALDataType Ctype = pGemm.Ctype;
+
+    const Type *A = (const Type *)pGemm.A;
+    const Type *B = (const Type *)pGemm.B;
+    TYPE_C *C = (TYPE_C *)pGemm.C;
+
+    // outer block size
+    const int bM = pGemm.bM;
+    const int bN = pGemm.bN;
+    const int bK = pGemm.bK;
+
+    // outer block num
+    int nM = M / bM;
+    int nN = N / bN;
+    int nK = K / bK;
+
+    // inner block size
+    int LocalbM = bM / 8;
+    int LocalbN = bN / 4;
+    int LocalbK = bK;
+
+    // inner block located
+    const Type *pA = A + cid * LocalbM * lda;
+    const Type *pB = B + rid * LocalbN;
+    TYPE_C *pC = C + cid * LocalbM * ldc + rid * LocalbN;
+
+    const Type *pCurrA;
+    const Type *pCurrB;
+    TYPE_C *pCurrC;
+
+    const size_t LenA = LocalbM * LocalbK * sizeof(Type);
+    const size_t BsizeA = LocalbK * sizeof(Type);
+    const size_t StrideA = (lda - LocalbK) * sizeof(Type);
+
+    const size_t LenB = LocalbK * LocalbN * sizeof(Type);
+    const size_t BsizeB = LocalbN * sizeof(Type);
+    const size_t StrideB = (ldb - LocalbN) * sizeof(Type);
+
+    const size_t LenC = LocalbM * LocalbN * sizeof(TYPE_C);
+    const size_t BsizeC = LocalbN * sizeof(TYPE_C);
+    const size_t StrideC = (ldc - LocalbN) * sizeof(TYPE_C);
+
+    int spm_size =
+        LenA + 2 * LenB + LenC + 2 * LocalbK * sizeof(float) + LocalbM * LocalbN * sizeof(float);
+    CHECK(spm_size < SPM_MAX_BYTE, "SPM heap space exceeded!\n");
+
+    Type *LocalA = (Type *)rt_spm_malloc(LenA);
+    Type *LocalB = (Type *)rt_spm_malloc(LenB);
+    Type *LocalB_T = (Type *)rt_spm_malloc(LenB);
+    TYPE_C *LocalC = (TYPE_C *)rt_spm_malloc(LenC);
+    float *TempA = (float *)rt_spm_malloc(LocalbK * sizeof(float));
+    float *TempB = (float *)rt_spm_malloc(LocalbK * sizeof(float));
+    float *TempC = (float *)rt_spm_malloc(LocalbM * LocalbN * sizeof(float));
+
+    int idM, idN, idK;
+
+    for (int idx = 0; idx < nM * nN; ++idx) {
+        idM = idx / nN;
+        idN = idx % nN;
+        pCurrC = pC + idM * bM * ldc + idN * bN;
+        memset(TempC, 0, LocalbM * LocalbN * sizeof(float));
+        for (idK = 0; idK < nK; ++idK) {
+            pCurrA = pA + idM * bM * lda + idK * bK;  // A[idM][idK]
+            pCurrB = pB + idK * bK * ldb + idN * bN;  // B[idK][idN]
+            memcpy_stride(LocalA, pCurrA, LenA, BsizeA, {0, StrideA});
+            memcpy_stride(LocalB, pCurrB, LenB, BsizeB, {0, StrideB});
+            for (int tbk = 0; tbk < LocalbK; tbk++) {
+                for (int tbn = 0; tbn < LocalbN; tbn++) {
+                    LocalB_T[tbn * LocalbK + tbk] = LocalB[tbk * LocalbN + tbn];
+                }
+            }
+            for (int ibx = 0; ibx < LocalbM; ibx++) {
+                batch_H2S(LocalA + ibx * LocalbK, TempA, LocalbK);
+                for (int iby = 0; iby < LocalbN; iby++) {
+                    float temp = 0;
+                    batch_H2S(LocalB_T + iby * LocalbK, TempB, LocalbK);
+                    reduce_Sdot(TempA, TempB, LocalbK, &temp);
+                    TempC[ibx * LocalbN + iby] += temp;
+                }
+            }
+        }
+        if (std::is_same<TYPE_C, float>::value) {
+            LocalC = (TYPE_C *)TempC;
+        } else {
+            batch_S2H(TempC, (half *)LocalC, LocalbM * LocalbN);
+        }
+        memcpy_stride(pCurrC, LocalC, LenC, BsizeC, {StrideC, 0});
+    }  // Loop idx
+    rt_spm_free(LocalA);
+    rt_spm_free(LocalB);
+    rt_spm_free(LocalB_T);
+    rt_spm_free(LocalC);
+    rt_spm_free(TempA);
+    rt_spm_free(TempB);
+    rt_spm_free(TempC);
+}
+
+template <typename TYPE_C>
+__device__ void tecoKernelGemmFT16MatmulImpl(GEMMArgs pGemm) {
+    const int rid = threadIdx / 8;
+    const int cid = threadIdx % 8;
+
+    const int M = pGemm.m;
+    const int N = pGemm.n;
+    const int K = pGemm.k;
+
+    const int lda = pGemm.lda;
+    const int ldb = pGemm.ldb;
+    const int ldc = pGemm.ldc;
+
+    const UALDataType Ctype = pGemm.Ctype;
+
+    const Type *A = (const Type *)pGemm.A;
+    const Type *B = (const Type *)pGemm.B;
+    TYPE_C *C = (TYPE_C *)pGemm.C;
+
+    // outer block size
+    const int bM = pGemm.bM;
+    const int bN = pGemm.bN;
+    const int bK = pGemm.bK;
+
+    // outer block num
+    int nM = M / bM;
+    int nN = N / bN;
+    int nK = K / bK;
+
+    // inner block size
+    int LocalbM = bM / 8;
+    int LocalbN = bN / 4;
+    int LocalbK = bK;
+
+    // inner block located
+    const Type *pA = A + cid * LocalbM * lda;
+    const Type *pB = B + rid * LocalbN;
+    TYPE_C *pC = C + cid * LocalbM * ldc + rid * LocalbN;
+
+    const Type *pCurrA;
+    const Type *pCurrB;
+    Type *pCurrC;
+
+    const size_t LenA = LocalbM * LocalbK * sizeof(Type);
+    const size_t BsizeA = LocalbK * sizeof(Type);
+    const size_t StrideA = (lda - LocalbK) * sizeof(Type);
+
+    const size_t LenB = LocalbK * LocalbN * sizeof(Type);
+    const size_t BsizeB = LocalbN * sizeof(Type);
+    const size_t StrideB = (ldb - LocalbN) * sizeof(Type);
+
+    const size_t LenC = LocalbM * LocalbN * sizeof(TYPE_C);
+    const size_t BsizeC = LocalbN * sizeof(TYPE_C);
+    const size_t StrideC = (ldc - LocalbN) * sizeof(TYPE_C);
+
+    int spm_size = LenA + 2 * LenB + LenC + LenC / sizeof(Type) * sizeof(float) * 2;
+    CHECK(spm_size < SPM_MAX_BYTE, "SPM heap space exceeded!\n");
+
+    Type *LocalCompA = (Type *)rt_spm_malloc(LenA);
+    Type *LocalCompB = (Type *)rt_spm_malloc(LenB * 2);
+    Type *LocalTB = LocalCompB + LocalbK * LocalbN;
+    TYPE_C *LocalC = (TYPE_C *)rt_spm_malloc(LenC);
+    float *LocalCompC = (float *)rt_spm_malloc(LocalbM * LocalbN * sizeof(float) * 2);
+    float *tempC = LocalCompC + LocalbM * LocalbN;
+    Type *pCA = LocalCompA;
+    Type *pCB = LocalCompB;
+
+    int im, in, ik;
+    int idM, idN, idK;
+    SIMDType vtb[SIMDSIZE];
+
+    MatmulHandle handleMMA;
+    matmul_init(handleMMA, MatmulHalfToFloat);
+
+    for (int idx = 0; idx < nM * nN; ++idx) {
+        idM = idx / nN;
+        idN = idx % nN;
+        for (idK = 0; idK < nK; ++idK) {
+            pCurrA = pA + idM * bM * lda + idK * bK;  // A[idM][idK]
+            pCurrB = pB + idK * bK * ldb + idN * bN;  // B[idK][idN]
+
+            matmul_wait_loading_input(handleMMA);
+            memcpy_stride(pCA, pCurrA, LenA, BsizeA, {0, StrideA});
+
+            matmul_wait_loading_weight(handleMMA);
+            memcpy_stride(pCB, pCurrB, LenB, BsizeB, {0, StrideB});
+
+            for (ik = 0; ik < LocalbK; ik += 8) {
+                simd_load(vtb[0], (float *)(pCB + ik * LocalbN));
+                simd_load(vtb[1], (float *)(pCB + ik * LocalbN + 32));
+                simd_load(vtb[2], (float *)(pCB + (ik + 1) * LocalbN));
+                simd_load(vtb[3], (float *)(pCB + (ik + 1) * LocalbN + 32));
+                simd_load(vtb[4], (float *)(pCB + (ik + 2) * LocalbN));
+                simd_load(vtb[5], (float *)(pCB + (ik + 2) * LocalbN + 32));
+                simd_load(vtb[6], (float *)(pCB + (ik + 3) * LocalbN));
+                simd_load(vtb[7], (float *)(pCB + (ik + 3) * LocalbN + 32));
+                simd_load(vtb[8], (float *)(pCB + (ik + 4) * LocalbN));
+                simd_load(vtb[9], (float *)(pCB + (ik + 4) * LocalbN + 32));
+                simd_load(vtb[10], (float *)(pCB + (ik + 5) * LocalbN));
+                simd_load(vtb[11], (float *)(pCB + (ik + 5) * LocalbN + 32));
+                simd_load(vtb[12], (float *)(pCB + (ik + 6) * LocalbN));
+                simd_load(vtb[13], (float *)(pCB + (ik + 6) * LocalbN + 32));
+                simd_load(vtb[14], (float *)(pCB + (ik + 7) * LocalbN));
+                simd_load(vtb[15], (float *)(pCB + (ik + 7) * LocalbN + 32));
+                simd_store(vtb[0], (float *)(LocalTB + ik * 32));
+                simd_store(vtb[1], (float *)(LocalTB + 32 * LocalbK + ik * 32));
+                simd_store(vtb[2], (float *)(LocalTB + (ik + 1) * 32));
+                simd_store(vtb[3], (float *)(LocalTB + 32 * LocalbK + (ik + 1) * 32));
+                simd_store(vtb[4], (float *)(LocalTB + (ik + 2) * 32));
+                simd_store(vtb[5], (float *)(LocalTB + 32 * LocalbK + (ik + 2) * 32));
+                simd_store(vtb[6], (float *)(LocalTB + (ik + 3) * 32));
+                simd_store(vtb[7], (float *)(LocalTB + 32 * LocalbK + (ik + 3) * 32));
+                simd_store(vtb[8], (float *)(LocalTB + (ik + 4) * 32));
+                simd_store(vtb[9], (float *)(LocalTB + 32 * LocalbK + (ik + 4) * 32));
+                simd_store(vtb[10], (float *)(LocalTB + (ik + 5) * 32));
+                simd_store(vtb[11], (float *)(LocalTB + 32 * LocalbK + (ik + 5) * 32));
+                simd_store(vtb[12], (float *)(LocalTB + (ik + 6) * 32));
+                simd_store(vtb[13], (float *)(LocalTB + 32 * LocalbK + (ik + 6) * 32));
+                simd_store(vtb[14], (float *)(LocalTB + (ik + 7) * 32));
+                simd_store(vtb[15], (float *)(LocalTB + 32 * LocalbK + (ik + 7) * 32));
+            }
+
+            if (idK < nK - 1) {
+                for (ik = 0; ik + 32 - 1 < LocalbK; ik += 32) {
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, 0);
+                    matmul_load_weight(handleMMA, LocalTB + ik * LocalbN / 2, MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, LocalbM);
+                    matmul_load_weight(handleMMA,
+                                       LocalTB + LocalbN * LocalbK / 2 + ik * LocalbN / 2,
+                                       MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+                }
+            } else {
+                for (ik = 0; ik + 64 - 1 < LocalbK; ik += 32) {
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, 0);
+                    matmul_load_weight(handleMMA, LocalTB + ik * LocalbN / 2, MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, LocalbM);
+                    matmul_load_weight(handleMMA,
+                                       LocalTB + LocalbN * LocalbK / 2 + ik * LocalbN / 2,
+                                       MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+                }
+                matmul_set_flushing_output(handleMMA, false);
+                matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, 0);
+                matmul_load_weight(handleMMA, LocalTB + ik * LocalbN / 2, MatmulK32, MatmulN32);
+                matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+
+                matmul_set_flushing_output(handleMMA, true);
+                matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, LocalbM);
+                matmul_load_weight(handleMMA, LocalTB + LocalbN * LocalbK / 2 + ik * LocalbN / 2,
+                                   MatmulK32, MatmulN32);
+                matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+                matmul_store(handleMMA, LocalCompC, LocalbM * 2, MatmulN32);
+            }
+        }  // loop idk
+        matmul_wait(handleMMA);
+
+        // permute C
+        for (im = 0; im < LocalbM; im++) {
+            simd_load(vtb[0], LocalCompC + im * 32);
+            simd_load(vtb[1], LocalCompC + im * 32 + 16);
+            simd_load(vtb[2], LocalCompC + (im + LocalbM) * 32);
+            simd_load(vtb[3], LocalCompC + (im + LocalbM) * 32 + 16);
+            simd_store(vtb[0], tempC + im * 64);
+            simd_store(vtb[1], tempC + im * 64 + 16);
+            simd_store(vtb[2], tempC + im * 64 + 32);
+            simd_store(vtb[3], tempC + im * 64 + 48);
+        }
+
+        if (std::is_same<TYPE_C, float>::value) {
+            LocalC = (TYPE_C *)tempC;
+        } else {
+            batch_S2H(tempC, (half *)LocalC, 4096);
+        }
+        memcpy_stride(pC + idM * bM * ldc + idN * bN, LocalC, LenC, BsizeC, {StrideC, 0});
+    }  // Loop idx
+    rt_spm_free(LocalCompA);
+    rt_spm_free(LocalCompB);
+    rt_spm_free(LocalC);
+    rt_spm_free(LocalCompC);
+}
+
+template <typename TYPE_C>
+__device__ void tecoKernelGemmFT16BroadcastImpl(GEMMArgs pGemm) {
+    const int rid = threadIdx / 8;
+    const int cid = threadIdx % 8;
+
+    const int M = pGemm.m;
+    const int N = pGemm.n;
+    const int K = pGemm.k;
+
+    const int lda = pGemm.lda;
+    const int ldb = pGemm.ldb;
+    const int ldc = pGemm.ldc;
+
+    const UALDataType Ctype = pGemm.Ctype;
+
+    const Type *A = (const Type *)pGemm.A;
+    const Type *B = (const Type *)pGemm.B;
+    TYPE_C *C = (TYPE_C *)pGemm.C;
+
+    // outer block size
+    const int bM = pGemm.bM;
+    const int bN = pGemm.bN;
+    const int bK = pGemm.bK;
+
+    // outer block num
+    int nM = M / bM;
+    int nN = N / bN;
+    int nK = K / bK;
+
+    // inner block size
+    int LocalbM = bM / 8;
+    int LocalbN = bN / 4;
+    int LocalbK = bK;
+
+    // inner block located
+    const Type *pA = A + cid * LocalbM * lda;
+    const Type *pB = B + rid * LocalbN;
+    TYPE_C *pC = C + cid * LocalbM * ldc + rid * LocalbN;
+
+    const Type *pCurrA;
+    const Type *pCurrB;
+    Type *pCurrC;
+
+    const size_t LenA = LocalbM * LocalbK * sizeof(Type);
+    const size_t BsizeA = LocalbK * sizeof(Type);
+    const size_t StrideA = (lda - LocalbK) * sizeof(Type);
+
+    const size_t LenB = LocalbK * LocalbN * sizeof(Type);
+    const size_t BsizeB = LocalbN * sizeof(Type);
+    const size_t StrideB = (ldb - LocalbN) * sizeof(Type);
+
+    const size_t LenC = LocalbM * LocalbN * sizeof(TYPE_C);
+    const size_t BsizeC = LocalbN * sizeof(TYPE_C);
+    const size_t StrideC = (ldc - LocalbN) * sizeof(TYPE_C);
+    int spm_size = LenA + 2 * LenB + LenC + LenC / sizeof(Type) * sizeof(float) * 2;
+    CHECK(spm_size < SPM_MAX_BYTE, "SPM heap space exceeded!\n");
+
+    Type *LocalCompA = (Type *)rt_spm_malloc(LenA);
+    Type *LocalCompB = (Type *)rt_spm_malloc(LenB * 2);
+    Type *LocalTB = LocalCompB + LocalbK * LocalbN;
+    TYPE_C *LocalC = (TYPE_C *)rt_spm_malloc(LenC);
+    float *LocalCompC = (float *)rt_spm_malloc(LocalbM * LocalbN * sizeof(float) * 2);
+    float *tempC = LocalCompC + LocalbM * LocalbN;
+    Type *pCA = LocalCompA;
+    Type *pCB = LocalCompB;
+    int im, in, ik;
+    int idM, idN, idK;
+    SIMDType vtb[SIMDSIZE];
+
+    MatmulHandle handleMMA;
+    matmul_init(handleMMA, MatmulHalfToFloat);
+
+    int typeAThreads = (3 - cid % 4) * 8 + cid;  // col broadcast
+    int typeBThreads = rid * 8 + rid;            // row broadcast
+
+    uint64_t mask = 0;
+    mask = 0x01010101 << cid;
+    ThreadGroup col_thread_group(mask);
+
+    mask = 0xFF << (8 * rid);
+    ThreadGroup row_thread_group(mask);
+
+    BroadcastHandle col_handle(&col_thread_group);
+    BroadcastHandle row_handle(&row_thread_group);
+
+    for (int idx = 0; idx < nM * nN; ++idx) {
+        idM = idx / nN;
+        idN = idx % nN;
+        for (idK = 0; idK < nK; ++idK) {
+            pCurrA = pA + idM * bM * lda + idK * bK;  // A[idM][idK]
+            pCurrB = pB + idK * bK * ldb + idN * bN;  // B[idK][idN]
+
+            matmul_wait_loading_input(handleMMA);
+            sync_threads(col_thread_group);
+            broadcast(pCA, (void *)pCurrA, LenA, BsizeA, {0, StrideA}, typeAThreads,
+                      BroadcastGlobalToSpm, col_handle);
+
+            matmul_wait_loading_weight(handleMMA);
+            sync_threads(row_thread_group);
+            broadcast(pCB, (void *)pCurrB, LenB, BsizeB, {0, StrideB}, typeBThreads,
+                      BroadcastGlobalToSpm, row_handle);
+
+            for (ik = 0; ik < LocalbK; ik += 8) {
+                simd_load(vtb[0], (float *)(pCB + ik * LocalbN));
+                simd_load(vtb[1], (float *)(pCB + ik * LocalbN + 32));
+                simd_load(vtb[2], (float *)(pCB + (ik + 1) * LocalbN));
+                simd_load(vtb[3], (float *)(pCB + (ik + 1) * LocalbN + 32));
+                simd_load(vtb[4], (float *)(pCB + (ik + 2) * LocalbN));
+                simd_load(vtb[5], (float *)(pCB + (ik + 2) * LocalbN + 32));
+                simd_load(vtb[6], (float *)(pCB + (ik + 3) * LocalbN));
+                simd_load(vtb[7], (float *)(pCB + (ik + 3) * LocalbN + 32));
+                simd_load(vtb[8], (float *)(pCB + (ik + 4) * LocalbN));
+                simd_load(vtb[9], (float *)(pCB + (ik + 4) * LocalbN + 32));
+                simd_load(vtb[10], (float *)(pCB + (ik + 5) * LocalbN));
+                simd_load(vtb[11], (float *)(pCB + (ik + 5) * LocalbN + 32));
+                simd_load(vtb[12], (float *)(pCB + (ik + 6) * LocalbN));
+                simd_load(vtb[13], (float *)(pCB + (ik + 6) * LocalbN + 32));
+                simd_load(vtb[14], (float *)(pCB + (ik + 7) * LocalbN));
+                simd_load(vtb[15], (float *)(pCB + (ik + 7) * LocalbN + 32));
+                simd_store(vtb[0], (float *)(LocalTB + ik * 32));
+                simd_store(vtb[1], (float *)(LocalTB + 32 * LocalbK + ik * 32));
+                simd_store(vtb[2], (float *)(LocalTB + (ik + 1) * 32));
+                simd_store(vtb[3], (float *)(LocalTB + 32 * LocalbK + (ik + 1) * 32));
+                simd_store(vtb[4], (float *)(LocalTB + (ik + 2) * 32));
+                simd_store(vtb[5], (float *)(LocalTB + 32 * LocalbK + (ik + 2) * 32));
+                simd_store(vtb[6], (float *)(LocalTB + (ik + 3) * 32));
+                simd_store(vtb[7], (float *)(LocalTB + 32 * LocalbK + (ik + 3) * 32));
+                simd_store(vtb[8], (float *)(LocalTB + (ik + 4) * 32));
+                simd_store(vtb[9], (float *)(LocalTB + 32 * LocalbK + (ik + 4) * 32));
+                simd_store(vtb[10], (float *)(LocalTB + (ik + 5) * 32));
+                simd_store(vtb[11], (float *)(LocalTB + 32 * LocalbK + (ik + 5) * 32));
+                simd_store(vtb[12], (float *)(LocalTB + (ik + 6) * 32));
+                simd_store(vtb[13], (float *)(LocalTB + 32 * LocalbK + (ik + 6) * 32));
+                simd_store(vtb[14], (float *)(LocalTB + (ik + 7) * 32));
+                simd_store(vtb[15], (float *)(LocalTB + 32 * LocalbK + (ik + 7) * 32));
+            }
+
+            if (idK < nK - 1) {
+                for (ik = 0; ik + 32 - 1 < LocalbK; ik += 32) {
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, 0);
+                    matmul_load_weight(handleMMA, LocalTB + ik * LocalbN / 2, MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, LocalbM);
+                    matmul_load_weight(handleMMA,
+                                       LocalTB + LocalbN * LocalbK / 2 + ik * LocalbN / 2,
+                                       MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+                }
+            } else {
+                for (ik = 0; ik + 64 - 1 < LocalbK; ik += 32) {
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, 0);
+                    matmul_load_weight(handleMMA, LocalTB + ik * LocalbN / 2, MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, LocalbM);
+                    matmul_load_weight(handleMMA,
+                                       LocalTB + LocalbN * LocalbK / 2 + ik * LocalbN / 2,
+                                       MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+                }
+                matmul_set_flushing_output(handleMMA, false);
+                matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, 0);
+                matmul_load_weight(handleMMA, LocalTB + ik * LocalbN / 2, MatmulK32, MatmulN32);
+                matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+
+                matmul_set_flushing_output(handleMMA, true);
+                matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, LocalbM);
+                matmul_load_weight(handleMMA, LocalTB + LocalbN * LocalbK / 2 + ik * LocalbN / 2,
+                                   MatmulK32, MatmulN32);
+                matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+                matmul_store(handleMMA, LocalCompC, LocalbM * 2, MatmulN32);
+            }
+        }  // loop idk
+        matmul_wait(handleMMA);
+
+        // permute C
+        for (im = 0; im < LocalbM; im++) {
+            simd_load(vtb[0], LocalCompC + im * 32);
+            simd_load(vtb[1], LocalCompC + im * 32 + 16);
+            simd_load(vtb[2], LocalCompC + (im + LocalbM) * 32);
+            simd_load(vtb[3], LocalCompC + (im + LocalbM) * 32 + 16);
+            simd_store(vtb[0], tempC + im * 64);
+            simd_store(vtb[1], tempC + im * 64 + 16);
+            simd_store(vtb[2], tempC + im * 64 + 32);
+            simd_store(vtb[3], tempC + im * 64 + 48);
+        }
+
+        if (std::is_same<TYPE_C, float>::value) {
+            LocalC = (TYPE_C *)tempC;
+        } else {
+            batch_S2H(tempC, (half *)LocalC, 4096);
+        }
+        memcpy_stride(pC + idM * bM * ldc + idN * bN, LocalC, LenC, BsizeC, {StrideC, 0});
+    }  // Loop idx
+    rt_spm_free(LocalCompA);
+    rt_spm_free(LocalCompB);
+    rt_spm_free(LocalC);
+    rt_spm_free(LocalCompC);
+}
+
+template <typename TYPE_C>
+__device__ void tecoKernelGemmFT16DoubleBufferImpl(GEMMArgs pGemm) {
+    // Calculate thread row and column IDs for organizing computation
+    const int rid = threadIdx / 8;
+    const int cid = threadIdx % 8;
+
+    // shape of A, B, C
+    const int M = pGemm.m;
+    const int N = pGemm.n;
+    const int K = pGemm.k;
+
+    // Leading dimensions for input and output matrices
+    const int lda = pGemm.lda;
+    const int ldb = pGemm.ldb;
+    const int ldc = pGemm.ldc;
+
+    // Data type for the output matrix C
+    const UALDataType Ctype = pGemm.Ctype;
+
+    // Pointers to the input matrices A, B, and the output matrix C
+    const Type *A = (const Type *)pGemm.A;
+    const Type *B = (const Type *)pGemm.B;
+    TYPE_C *C = (TYPE_C *)pGemm.C;
+
+    // outer block size
+    const int bM = pGemm.bM;
+    const int bN = pGemm.bN;
+    const int bK = pGemm.bK;
+
+    // outer block num
+    int nM = M / bM;
+    int nN = N / bN;
+    int nK = K / bK;
+
+    // inner block size
+    int LocalbM = bM / 8;
+    int LocalbN = bN / 4;
+    int LocalbK = bK;
+
+    // inner block located
+    const Type *pA = A + cid * LocalbM * lda;
+    const Type *pB = B + rid * LocalbN;
+    TYPE_C *pC = C + cid * LocalbM * ldc + rid * LocalbN;
+
+    // Pointers for current and next blocks of A, B, C
+    const Type *pCurrA, *pNextA;
+    const Type *pCurrB, *pNextB;
+    Type *pCurrC, *pNextC;
+
+    // Calculate the memory stride patterns for efficient data transfer
+    const size_t LenA = LocalbM * LocalbK * sizeof(Type);
+    const size_t BsizeA = LocalbK * sizeof(Type);
+    const size_t StrideA = (lda - LocalbK) * sizeof(Type);
+
+    const size_t LenB = LocalbK * LocalbN * sizeof(Type);
+    const size_t BsizeB = LocalbN * sizeof(Type);
+    const size_t StrideB = (ldb - LocalbN) * sizeof(Type);
+
+    const size_t LenC = LocalbM * LocalbN * sizeof(TYPE_C);
+    const size_t BsizeC = LocalbN * sizeof(TYPE_C);
+    const size_t StrideC = (ldc - LocalbN) * sizeof(TYPE_C);
+
+    size_t spm_size = 2 * LenA + 3 * LenB + LenC + LenC / sizeof(Type) * sizeof(float) * 2;
+    CHECK(spm_size < SPM_MAX_BYTE, "SPM heap space exceeded!\n");
+
+    // Allocate local buffers for the sub-blocks of A, B, and the result C, including double buffer
+    // and permute
+    Type *LocalDmaA = (Type *)rt_spm_malloc(LenA * 2);
+    Type *LocalCompA = LocalDmaA + LocalbM * LocalbK;
+    Type *LocalDmaB = (Type *)rt_spm_malloc(LenB * 3);
+    Type *LocalCompB = LocalDmaB + LocalbK * LocalbN;
+    Type *LocalTB = LocalDmaB + LocalbK * LocalbN * 2;
+    TYPE_C *LocalC = (TYPE_C *)rt_spm_malloc(LenC);
+    float *LocalCompC = (float *)rt_spm_malloc(LocalbM * LocalbN * sizeof(float) * 2);
+    float *tempC = LocalCompC + LocalbM * LocalbN;
+
+    // Temporary variables for intermediate computations
+    Type *pTemp;
+
+    // Pointers for DMA and computation buffers of A, B
+    Type *pDA = LocalDmaA, *pCA = LocalCompA;
+    Type *pDB = LocalDmaB, *pCB = LocalCompB;
+
+    int typeAThreads = (3 - cid % 4) * 8 + cid;  // col broadcast
+    int typeBThreads = rid * 8 + rid;            // row broadcast
+
+    // Loop variables for iterating over blocks and elements within blocks
+    int im, in, ik;
+    int idM, idN, idK;
+
+    // Permute B preparation
+    SIMDType vtb[SIMDSIZE];
+
+    // Initialize matrix multiplication operation
+    MatmulHandle handleMMA;
+    matmul_init(handleMMA, MatmulHalfToFloat);
+
+    // Broadcast preparation
+    uint64_t mask = 0;
+    mask = 0x01010101 << cid;
+    ThreadGroup col_thread_group(mask);
+
+    mask = 0xFF << (8 * rid);
+    ThreadGroup row_thread_group(mask);
+
+    // Create broadcast handle
+    BroadcastHandle col_handle(&col_thread_group);
+    BroadcastHandle row_handle(&row_thread_group);
+    sync_threads();
+
+    // Perform asynchronous broadcasting of matrix A and B
+    broadcast_async(pDA, (void *)pA, LenA, BsizeA, {0, StrideA}, typeAThreads, BroadcastGlobalToSpm,
+                    col_handle);
+    broadcast_async(pDB, (void *)pB, LenB, BsizeB, {0, StrideB}, typeBThreads, BroadcastGlobalToSpm,
+                    row_handle);
+
+    // Main loop over blocks of matrices A and B to compute the block-wise product and accumulate in
+    // matrix C
+    for (int idx = 0; idx < nM * nN; ++idx) {
+        // Calculate block index in M, N dimension
+        idM = idx / nN;
+        idN = idx % nN;
+        // Loop over the K dimension to multiply blocks of A and B and accumulate the result in
+        // TempC
+        for (idK = 0; idK < nK; ++idK) {
+            // Update pointers to the current blocks of matrices A and B
+            pCurrA = pA + idM * bM * lda + idK * bK;  // A[idM][idK]
+            pCurrB = pB + idK * bK * ldb + idN * bN;  // B[idK][idN]
+            // locate pNextA and pNextB
+            if (idK < nK - 1) {
+                pNextA = pA + idM * bM * lda + (idK + 1) * bK;  // A[idM][idK+1]
+                pNextB = pB + (idK + 1) * bK * ldb + idN * bN;  // B[idK+1][idN]
+            } else {
+                if (idN == nN - 1) {
+                    pNextA = pA + (idM + 1) * bM * lda;  // A[idM+1][0]
+                    pNextB = pB;                         // B[0][0]
+                    if (idx == (nM * nN - 1)) pNextA = pA;
+                } else {
+                    pNextA = pA + idM * bM * lda;  // A[idM][0]
+                    pNextB = pB + (idN + 1) * bN;  // B[0][idN+1]
+                }
+            }
+
+            // swap pCA and pDA
+            pTemp = pCA;
+            pCA = pDA;
+            pDA = pTemp;
+
+            // swap pCB and pDB
+            pTemp = pCB;
+            pCB = pDB;
+            pDB = pTemp;
+
+            // Wait for A broadcasting and matmul data load
+            broadcast_wait(col_handle);
+            matmul_wait_loading_input(handleMMA);
+
+            // Synchronize threads within the column thread group
+            sync_threads(col_thread_group);
+
+            // Asynchronously broadcast the next block of matrix A
+            broadcast_async(pDA, (void *)pNextA, LenA, BsizeA, {0, StrideA}, typeAThreads,
+                            BroadcastGlobalToSpm, col_handle);
+
+            // Same for matrix B
+            broadcast_wait(row_handle);
+            matmul_wait_loading_weight(handleMMA);
+
+            sync_threads(row_thread_group);
+
+            broadcast_async(pDB, (void *)pNextB, LenB, BsizeB, {0, StrideB}, typeBThreads,
+                            BroadcastGlobalToSpm, row_handle);
+
+            // Permute matrix B
+            for (ik = 0; ik < LocalbK; ik += 8) {
+                simd_load(vtb[0], (float *)(pCB + ik * LocalbN));
+                simd_load(vtb[1], (float *)(pCB + ik * LocalbN + 32));
+                simd_load(vtb[2], (float *)(pCB + (ik + 1) * LocalbN));
+                simd_load(vtb[3], (float *)(pCB + (ik + 1) * LocalbN + 32));
+                simd_load(vtb[4], (float *)(pCB + (ik + 2) * LocalbN));
+                simd_load(vtb[5], (float *)(pCB + (ik + 2) * LocalbN + 32));
+                simd_load(vtb[6], (float *)(pCB + (ik + 3) * LocalbN));
+                simd_load(vtb[7], (float *)(pCB + (ik + 3) * LocalbN + 32));
+                simd_load(vtb[8], (float *)(pCB + (ik + 4) * LocalbN));
+                simd_load(vtb[9], (float *)(pCB + (ik + 4) * LocalbN + 32));
+                simd_load(vtb[10], (float *)(pCB + (ik + 5) * LocalbN));
+                simd_load(vtb[11], (float *)(pCB + (ik + 5) * LocalbN + 32));
+                simd_load(vtb[12], (float *)(pCB + (ik + 6) * LocalbN));
+                simd_load(vtb[13], (float *)(pCB + (ik + 6) * LocalbN + 32));
+                simd_load(vtb[14], (float *)(pCB + (ik + 7) * LocalbN));
+                simd_load(vtb[15], (float *)(pCB + (ik + 7) * LocalbN + 32));
+                simd_store(vtb[0], (float *)(LocalTB + ik * 32));
+                simd_store(vtb[1], (float *)(LocalTB + 32 * LocalbK + ik * 32));
+                simd_store(vtb[2], (float *)(LocalTB + (ik + 1) * 32));
+                simd_store(vtb[3], (float *)(LocalTB + 32 * LocalbK + (ik + 1) * 32));
+                simd_store(vtb[4], (float *)(LocalTB + (ik + 2) * 32));
+                simd_store(vtb[5], (float *)(LocalTB + 32 * LocalbK + (ik + 2) * 32));
+                simd_store(vtb[6], (float *)(LocalTB + (ik + 3) * 32));
+                simd_store(vtb[7], (float *)(LocalTB + 32 * LocalbK + (ik + 3) * 32));
+                simd_store(vtb[8], (float *)(LocalTB + (ik + 4) * 32));
+                simd_store(vtb[9], (float *)(LocalTB + 32 * LocalbK + (ik + 4) * 32));
+                simd_store(vtb[10], (float *)(LocalTB + (ik + 5) * 32));
+                simd_store(vtb[11], (float *)(LocalTB + 32 * LocalbK + (ik + 5) * 32));
+                simd_store(vtb[12], (float *)(LocalTB + (ik + 6) * 32));
+                simd_store(vtb[13], (float *)(LocalTB + 32 * LocalbK + (ik + 6) * 32));
+                simd_store(vtb[14], (float *)(LocalTB + (ik + 7) * 32));
+                simd_store(vtb[15], (float *)(LocalTB + 32 * LocalbK + (ik + 7) * 32));
+            }
+
+            if (idK < nK - 1) {
+                for (ik = 0; ik + 32 - 1 < LocalbK; ik += 32) {
+                    // Perform the actual matrix multiplication
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, 0);
+                    matmul_load_weight(handleMMA, LocalTB + ik * LocalbN / 2, MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, LocalbM);
+                    matmul_load_weight(handleMMA,
+                                       LocalTB + LocalbN * LocalbK / 2 + ik * LocalbN / 2,
+                                       MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+                }
+            } else {
+                for (ik = 0; ik + 64 - 1 < LocalbK; ik += 32) {
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, 0);
+                    matmul_load_weight(handleMMA, LocalTB + ik * LocalbN / 2, MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+
+                    matmul_set_flushing_output(handleMMA, false);
+                    matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, LocalbM);
+                    matmul_load_weight(handleMMA,
+                                       LocalTB + LocalbN * LocalbK / 2 + ik * LocalbN / 2,
+                                       MatmulK32, MatmulN32);
+                    matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+                }
+                // Last matmul calculation and store result
+                matmul_set_flushing_output(handleMMA, false);
+                matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, 0);
+                matmul_load_weight(handleMMA, LocalTB + ik * LocalbN / 2, MatmulK32, MatmulN32);
+                matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+
+                matmul_set_flushing_output(handleMMA, true);
+                matmul_set_output_row_offset(handleMMA, MatmulEnableOutputRowOffset, LocalbM);
+                matmul_load_weight(handleMMA, LocalTB + LocalbN * LocalbK / 2 + ik * LocalbN / 2,
+                                   MatmulK32, MatmulN32);
+                matmul_compute(handleMMA, pCA + ik, LocalbM, MatmulK32, LocalbK / REDUITEM - 1);
+                matmul_store(handleMMA, LocalCompC, LocalbM * 2, MatmulN32);
+            }
+        }  // loop idk
+
+        // Wait for the matrix multiplication operation to complete
+        matmul_wait(handleMMA);
+
+        // Permute the computed partial results for matrix C to the correct order
+        for (im = 0; im < LocalbM; im++) {
+            simd_load(vtb[0], LocalCompC + im * 32);
+            simd_load(vtb[1], LocalCompC + im * 32 + 16);
+            simd_load(vtb[2], LocalCompC + (im + LocalbM) * 32);
+            simd_load(vtb[3], LocalCompC + (im + LocalbM) * 32 + 16);
+            simd_store(vtb[0], tempC + im * 64);
+            simd_store(vtb[1], tempC + im * 64 + 16);
+            simd_store(vtb[2], tempC + im * 64 + 32);
+            simd_store(vtb[3], tempC + im * 64 + 48);
+        }
+
+        // Handle type conversion if necessary before storing the result
+        if (std::is_same<TYPE_C, float>::value) {
+            LocalC = (TYPE_C *)tempC;
+        } else {
+            batch_S2H(tempC, (half *)LocalC, 4096);
+        }
+
+        // Copy the computed block back to the global memory
+        memcpy_stride(pC + idM * bM * ldc + idN * bN, LocalC, LenC, BsizeC, {StrideC, 0});
+    }  // Loop idx
+
+    // Free allocated local memory
+    rt_spm_free(LocalDmaA);
+    rt_spm_free(LocalDmaB);
+    rt_spm_free(LocalC);
+    rt_spm_free(LocalCompC);
+}
+
+__global__ void tecoKernelGemmFT16SingleThread(GEMMArgs pGemm) {
+    UALDataType ctype = pGemm.Ctype;
+    if (ctype == UALDataType::UAL_DTYPE_HALF) {
+        tecoKernelGemmFT16SingleThreadImpl<_Float16>(pGemm);
+    } else if (ctype == UALDataType::UAL_DTYPE_FLOAT) {
+        tecoKernelGemmFT16SingleThreadImpl<float>(pGemm);
+    }
+}
+
+__global__ void tecoKernelGemmFT16MultiThreads(GEMMArgs pGemm) {
+    UALDataType ctype = pGemm.Ctype;
+    if (ctype == UALDataType::UAL_DTYPE_HALF) {
+        tecoKernelGemmFT16MultiThreadsImpl<_Float16>(pGemm);
+    } else if (ctype == UALDataType::UAL_DTYPE_FLOAT) {
+        tecoKernelGemmFT16MultiThreadsImpl<float>(pGemm);
+    }
+}
+
+__global__ void tecoKernelGemmFT16DMA(GEMMArgs pGemm) {
+    UALDataType ctype = pGemm.Ctype;
+    if (ctype == UALDataType::UAL_DTYPE_HALF) {
+        tecoKernelGemmFT16DMAImpl<_Float16>(pGemm);
+    } else if (ctype == UALDataType::UAL_DTYPE_FLOAT) {
+        tecoKernelGemmFT16DMAImpl<float>(pGemm);
+    }
+}
+
+__global__ void tecoKernelGemmFT16SIMD(GEMMArgs pGemm) {
+    UALDataType ctype = pGemm.Ctype;
+    if (ctype == UALDataType::UAL_DTYPE_HALF) {
+        tecoKernelGemmFT16SIMDImpl<_Float16>(pGemm);
+    } else if (ctype == UALDataType::UAL_DTYPE_FLOAT) {
+        tecoKernelGemmFT16SIMDImpl<float>(pGemm);
+    }
+}
+
+__global__ void tecoKernelGemmFT16Matmul(GEMMArgs pGemm) {
+    UALDataType ctype = pGemm.Ctype;
+    if (ctype == UALDataType::UAL_DTYPE_HALF) {
+        tecoKernelGemmFT16MatmulImpl<_Float16>(pGemm);
+    } else if (ctype == UALDataType::UAL_DTYPE_FLOAT) {
+        tecoKernelGemmFT16MatmulImpl<float>(pGemm);
+    }
+}
+
+__global__ void tecoKernelGemmFT16Broadcast(GEMMArgs pGemm) {
+    UALDataType ctype = pGemm.Ctype;
+    if (ctype == UALDataType::UAL_DTYPE_HALF) {
+        tecoKernelGemmFT16BroadcastImpl<_Float16>(pGemm);
+    } else if (ctype == UALDataType::UAL_DTYPE_FLOAT) {
+        tecoKernelGemmFT16BroadcastImpl<float>(pGemm);
+    }
+}
+
+__global__ void tecoKernelGemmFT16DoubleBuffer(GEMMArgs pGemm) {
+    UALDataType ctype = pGemm.Ctype;
+    if (ctype == UALDataType::UAL_DTYPE_HALF) {
+        tecoKernelGemmFT16DoubleBufferImpl<_Float16>(pGemm);
+    } else if (ctype == UALDataType::UAL_DTYPE_FLOAT) {
+        tecoKernelGemmFT16DoubleBufferImpl<float>(pGemm);
+    }
+}
+}  // namespace kernel
+}  // namespace ual
+}  // namespace tecoal

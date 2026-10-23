@@ -1,0 +1,4 @@
+interface:
+  display_name: "仓库问题与功能记录"
+  short_description: "简要记录仓库功能问题修复、功能支持、核心方案与验证结果"
+  default_prompt: "Use $record-repo-change to record a concise repository bug fix or feature support."

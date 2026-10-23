@@ -1,0 +1,194 @@
+// BSD 3- Clause License Copyright (c) 2024, Tecorigin Co., Ltd. All rights
+// reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// Redistributions of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+// Neither the name of the copyright holder nor the names of its contributors
+// may be used to endorse or promote products derived from this software
+// without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)  ARISING IN ANY
+// WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
+#include "ual/kernel/index_put/index_put.h"
+#include "ual/com/dma_all_type.h"
+#include "ual/com/rt.h"
+
+using namespace sdaa;
+using namespace tecoal::ual::common;
+
+namespace tecoal {
+namespace ual {
+namespace kernel {
+
+#ifndef MIN
+#define MIN(x, y) ((x) < (y) ? (x) : (y))
+#endif
+#ifndef MAX
+#define MAX(x, y) ((x) > (y) ? (x) : (y))
+#endif
+#define SIMD_WIDTH 64
+
+__device__ static inline int get_idx(int *pos, const int *A, int n) {
+    int ans = 0;
+    for (int i = n - 1; i > -1; --i) {
+        ans = ans * A[i] + pos[i];
+    }
+    return ans;
+}
+
+__device__ static inline int round_down_2_power(int x, int align) { return x & -align; }
+__device__ static inline int round_up_2_power(int x, int align) {
+    return round_down_2_power(x + align - 1, align);
+}
+
+__device__ static inline int PI(const int *x, int ln) {
+    int ans = 1;
+    for (int i = 0; i < ln; ++i) ans *= x[i];
+    return ans;
+}
+
+static __device__ inline __attribute__((always_inline)) void batch_Hadd(const half *x,
+                                                                        const half *y, half *z,
+                                                                        int len) {
+    float16v16 x0, x1, x2, x3, x4, x5;
+    float16v16 y0, y1, y2, y3, y4, y5;
+    float16v16 z0, z1, z2, z3, z4, z5;
+    for (int i = 0; i < len; i += 96) {
+        simd_load(x0, x + i);
+        simd_load(x1, x + i + 16);
+        simd_load(x2, x + i + 32);
+        simd_load(x3, x + i + 48);
+        simd_load(x4, x + i + 64);
+        simd_load(x5, x + i + 80);
+
+        simd_load(y0, y + i);
+        simd_load(y1, y + i + 16);
+        simd_load(y2, y + i + 32);
+        simd_load(y3, y + i + 48);
+        simd_load(y4, y + i + 64);
+        simd_load(y5, y + i + 80);
+
+        z0 = x0 + y0;
+        z1 = x1 + y1;
+        z2 = x2 + y2;
+        z3 = x3 + y3;
+        z4 = x4 + y4;
+        z5 = x5 + y5;
+
+        simd_store(z0, z + i);
+        simd_store(z1, z + i + 16);
+        simd_store(z2, z + i + 32);
+        simd_store(z3, z + i + 48);
+        simd_store(z4, z + i + 64);
+        simd_store(z5, z + i + 80);
+    }
+}
+
+__global__ void tecoKernelIndexPutInt64Indices(IndexPutArgs arg) {
+    const int tid = threadIdx;
+    const int spe_cnt = arg.spe_cnt;
+
+    const int sz_type = arg.sz_type;
+    const int list_length = arg.list_length;
+    const int dim_ln_index = arg.dim_ln_index;
+    const int dim_ln = arg.dim_ln;
+
+    int64_t **indices = (int64_t **)arg.indices;
+    char *input = (char *)arg.input;
+    char *output = (char *)arg.output;
+    char *value = (char *)arg.value;
+    const int accumulate = arg.accumulate;
+
+    const int TYPE_CODE = arg.TYPE_CODE;
+    const int FUNC_CODE = arg.FUNC_CODE;
+
+    int dim_output[MAX_DIM];
+    int dim_index[MAX_DIM];
+
+    memcpy(dim_output, arg.dim_output, sizeof(int) * dim_ln);
+    memcpy(dim_index, arg.dim_index, sizeof(int) * dim_ln_index);
+
+    const int index_cnt = PI(dim_index, dim_ln_index);
+    const int mid_pos = dim_ln - list_length;
+    const int lo_cnt = PI(dim_output, mid_pos);
+
+    int pos[MAX_DIM] = {0};
+
+    int blk_cnt = 1 << 10;
+
+    typedef void (*FUNC_3)(void *, void *, void *, int ln);
+    auto simd_op = (FUNC_3)batch_Hadd;
+
+    const int K = index_cnt;
+    const int I = list_length;
+
+    char *buf_value = (char *)rt_spm_malloc(sz_type * blk_cnt);
+    char *buf_output = (char *)rt_spm_malloc(sz_type * blk_cnt);
+    int64_t *buf_indices[MAX_DIM];
+
+    MemcpyHandle handle;
+
+    // In extreme cases, allocate sizeof(int64_t) * 1K * MAX_DIM = 64K.
+    for (int i = 0; i < I; ++i) {
+        buf_indices[i] = (int64_t *)rt_spm_malloc(sizeof(int64_t) * blk_cnt);
+    }
+
+    for (int itr_k = 0; itr_k < K; itr_k += blk_cnt) {
+        int dma_cnt = MIN(blk_cnt, K - itr_k);
+        for (int i = 0; i < I; ++i) {
+            allDmaIgetSdaa(buf_indices[i], indices[i] + itr_k, sizeof(int64_t) * dma_cnt, handle);
+        }
+        memcpy_wait(handle);
+        for (int k = itr_k; k < itr_k + dma_cnt; k++) {
+            for (int i = 0; i < I; i++) {
+                pos[list_length - 1 - i] = buf_indices[i][k - itr_k];
+            }
+            int idx_output = get_idx(pos, dim_output + mid_pos, list_length);
+            int idx_value = k;
+            if ((idx_output & (spe_cnt - 1)) == tid) {
+                for (int i_lo_cnt = 0; i_lo_cnt < lo_cnt; i_lo_cnt += blk_cnt) {
+                    int dma_cnt = MIN(blk_cnt, lo_cnt - i_lo_cnt);
+                    allDmaIgetSdaa(buf_value, value + sz_type * (idx_value * lo_cnt + i_lo_cnt),
+                                   sz_type * dma_cnt, handle);
+                    memcpy_wait(handle);
+                    if (accumulate) {
+                        allDmaIgetSdaa(buf_output,
+                                       output + sz_type * (idx_output * lo_cnt + i_lo_cnt),
+                                       sz_type * dma_cnt, handle);
+                        memcpy_wait(handle);
+                        ((FUNC_3)simd_op)(buf_output, buf_value, buf_value,
+                                          round_up_2_power(dma_cnt, SIMD_WIDTH));
+                    }
+                    allDmaIputSdaa(output + sz_type * (idx_output * lo_cnt + i_lo_cnt), buf_value,
+                                   sz_type * dma_cnt, handle);
+                    memcpy_wait(handle);
+                }
+            }
+        }
+    }
+    for (int i = 0; i < I; ++i) {
+        rt_spm_free(buf_indices[i]);
+    }
+
+    rt_spm_free(buf_output);
+    rt_spm_free(buf_value);
+}
+
+}  // namespace kernel
+}  // namespace ual
+}  // namespace tecoal

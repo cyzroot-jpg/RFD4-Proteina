@@ -1,0 +1,152 @@
+syntax = "proto2";
+
+package testpt;
+
+message HandleParam {
+    optional int32 slave_group_num    =1 [default = 0];
+    optional int32 slave_core_num     =2 [default = 32];
+    optional int32 slave_ldm_size     =3 [default = 225280];//220K
+}
+
+enum MathType{
+    DEFAULT_MATH = 0;
+    TENSOR_ACC_MATH = 1;
+    TENSOR_ACC_MATH_ALLOW_CONVERSION = 2;
+}
+
+enum NanPropagation{
+    NOT_PROPAGATE_NAN = 0;
+    PROPAGATE_NAN = 1;
+}
+
+//-----------------LOSS----------------------
+enum LossReductionMode{
+    LOSS_REDUCTION_NONE = 0;
+    LOSS_REDUCTION_MEAN = 1;  // default
+    LOSS_REDUCTION_SUM = 2;
+    LOSS_REDUCTION_BATCH_MEAN = 3;
+}
+
+enum GluAccurateMode{
+    GLU_NORMAL_PRECISION = 0;
+    GLU_HIGH_PRECISION = 1;
+}
+
+enum ModelMode{
+    MODEL_TRAINING = 0;  // Default training mode
+    MODEL_INFER = 1;
+}
+
+enum Algo{
+    ALGO_0 = 0;
+    ALGO_1 = 1;
+    ALGO_2 = 2;
+    ALGO_3 = 3;
+    ALGO_4 = 4;
+    ALGO_5 = 5;
+    ALGO_6 = 6;
+    ALGO_7 = 7;
+    ALGO_8 = 8;
+    ALGO_9 = 9;
+    ALGO_10 = 10;
+    ALGO_11 = 11;
+    ALGO_12 = 12;
+    ALGO_13 = 13;
+    ALGO_14 = 14;
+    ALGO_15 = 15;
+    ALGO_16 = 16;
+    ALGO_17 = 17;
+    ALGO_18 = 18;
+    ALGO_19 = 19;
+    ALGO_20 = 20;
+    ALGO_21 = 21;
+    ALGO_22 = 22;
+    ALGO_23 = 23;
+    ALGO_24 = 24;
+    ALGO_25 = 25;
+    ALGO_26 = 26;
+    ALGO_27 = 27;
+    ALGO_28 = 28;
+    ALGO_29 = 29;
+    ALGO_30 = 30;
+    ALGO_31 = 31;
+    ALGO_32 = 32;
+    ALGO_33 = 33;
+    ALGO_34 = 34;
+    ALGO_35 = 35;
+    ALGO_36 = 36;
+    ALGO_37 = 37;
+    ALGO_38 = 38;
+    ALGO_39 = 39;
+    ALGO_40 = 40;
+    ALGO_41 = 41;
+    ALGO_42 = 42;
+    ALGO_43 = 43;
+    ALGO_44 = 44;
+    ALGO_45 = 45;
+    ALGO_46 = 46;
+    ALGO_47 = 47;
+    ALGO_48 = 48;
+    ALGO_49 = 49;
+    ALGO_50 = 50;
+    ALGO_51 = 51;
+    ALGO_52 = 52;
+    ALGO_53 = 53;
+    ALGO_54 = 54;
+    ALGO_55 = 55;
+    ALGO_56 = 56;
+    ALGO_57 = 57;
+    ALGO_58 = 58;
+    ALGO_59 = 59;
+    ALGO_60 = 60;
+    ALGO_61 = 61;
+    ALGO_62 = 62;
+    ALGO_63 = 63;
+    ALGO_64 = 64;
+    ALGO_65 = 65;
+    ALGO_66 = 66;
+    ALGO_67 = 67;
+    ALGO_68 = 68;
+    ALGO_69 = 69;
+    ALGO_70 = 70;
+    ALGO_71 = 71;
+    ALGO_72 = 72;
+    ALGO_73 = 73;
+    ALGO_74 = 74;
+    ALGO_75 = 75;
+    ALGO_76 = 76;
+    ALGO_77 = 77;
+    ALGO_78 = 78;
+    ALGO_79 = 79;
+    ALGO_80 = 80;
+    ALGO_81 = 81;
+    ALGO_82 = 82;
+    ALGO_83 = 83;
+    ALGO_84 = 84;
+    ALGO_85 = 85;
+    ALGO_86 = 86;
+    ALGO_87 = 87;
+    ALGO_88 = 88;
+    ALGO_89 = 89;
+    ALGO_90 = 90;
+    ALGO_91 = 91;
+    ALGO_92 = 92;
+    ALGO_93 = 93;
+    ALGO_94 = 94;
+    ALGO_95 = 95;
+    ALGO_96 = 96;
+    ALGO_97 = 97;
+    ALGO_98 = 98;
+    ALGO_99 = 99;
+    ALGO_100 = 100;
+    ALGO_101 = 101;
+    ALGO_102 = 102;
+    ALGO_103 = 103;
+    ALGO_104 = 104;
+    ALGO_105 = 105;
+    ALGO_106 = 106;
+    ALGO_107 = 107;
+    ALGO_108 = 108;
+    ALGO_109 = 109;
+    ALGO_110 = 110;
+}

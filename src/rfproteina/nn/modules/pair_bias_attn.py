@@ -35,6 +35,7 @@ from rfproteina.nn.modules.adaptive_ln_scale import (
 )
 from rfproteina.nn.modules.norm import make_norm
 from rfproteina.utils.common import default, exists
+from rfproteina.utils.sdaa_compat import sdaa_is_active
 
 # Large negative value for masking (not -inf to avoid gradient issues)
 NEG_INF = -1e4
@@ -64,6 +65,22 @@ try:
 except (ImportError, OSError):
     CUET_AVAILABLE = False
     cuet_attention_pair_bias = None
+
+
+# SDAA's SDPA implementation rejects some dtype/shape combinations the CUDA
+# backend supports. Probe once per process, then use the explicit einsum path
+# for the rest of the run instead of retrying a failing kernel every step.
+_SDAA_SDPA_UNAVAILABLE = False
+
+
+def _einsum_attention(q, k, v, attn_bias, dim_head, target_dtype):
+    scale = dim_head**-0.5
+    q, k, v = (t.to(target_dtype) for t in (q, k, v))
+    sim = einsum("b h i d, b h j d -> b h i j", q, k) * scale
+    if attn_bias is not None:
+        sim = sim + attn_bias
+    attn = torch.softmax(sim, dim=-1)
+    return einsum("b h i j, b h j d -> b h i d", attn, v)
 
 
 class PairBiasAttention(nn.Module):
@@ -168,22 +185,26 @@ class PairBiasAttention(nn.Module):
             # Avoid crashes for fully masked attention rows.
             attn_bias = attn_bias.masked_fill(~mask_expanded.any(dim=-1, keepdim=True), 0.0)
 
-        # SDPA on GPU; explicit einsum fallback on CPU (CI / local dev only, not
-        # intended for production CPU inference).
-        if not torch.cuda.is_available():
-            scale = self.dim_head**-0.5
-            sim = einsum("b h i d, b h j d -> b h i j", q, k) * scale
-            if attn_bias is not None:
-                sim = sim + attn_bias
-            attn = torch.softmax(sim, dim=-1)
-            o = einsum("b h i j, b h j d -> b h i d", attn, v)
+        # SDPA on GPU; explicit einsum fallback on CPU. On Teco SDAA, try the
+        # fused kernel first and fall back permanently if this build cannot
+        # dispatch it for an additive pair bias.
+        global _SDAA_SDPA_UNAVAILABLE
+        use_einsum = not torch.cuda.is_available() or (sdaa_is_active() and _SDAA_SDPA_UNAVAILABLE)
+        if use_einsum:
+            o = _einsum_attention(q, k, v, attn_bias, self.dim_head, target_dtype)
         else:
-            o = F.scaled_dot_product_attention(
-                q.contiguous().to(target_dtype),
-                k.contiguous().to(target_dtype),
-                v.contiguous().to(target_dtype),
-                attn_mask=attn_bias.contiguous() if attn_bias is not None else None,
-            )
+            try:
+                o = F.scaled_dot_product_attention(
+                    q.contiguous().to(target_dtype),
+                    k.contiguous().to(target_dtype),
+                    v.contiguous().to(target_dtype),
+                    attn_mask=attn_bias.contiguous().to(target_dtype) if attn_bias is not None else None,
+                )
+            except RuntimeError:
+                if not sdaa_is_active():
+                    raise
+                _SDAA_SDPA_UNAVAILABLE = True
+                o = _einsum_attention(q, k, v, attn_bias, self.dim_head, target_dtype)
 
         # Apply gating
         o_gated = torch.sigmoid(g) * o

@@ -1,0 +1,31 @@
+# <TITLE>
+
+## 原始创意
+
+<ORIGINAL_IDEA>
+
+## 主要方向：<PRIMARY_NAME>
+
+### 理由
+
+<PRIMARY_RATIONALE>
+
+### 方法摘要
+
+<PRIMARY_APPROACH_SUMMARY>
+
+### 客观证据
+
+<PRIMARY_OBJECTIVE_EVIDENCE>
+
+### 已知风险
+
+<PRIMARY_KNOWN_RISKS>
+
+## 考虑过的替代方向
+
+<ALTERNATIVES>
+
+## 综合说明
+
+<SYNTHESIS_NOTES>

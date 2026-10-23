@@ -1,0 +1,9 @@
+# Developability triage metrics that need only the native Python environment.
+# The Rosetta entry in `developability_metrics.yaml` requires an external
+# PyRosetta apptainer ($PYROSETTA_CONTAINER); use this group when that runtime is
+# unavailable so the remaining official metrics still run.
+
+sequence_developability:
+  _target_: rfproteina.metrics.physics.developability_metrics.SequenceDevelopabilityMetric
+  required_tags_any: ["developability"]
+  prohibited_tags: ["small_molecule_only", "structure_prediction"]

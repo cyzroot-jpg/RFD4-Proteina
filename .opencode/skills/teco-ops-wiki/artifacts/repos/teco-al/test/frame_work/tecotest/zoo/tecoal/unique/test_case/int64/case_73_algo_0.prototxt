@@ -1,0 +1,89 @@
+op_name: "unique"
+input {
+  id: "x"
+  shape {
+    dims: 34
+    dims: 12
+    dims: 6
+    dims: 12
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  random_data {
+    seed: 52915209
+    lower_bound: -100.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+  }
+  ttype: TENSOR
+}
+input {
+  id: "y"
+  shape {
+    dims: 29376
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  reused: true
+  random_data {
+    seed: 47981610
+    lower_bound: -100.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+  }
+  ttype: TENSOR
+}
+input {
+  id: "inverse"
+  shape {
+    dims: 34
+    dims: 12
+    dims: 6
+    dims: 12
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  reused: true
+  random_data {
+    seed: 62711979
+    lower_bound: -100.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+  }
+  ttype: TENSOR
+}
+input {
+  id: "counts"
+  shape {
+    dims: 29376
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  reused: true
+  random_data {
+    seed: 40970646
+    lower_bound: -100.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+  }
+  ttype: TENSOR
+}
+output {
+  id: "out_size"
+  shape {
+    dims: 1
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_INT64
+  ttype: VALID
+}
+tecoal_param {
+  unique_param {
+    sorted: true
+    return_inverse: true
+    return_counts: false
+    mode: UNIQUE_NONE
+    axis: 0
+    algo: ALGO_0
+  }
+}

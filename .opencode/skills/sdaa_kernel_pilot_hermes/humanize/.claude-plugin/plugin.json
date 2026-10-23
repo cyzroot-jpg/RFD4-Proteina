@@ -1,0 +1,19 @@
+{
+  "name": "humanize",
+  "description": "Humanize RLCR with the KernelPilot Hermes loop, native teco-ops correctness and SDPTI performance testing, and exclusive teco-ops-wiki evidence.",
+  "version": "1.18.0",
+  "author": {
+    "name": "PolyArch"
+  },
+  "repository": "https://github.com/PolyArch/humanize",
+  "homepage": "https://github.com/PolyArch/humanize#readme",
+  "license": "MIT",
+  "keywords": [
+    "iterative-development",
+    "codex-review",
+    "ai-native",
+    "feedback-loop",
+    "goal-tracking",
+    "quality-assurance"
+  ]
+}

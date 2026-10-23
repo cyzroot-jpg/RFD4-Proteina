@@ -1,0 +1,38 @@
+op_name: "unary_ops"
+input {
+  id: "x"
+  shape {
+    dims: 17
+    dims: 22
+    dims: 28
+    dims: 4
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  random_data {
+    seed: 73284831
+    lower_bound: -100.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+  }
+  ttype: TENSOR
+}
+output {
+  id: "y"
+  shape {
+    dims: 17
+    dims: 22
+    dims: 28
+    dims: 4
+  }
+  layout: LAYOUT_NHWC
+  dtype: DTYPE_FLOAT
+  ttype: TENSOR
+}
+tecoal_param {
+  unary_ops_param {
+    mode: BATCH_MUL_A
+    unary_alpha: 25.39723014831543
+    algo: ALGO_0
+  }
+}

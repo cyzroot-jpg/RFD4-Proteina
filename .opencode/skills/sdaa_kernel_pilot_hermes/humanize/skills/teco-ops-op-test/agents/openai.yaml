@@ -1,0 +1,4 @@
+interface:
+  display_name: "Teco Ops Test"
+  short_description: "Run native teco-ops correctness and performance tests"
+  default_prompt: "Use $teco-ops-op-test to validate and benchmark this teco-ops candidate."

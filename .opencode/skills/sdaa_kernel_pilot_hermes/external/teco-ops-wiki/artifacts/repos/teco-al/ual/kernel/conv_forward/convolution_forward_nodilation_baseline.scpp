@@ -1,0 +1,501 @@
+// BSD 3- Clause License Copyright (c) 2024, Tecorigin Co., Ltd. All rights
+// reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// Redistributions of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+// Neither the name of the copyright holder nor the names of its contributors
+// may be used to endorse or promote products derived from this software
+// without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)  ARISING IN ANY
+// WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
+#include <simd.h>
+#include <slave.h>
+#include <sdaa_matmul.h>
+#include "ual/com/log.h"
+#include "ual/kernel/conv_forward/conv_forward.h"
+#include "ual/kernel/macro.h"
+#include "ual/com/rt.h"
+
+using namespace sdaa;
+using namespace tecoal::ual::common;
+
+namespace tecoal {
+namespace ual {
+namespace kernel {
+
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+#define ALIGN_UNIT(in, unit) (((in) + (unit)-1) / (unit) * (unit))
+#define SEG_NUM(in, unit) (((in) + (unit)-1) / (unit))
+#define BACK_INFER_H(in) (((in)-1) * (SH) + (R))
+#define BACK_INFER_W(in) (((in)-1) * (SW) + (S))
+
+#define INPUT(n, h, w, c) ((((n)*H + h) * W + w) * C + c)
+#define OUTPUT(n, e, f, m) ((((n)*E + e) * F + f) * M + m)
+#define WEIGHT(c, r, s, m) ((((c)*R + r) * S + s) * M + m)
+#define WEIGHT6D(c, r, s, m) (((c)*M + (m)*32) * R * S + ((r)*S + (s)) * 32 * 32)
+
+#define DB_MAX_USED_SPM_SIZE 239616  // 234KB for SPM
+
+template <typename DT>
+struct precision_flag;
+template <>
+struct precision_flag<half> {
+    static const int value = 0;
+};
+template <>
+struct precision_flag<float> {
+    static const int value = 1;
+};
+
+template <typename XDT, typename YDT>
+static __device__ int calcuBlockParam(const ConvFwdArgs &arg, int *block_c_p, int *block_e_p,
+                                      int *block_f_p) {
+    const int N = arg.N, C = arg.C, H = arg.H, W = arg.W, M = arg.M, R = arg.R, S = arg.S,
+              E = arg.E, F = arg.F, SH = arg.stride_h, SW = arg.stride_w;
+    int &block_c = *block_c_p;
+    int &block_e = *block_e_p;
+    int &block_f = *block_f_p;
+    // All splitting strategies are designed based on the 234KB SPM
+    constexpr int unit_block_c = 32, unit_block_m = 32;
+    const int min_block_f = MIN(F, 32), max_block_f = MIN(F, 128);
+    const int max_block_e = E;
+    int start_block_e = 1;
+    int start_block_c = ALIGN_UNIT(C, unit_block_c);
+    int all_c = ALIGN_UNIT(C, unit_block_c);
+    // Keep bf even if C is odd and XDT is half
+    int enlarge_bf = sizeof(XDT) == 2 && C % 2 ? 2 : 1;
+    int start_block_f = (F <= 48) ? max_block_f : min_block_f;
+    int start_block_f0 = start_block_f;
+    // 1. First fix bF and bE, and check if it is possible to split with bC = C
+    while (sizeof(XDT) * BACK_INFER_H(start_block_e) * BACK_INFER_W(start_block_f0) * all_c +
+                   sizeof(XDT) * unit_block_m * all_c * 2 +
+                   sizeof(YDT) * start_block_e * start_block_f0 * unit_block_m * 2 >
+               DB_MAX_USED_SPM_SIZE &&
+           (start_block_f0 + 1) / 2 >= 16) {
+        start_block_f0 = (start_block_f0 + 1) / 2;
+    }
+    int read_all_C =
+        sizeof(XDT) * BACK_INFER_H(start_block_e) * BACK_INFER_W(start_block_f0) * all_c +
+        sizeof(XDT) * unit_block_m * all_c * 2 +
+        sizeof(YDT) * start_block_e * start_block_f0 * unit_block_m * 2;
+    // 2. If 1 is possible, then further check if bE and bF can be enlarged
+    if (read_all_C < DB_MAX_USED_SPM_SIZE) {
+        block_f = start_block_f0;
+        block_c = start_block_c;
+        block_e = start_block_e;
+        // First enlarge max_be
+        for (int tmp_be = start_block_e; tmp_be <= max_block_e; tmp_be += 1) {
+            read_all_C = sizeof(XDT) * BACK_INFER_H(tmp_be) * BACK_INFER_W(block_f) * all_c +
+                         sizeof(XDT) * unit_block_m * all_c * 2 +
+                         sizeof(YDT) * tmp_be * block_f * unit_block_m * 2;
+            if (read_all_C > DB_MAX_USED_SPM_SIZE || tmp_be * block_f > 128) break;
+            block_e = tmp_be;  // enlarge be
+        }
+        // Then enlarge tmp_bf
+        for (int tmp_bf = start_block_f0; tmp_bf <= max_block_f; tmp_bf += enlarge_bf) {
+            read_all_C = sizeof(XDT) * BACK_INFER_H(block_e) * BACK_INFER_W(tmp_bf) * all_c +
+                         sizeof(XDT) * unit_block_m * all_c * 2 +
+                         sizeof(YDT) * block_e * tmp_bf * unit_block_m * 2;
+            if (read_all_C > DB_MAX_USED_SPM_SIZE || block_e * tmp_bf > 128) break;
+            block_f = tmp_bf;  // enlarge bf
+        }
+        block_e = MIN(block_e, SEG_NUM(E, SEG_NUM(E, block_e)));
+        block_f = MIN(block_f, SEG_NUM(F, SEG_NUM(F, block_f)));
+
+        int new_block_e = MIN(SEG_NUM(ALIGN_UNIT(E, 4), 4), block_e);
+        while (N * SEG_NUM(E, block_e) * SEG_NUM(F, block_f) <= 16) {
+            block_e = (block_e + 1) / 2;
+            if (block_e == 1) break;
+        }
+        int loops = N * SEG_NUM(E, block_e) * SEG_NUM(F, block_f);
+        float eff1 = (float)loops / (float)ALIGN_UNIT(loops, 32);
+        loops = N * SEG_NUM(E, new_block_e) * SEG_NUM(F, block_f);
+        float eff2 =
+            float(SEG_NUM(M, 32) * loops) / float(SEG_NUM(M, 256) * SEG_NUM(loops, 4) * 32);
+        if (block_e * block_f < 32 && block_e != new_block_e && eff1 < eff2) {
+            block_e = new_block_e;
+        }
+        return 1;  // reading all C
+    }
+    // 3. If 1 is not possible, then fix bC and adjust bE and bF for splitting
+    // Split C
+    int max_block_c = unit_block_c;
+    block_c = max_block_c;    // setting bc
+    block_e = start_block_e;  // setting be
+    block_f = start_block_f;  // setting bf
+
+    // First enlarge be
+    for (int tmp_be = start_block_e; tmp_be <= max_block_e; tmp_be += 1) {
+        read_all_C = sizeof(XDT) * BACK_INFER_H(tmp_be) * BACK_INFER_W(block_f) * max_block_c +
+                     sizeof(XDT) * unit_block_m * max_block_c * 2 +
+                     sizeof(YDT) * tmp_be * block_f * unit_block_m * 2;
+        if (read_all_C > DB_MAX_USED_SPM_SIZE || tmp_be * block_f > 128) break;
+        block_e = tmp_be;
+    }
+
+    // Then enlarge tmp_bf
+    for (int tmp_bf = start_block_f; tmp_bf <= max_block_f; tmp_bf += enlarge_bf) {
+        read_all_C = sizeof(XDT) * BACK_INFER_H(block_e) * BACK_INFER_W(tmp_bf) * max_block_c +
+                     sizeof(XDT) * unit_block_m * max_block_c * 2 +
+                     sizeof(YDT) * block_e * tmp_bf * unit_block_m * 2;
+        if (read_all_C > DB_MAX_USED_SPM_SIZE || block_e * tmp_bf > 128) break;
+        block_f = tmp_bf;
+    }
+    block_e = MIN(block_e, SEG_NUM(E, SEG_NUM(E, block_e)));
+    block_f = MIN(block_f, SEG_NUM(F, SEG_NUM(F, block_f)));
+
+    if (SEG_NUM(E, block_e) * SEG_NUM(F, block_f) <= 16 && (block_f + 1) / 2 >= 16) {
+        block_f = (block_f + 1) / 2;
+    } else if (SEG_NUM(E, block_e) * SEG_NUM(F, block_f) <= 16) {
+        block_e = (block_e + 1) / 2;
+    }
+    // Lastly, enlarge bc
+    while (sizeof(XDT) * BACK_INFER_H(block_e) * BACK_INFER_W(block_f) * max_block_c +
+               sizeof(XDT) * unit_block_m * max_block_c * 2 +
+               sizeof(YDT) * block_e * block_f * unit_block_m * 2 <=
+           DB_MAX_USED_SPM_SIZE) {
+        max_block_c += unit_block_c;
+    }
+    max_block_c -= unit_block_c;
+    max_block_c = MIN(max_block_c, ALIGN_UNIT(SEG_NUM(C, SEG_NUM(C, max_block_c)), 32));
+
+    // Ensure last BC is less than 32
+    if (C % 32 == 0) {
+        max_block_c = MIN(max_block_c, C);
+    } else {
+        max_block_c = MIN(max_block_c, C - C % 32);
+        max_block_c = MAX(32, max_block_c);
+    }
+    block_c = max_block_c;  // setting bc
+    return 1;
+}
+
+template <typename XDT, typename YDT, typename ScaleBiasDT>
+static __device__ void convolution_forward_nodilation_baseline_kernel_impl(const ConvFwdArgs &arg,
+                                                                           const int block_c,
+                                                                           const int block_e,
+                                                                           const int block_f) {
+    // Get input data shape information
+    const int N = arg.N, C = arg.C, H = arg.H, W = arg.W, M = arg.M, R = arg.R, S = arg.S,
+              E = arg.E, F = arg.F, PH = arg.pad_h, PW = arg.pad_w, SH = arg.stride_h,
+              SW = arg.stride_w;
+    // Get input data address information
+    XDT *x = (XDT *)arg.x;
+    XDT *w = (XDT *)arg.w;
+    YDT *y = (YDT *)arg.y;
+    // Get index for spes
+    const int tid = threadIdx;
+    const int rid = threadIdx / 8;
+    const int cid = threadIdx % 8;
+
+    // Initialize x, w, y, and matmul
+    constexpr int unit_block_m = 32;
+    // Weight broadcast load initialization
+    BroadcastHandle w_handle;
+    const size_t w_buf_size = block_c * unit_block_m;
+    XDT *w_buf[2] = {nullptr, nullptr};
+    w_buf[0] = (XDT *)rt_spm_malloc(w_buf_size * sizeof(XDT));
+    w_buf[1] = (XDT *)rt_spm_malloc(w_buf_size * sizeof(XDT));
+
+    // Input load initialization
+    MemcpyHandle x_handle;
+    const size_t x_buf_size = BACK_INFER_H(block_e) * BACK_INFER_W(block_f) * block_c;
+    XDT *x_buf = (XDT *)rt_spm_malloc(x_buf_size * sizeof(XDT));
+
+    // Output store initialization
+    MemcpyHandle y_handle;
+    const size_t y_buf_size = block_e * block_f * unit_block_m;
+    YDT *y_buf[2] = {nullptr, nullptr};
+    y_buf[0] = (YDT *)rt_spm_malloc(y_buf_size * sizeof(YDT));
+    y_buf[1] = (YDT *)rt_spm_malloc(y_buf_size * sizeof(YDT));
+
+    // Matmul initialization
+    MatmulHandle mm_handle;
+    matmul_init(mm_handle, precision_flag<YDT>::value ? MatmulHalfToFloat : MatmulHalfToHalf);
+
+    // Initialize parameters
+    int prev_bE, prev_bF, prev_m, prev_n, prev_e, prev_f;
+    int local_st_Hi, local_ed_Hi, local_st_Ho, st_Wi, ed_Wi, st_Wo, st_Wi_no_pad,
+        local_st_Hi_no_pad, last_flag, north_flag, howo;
+    int next_local_st_Hi_no_pad, next_local_st_Hi, mm_stride, mm_len;
+    int output_dbflag = 0, weight_dbflag = 0;
+
+    // Calculate the number of outer loops for splitting output
+    constexpr int N_core = 32;
+    int num_bE = SEG_NUM(E, block_e);
+    int num_bF = SEG_NUM(F, block_f);
+    int num_bEF = num_bE * num_bF;
+    int num_loops = N * num_bE * num_bF;
+    int loops_aligned = ALIGN_UNIT(num_loops, N_core);
+    int prev_ids = loops_aligned;
+    // Split output's N, H, and W dimensions
+    for (int ids = tid; ids < loops_aligned; ids += N_core) {
+        // Calculate input and output indices based on the loop
+        int index_n = ids / num_bEF;
+        int index_e = ids % num_bEF / num_bF * block_e;
+        int index_f = ids % num_bEF % num_bF * block_f;
+
+        int cur_bF = MIN(block_f, F - index_f);
+        int back_infer_w = BACK_INFER_W(cur_bF);
+        int start_w = MAX(index_f * SW - PW, 0);
+        int end_w = MIN(index_f * SW - PW + back_infer_w, W);
+        int cur_bW = end_w - start_w;
+
+        int cur_bE = MIN(block_e, E - index_e);
+        int back_infer_h = BACK_INFER_H(cur_bE);
+        int start_h = MAX(index_e * SH - PH, 0);
+        int end_h = MIN(index_e * SH - PH + back_infer_h, H);
+        int cur_bH = end_h - start_h;
+
+        // Broadcast load first weight
+        int has_next_w = 1;
+        int next_r, next_s, next_c, next_m, next_bC;
+        matmul_wait_loading_weight(mm_handle);
+        sync_threads();
+        if (tid == 0) {
+            int cur_bC = MIN(C, block_c);
+            broadcast_async(w_buf[weight_dbflag], w + WEIGHT(0, 0, 0, 0),
+                            cur_bC * unit_block_m * sizeof(XDT), unit_block_m * sizeof(XDT),
+                            {0, (R * S * M - unit_block_m) * sizeof(XDT)}, BroadcastGlobalToSpm,
+                            w_handle);
+        }
+
+        int reuse_x = 0;
+        // Split output's M dimension
+        for (int index_m = 0; index_m < M; index_m += unit_block_m) {
+            // Split input's C dimension
+            for (int index_c = 0; index_c < C; index_c += block_c) {
+                int cur_bC = MIN(C - index_c, block_c);
+                int cur_bC_aligned = ALIGN_UNIT(cur_bC, 32);
+
+                // Load x
+                if (reuse_x == 0 && ids < num_loops) {
+                    matmul_wait_loading_input(mm_handle);
+                    for (int h = start_h; h < end_h; h++) {
+                        memcpy_async(x_buf + (h - start_h) * cur_bW * cur_bC_aligned,
+                                     x + INPUT(index_n, h, start_w, index_c),
+                                     cur_bW * cur_bC * sizeof(XDT), cur_bC * sizeof(XDT),
+                                     {0, (C - cur_bC) * sizeof(XDT)}, MemcpyGlobalToSpm, x_handle);
+                    }
+                    reuse_x = block_c >= C;
+                    memcpy_wait(x_handle);
+                }
+
+                // rs
+                int is_last_r = 0;
+                for (int r = 0; r < R; r++) {
+                    // Calculate input/output's starting position in the H direction
+                    local_st_Hi_no_pad = index_e * SH + r - PH - start_h;
+                    if (local_st_Hi_no_pad < 0) {
+                        local_st_Ho = SEG_NUM(-local_st_Hi_no_pad, SH);
+                        local_st_Hi = local_st_Hi_no_pad + local_st_Ho * SH;
+                    } else {
+                        local_st_Ho = 0;
+                        local_st_Hi = local_st_Hi_no_pad;
+                    }
+                    local_ed_Hi = MIN(MAX(local_st_Hi_no_pad + (cur_bE - 1) * SH + 1, 0), cur_bH);
+                    // Adjust for out-of-bounds conditions
+                    if (r != R - 1) {
+                        next_local_st_Hi_no_pad = index_e * SH + r + 1 - PH - start_h;
+                        next_local_st_Hi = (next_local_st_Hi_no_pad >= 0) ?
+                                               next_local_st_Hi_no_pad :
+                                               SEG_NUM(-next_local_st_Hi_no_pad, SH) * SH +
+                                                   next_local_st_Hi_no_pad;
+                        next_local_st_Hi = cur_bE > 1 ? next_local_st_Hi : next_local_st_Hi_no_pad;
+                        if (next_local_st_Hi >= cur_bH) {
+                            is_last_r = 1;
+                        }
+                    }
+
+                    int is_last_s = 0;
+                    // Accumulate weight in the S dimension
+                    for (int s = 0; s < S; s++) {
+                        // Calculate input/output's starting position in the W direction
+                        st_Wi_no_pad = index_f * SW + s - PW - start_w;
+                        if (st_Wi_no_pad < 0) {
+                            st_Wo = SEG_NUM(-st_Wi_no_pad, SW);
+                            st_Wi = st_Wi_no_pad + SW * st_Wo;
+                        } else {
+                            st_Wo = 0;
+                            st_Wi = st_Wi_no_pad;
+                        }
+                        ed_Wi = MIN(MAX(st_Wi_no_pad + (cur_bF - 1) * SW + 1, 0), cur_bW);
+                        // Adjust for out-of-bounds conditions
+                        if (s != S - 1) {
+                            int next_local_st_Wi_no_pad = index_f * SW + s + 1 - PW - start_w;
+                            int next_local_st_Wi = (next_local_st_Wi_no_pad >= 0) ?
+                                                       next_local_st_Wi_no_pad :
+                                                       SEG_NUM(-next_local_st_Wi_no_pad, SW) * SW +
+                                                           next_local_st_Wi_no_pad;
+                            next_local_st_Wi =
+                                cur_bF > 1 ? next_local_st_Wi : next_local_st_Wi_no_pad;
+                            if (next_local_st_Wi >= cur_bW) {
+                                is_last_s = 1;
+                            }
+                        }
+
+                        mm_len = (ed_Wi - st_Wi - 1) / SW + 1;
+                        // Check if there's a next weight
+                        if (s + 1 < S) {
+                            next_s = s + 1;
+                            next_r = r;
+                            next_c = index_c;
+                            next_m = index_m;
+                        } else if (r + 1 < R) {
+                            next_s = 0;
+                            next_r = r + 1;
+                            next_c = index_c;
+                            next_m = index_m;
+                        } else if (index_c + block_c < C) {
+                            next_s = 0;
+                            next_r = 0;
+                            next_c = index_c + block_c;
+                            next_m = index_m;
+                        } else if (index_m + unit_block_m < M) {
+                            next_s = 0;
+                            next_r = 0;
+                            next_c = 0;
+                            next_m = index_m + unit_block_m;
+                        } else {
+                            has_next_w = 0;
+                        }
+                        broadcast_wait(w_handle, 1);
+                        if (has_next_w) {
+                            // Broadcast load next weight
+                            int next_bC = MIN(C - next_c, block_c);
+                            matmul_wait_loading_weight(mm_handle);
+                            sync_threads();
+                            if (tid == 0) {
+                                broadcast_async(w_buf[1 - weight_dbflag],
+                                                w + WEIGHT(next_c, next_r, next_s, next_m),
+                                                next_bC * unit_block_m * sizeof(XDT),
+                                                unit_block_m * sizeof(XDT),
+                                                {0, (R * S * M - unit_block_m) * sizeof(XDT)},
+                                                BroadcastGlobalToSpm, w_handle);
+                            }
+                        }
+                        weight_dbflag = 1 - weight_dbflag;
+                        // Skip matmul calculation for spes that do not meet conditions
+                        if (local_ed_Hi == 0 || local_st_Hi >= cur_bH) continue;
+                        if (ed_Wi == 0 || st_Wi >= cur_bW) continue;
+                        if (ids >= num_loops) continue;
+
+                        for (int c = 0; c < cur_bC; c += 32) {
+                            last_flag = (r == R - 1 || is_last_r) && (s == S - 1 || is_last_s) &&
+                                        (index_c + cur_bC >= C) && (c + 32 >= cur_bC);
+                            // matmul computation, load matmul_weight data
+                            matmul_load_weight(mm_handle,
+                                               w_buf[1 - weight_dbflag] + c * unit_block_m,
+                                               MatmulK32, MatmulN32);
+                            north_flag = 1;
+                            for (int hi = local_st_Hi; hi < local_ed_Hi; hi += SH) {
+                                XDT *x_mm = x_buf + hi * cur_bW * cur_bC_aligned +
+                                            st_Wi * cur_bC_aligned + c;
+                                howo = (local_st_Ho + (hi - local_st_Hi) / SH) * cur_bF + st_Wo;
+                                mm_stride = (cur_bC_aligned * SW / 32 - 1);
+                                // Update matmul_weight data
+                                matmul_set_updating_weight(mm_handle, north_flag);
+                                // Matmul computation, load matmul_input data
+                                matmul_compute(mm_handle, x_mm, mm_len, MatmulK32,
+                                               MatmulEnableOutputRowOffset, howo,
+                                               last_flag && ((hi + SH) >= local_ed_Hi), mm_stride);
+                                // Determine if matmul_input data should be updated
+                                north_flag = 0;
+                            }
+                        }  // cur_bc
+                    }      // s
+                }          // r
+            }              // c
+            // Skip write-back for spes that do not meet conditions
+            if (ids >= num_loops) continue;
+            memcpy_wait(y_handle);
+            // Matmul result write-back
+            matmul_store(mm_handle, y_buf[output_dbflag], cur_bE * cur_bF, MatmulN32);
+            // Double buffer write-back for y, skip on the first pass
+            if (!(ids == tid && index_m == 0)) {
+                for (int ho = 0; ho < prev_bE; ho++) {
+                    memcpy_async(y + OUTPUT(prev_n, prev_e + ho, prev_f, prev_m),
+                                 y_buf[1 - output_dbflag] + ho * prev_bF * unit_block_m,
+                                 prev_bF * unit_block_m * sizeof(YDT), unit_block_m * sizeof(YDT),
+                                 {(M - unit_block_m) * sizeof(YDT), 0}, MemcpySpmToGlobal,
+                                 y_handle);
+                }
+            }
+            // Wait for matmul result write-back
+            matmul_wait(mm_handle);
+            // Exchange current y buffer
+            prev_bE = cur_bE;
+            prev_bF = cur_bF;
+            prev_m = index_m;
+            prev_n = index_n;
+            prev_e = index_e;
+            prev_f = index_f;
+            prev_ids = ids;
+            output_dbflag = 1 - output_dbflag;
+        }  // m
+    }      // ids
+    // Write-back the results of the last iteration
+    if (prev_ids < num_loops) {
+        for (int ho = 0; ho < prev_bE; ho++) {
+            memcpy_async(y + OUTPUT(prev_n, prev_e + ho, prev_f, prev_m),
+                         y_buf[1 - output_dbflag] + ho * prev_bF * unit_block_m,
+                         prev_bF * unit_block_m * sizeof(YDT), unit_block_m * sizeof(YDT),
+                         {(M - unit_block_m) * sizeof(YDT), 0}, MemcpySpmToGlobal, y_handle);
+        }
+        memcpy_wait(y_handle);
+    }
+    sync_threads();
+
+    // Free spm space
+    rt_spm_free(x_buf);
+    rt_spm_free(w_buf[0]);
+    rt_spm_free(w_buf[1]);
+    rt_spm_free(y_buf[0]);
+    rt_spm_free(y_buf[1]);
+}
+
+template <typename XDT, typename YDT, typename ScaleBiasDT>
+static __device__ void convolution_forward_nodilation_baseline_device_impl(const ConvFwdArgs &arg) {
+    // Split the output
+    // Different splitting strategies potentially yielding different performance results
+    // In this case, splitting is done with double buffering for weights and input
+    // You can add your own splitting strategy
+    int block_c = 0, block_e = 0, block_f = 0;
+    if (!calcuBlockParam<XDT, YDT>(arg, &block_c, &block_e, &block_f)) {
+        return;
+    }
+
+    // Implement matmul computation steps according to the splitting strategy
+    convolution_forward_nodilation_baseline_kernel_impl<XDT, YDT, ScaleBiasDT>(arg, block_c,
+                                                                               block_e, block_f);
+}
+
+__global__ void tecoKernelConvFwdNodilationBaseline(const ConvFwdArgs arg) {
+    const UALDataType YDType = arg.out_data_type;
+    // The default weight of convf is the same as the output data type
+    if (YDType == UAL_DTYPE_HALF)
+        convolution_forward_nodilation_baseline_device_impl<half, half, half>(arg);
+    else
+        convolution_forward_nodilation_baseline_device_impl<half, float, float>(arg);
+}
+
+}  // namespace kernel
+}  // namespace ual
+}  // namespace tecoal

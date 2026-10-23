@@ -1,0 +1,1 @@
+/data01/tuyilist/cyz/RFD4-Proteina/linshi/work/gen_default/long/inference_samples/monomer-long/monomer-long_generated.cif

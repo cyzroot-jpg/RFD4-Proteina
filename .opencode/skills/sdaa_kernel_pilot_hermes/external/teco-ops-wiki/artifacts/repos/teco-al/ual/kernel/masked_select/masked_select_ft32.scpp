@@ -1,0 +1,247 @@
+// BSD 3- Clause License Copyright (c) 2024, Tecorigin Co., Ltd. All rights
+// reserved.
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// Redistributions of source code must retain the above copyright notice,
+// this list of conditions and the following disclaimer.
+// Redistributions in binary form must reproduce the above copyright notice,
+// this list of conditions and the following disclaimer in the documentation
+// and/or other materials provided with the distribution.
+// Neither the name of the copyright holder nor the names of its contributors
+// may be used to endorse or promote products derived from this software
+// without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+// LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+// CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+// SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+// INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY,OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)  ARISING IN ANY
+// WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+// OF SUCH DAMAGE.
+
+#include "ual/kernel/masked_select/masked_select.h"
+#include "ual/com/dma_all_type.h"
+#include "ual/kernel/macro.h"
+#include "ual/com/rt.h"
+
+using namespace sdaa;
+using namespace tecoal::ual::common;
+
+namespace tecoal {
+namespace ual {
+namespace kernel {
+
+#define CDBUF(x) (buf_dbflag == 0 ? x##0 : x##1)
+#define ADBUF(x) (buf_dbflag == 0 ? x##1 : x##0)
+#define EXDBF buf_dbflag = 1 - buf_dbflag
+#define MIN_DATANUM 4096
+#define SPE_NUM 32
+
+__thread_local static int rma_array[32];
+
+template <typename TypeA, typename TypeB>
+__device__ inline void maskedSelectKernel(TypeA *__restrict x, TypeB *__restrict mask,
+                                          TypeA *__restrict out, const int mask_length) {
+    int find_one_element_num = 0;
+    int i = 0;
+    for (; i <= mask_length - 8; i += 8) {
+        mask[i] ? (out[find_one_element_num++] = x[i]) : 0;
+        mask[i + 1] ? (out[find_one_element_num++] = x[i + 1]) : 0;
+        mask[i + 2] ? (out[find_one_element_num++] = x[i + 2]) : 0;
+        mask[i + 3] ? (out[find_one_element_num++] = x[i + 3]) : 0;
+        mask[i + 4] ? (out[find_one_element_num++] = x[i + 4]) : 0;
+        mask[i + 5] ? (out[find_one_element_num++] = x[i + 5]) : 0;
+        mask[i + 6] ? (out[find_one_element_num++] = x[i + 6]) : 0;
+        mask[i + 7] ? (out[find_one_element_num++] = x[i + 7]) : 0;
+    }
+    for (; i < mask_length; i++) {
+        mask[i] ? (out[find_one_element_num++] = x[i]) : 0;
+    }
+}
+
+template <typename TypeB>
+__device__ inline int findOneElementNumKernel(TypeB *mask, const int mask_length) {
+    TypeB *offset_mask = mask;
+    shortv32 v0, v1, v2, v3, vsum0 = 0, vsum1 = 0, vsum2 = 0, vsum3 = 0;
+    int sum0 = 0, sum1 = 0, sum2 = 0, sum3 = 0;
+    int reminder = (32 - ((unsigned long)mask % 32) / sizeof(uint8_t)) % 32;
+    reminder = reminder < mask_length ? reminder : mask_length;
+    int i = 0;
+    for (; i <= reminder - 4; i += 4) {
+        sum0 += offset_mask[0];
+        sum1 += offset_mask[1];
+        sum2 += offset_mask[2];
+        sum3 += offset_mask[3];
+        offset_mask += 4;
+    }
+    for (; i < reminder; i++) {
+        sum0 += *offset_mask;
+        offset_mask++;
+    }
+    for (; i <= mask_length - 128; i += 128) {
+        simd_load_widen(v0, offset_mask);
+        simd_load_widen(v1, offset_mask + 32);
+        simd_load_widen(v2, offset_mask + 64);
+        simd_load_widen(v3, offset_mask + 96);
+        vsum0 += v0;
+        vsum1 += v1;
+        vsum2 += v2;
+        vsum3 += v3;
+        offset_mask += 128;
+    }
+    for (; i <= mask_length - 32; i += 32) {
+        simd_load_widen(v0, offset_mask);
+        vsum0 += v0;
+        offset_mask += 32;
+    }
+    for (; i <= mask_length - 4; i += 4) {
+        sum0 += offset_mask[0];
+        sum1 += offset_mask[1];
+        sum2 += offset_mask[2];
+        sum3 += offset_mask[3];
+        offset_mask += 4;
+    }
+    for (; i < mask_length; i++) {
+        sum0 += *offset_mask;
+        offset_mask++;
+    }
+    for (int j = 0; j < 32; ++j) {
+        sum0 += vsum0[j];
+        sum0 += vsum1[j];
+        sum0 += vsum2[j];
+        sum0 += vsum3[j];
+    }
+    sum0 += sum1;
+    sum2 += sum3;
+    return sum0 + sum2;
+}
+
+template <typename TypeA, typename TypeB>
+__global__ void tecoKernelMaskedSelectNobroadcast(MaskedSelectArgs arg) {
+    int spe_num = arg.spe_num;
+    int expand_dims = arg.expand_dims;
+    int *broadcast_dim = arg.broadcast_dim;
+    const TypeA *x = (const TypeA *)arg.input;
+    const TypeB *mask = (const TypeB *)arg.mask;
+    TypeA *out = (TypeA *)arg.output;
+    int64_t *selectcount = (int64_t *)arg.selectcount;
+    const int tid = threadIdx;
+
+    MemcpyHandle x_get_handle[2];
+    MemcpyHandle mask_get_handle[2];
+    MemcpyHandle out_put_handle[2];
+    ThreadGroup thread_group(0xFFFFFFFF);
+    BroadcastHandle bcast_handle(&thread_group);
+
+    int data_length = 1;
+    for (int i = 0; i < expand_dims; i++) {
+        data_length *= broadcast_dim[i];
+    }
+
+    int max_length =
+        ((SPM_MAX_BYTE / (sizeof(TypeA) * 4 + sizeof(TypeB) * 2) + spe_num - 1) / spe_num + 3) / 4 *
+        4;
+    max_length =
+        max_length * spe_num > data_length ? (data_length + spe_num - 1) / spe_num : max_length;
+    int cur_start = tid * max_length, next_start, i;
+    int cur_length = MIN(data_length - cur_start, max_length), next_length,
+        all_spe_max_length = max_length * spe_num;
+
+    TypeA *spm_out0 = (TypeA *)rt_spm_malloc_try_left(max_length * sizeof(TypeA) + 4);
+    TypeA *spm_x0 = (TypeA *)rt_spm_malloc_try_left(max_length * sizeof(TypeA) + 4);
+    TypeB *spm_mask0 = (TypeB *)rt_spm_malloc_try_left(max_length * sizeof(TypeB) + 4);
+    TypeA *spm_out1 = (TypeA *)rt_spm_malloc_try_right(max_length * sizeof(TypeA) + 4);
+    TypeA *spm_x1 = (TypeA *)rt_spm_malloc_try_right(max_length * sizeof(TypeA) + 4);
+    TypeB *spm_mask1 = (TypeB *)rt_spm_malloc_try_right(max_length * sizeof(TypeB) + 4);
+
+    TypeA *cur_out, *next_out, *cur_x, *next_x;
+    TypeB *cur_mask, *next_mask;
+    int cur_spe_out_start, next_all_spe_out_start, cur_all_spe_out_start = 0;
+    int buf_dbflag = 0;
+
+    if (cur_length > 0) {
+        cur_mask = get_aligned_address(mask + cur_start, CDBUF(spm_mask));
+        allDmaIgetSdaa(cur_mask, mask + cur_start, cur_length * sizeof(TypeB),
+                       mask_get_handle[buf_dbflag]);
+        cur_x = get_aligned_address(x + cur_start, CDBUF(spm_x));
+        allDmaIgetSdaa(cur_x, x + cur_start, cur_length * sizeof(TypeA), x_get_handle[buf_dbflag]);
+    }
+
+    for (int loop_contral = 0; loop_contral < data_length; loop_contral += all_spe_max_length) {
+        next_start = cur_start + all_spe_max_length;
+        next_length = MIN(data_length - next_start, max_length);
+        if (next_length > 0) {
+            next_mask = get_aligned_address(mask + next_start, ADBUF(spm_mask));
+            allDmaIgetSdaa(next_mask, mask + next_start, next_length * sizeof(TypeB),
+                           mask_get_handle[1 - buf_dbflag]);
+            next_x = get_aligned_address(x + next_start, ADBUF(spm_x));
+            allDmaIgetSdaa(next_x, x + next_start, next_length * sizeof(TypeA),
+                           x_get_handle[1 - buf_dbflag]);
+        }
+
+        if (cur_length > 0) {
+            memcpy_wait(x_get_handle[buf_dbflag]);
+            memcpy_wait(mask_get_handle[buf_dbflag]);
+            memcpy_wait(out_put_handle[buf_dbflag]);
+            rma_array[tid] = findOneElementNumKernel(cur_mask, cur_length);
+        } else {
+            rma_array[tid] = 0;
+        }
+
+        sync_threads();
+        broadcast_async(&rma_array[tid], &rma_array[tid], sizeof(int), BroadcastSpmToSpm,
+                        bcast_handle);
+        broadcast_wait(bcast_handle, 32);
+
+        i = 0;
+        cur_spe_out_start = 0;
+        for (; i < tid; i++) {
+            cur_spe_out_start += rma_array[i];
+        }
+        next_all_spe_out_start = cur_all_spe_out_start + cur_spe_out_start;
+        for (; i < spe_num; i++) {
+            next_all_spe_out_start += rma_array[i];
+        }
+
+        if (rma_array[tid] > 0) {
+            cur_out = get_aligned_address(out + cur_all_spe_out_start + cur_spe_out_start,
+                                          CDBUF(spm_out));
+
+            maskedSelectKernel(cur_x, cur_mask, cur_out, cur_length);
+
+            allDmaIputSdaa(out + cur_all_spe_out_start + cur_spe_out_start, cur_out,
+                           rma_array[tid] * sizeof(TypeA), out_put_handle[buf_dbflag]);
+        }
+
+        EXDBF;
+        cur_start = next_start;
+        cur_length = next_length;
+        cur_mask = next_mask;
+        cur_x = next_x;
+        cur_all_spe_out_start = next_all_spe_out_start;
+    }
+    if (tid == 31) {
+        *selectcount = cur_all_spe_out_start;
+    }
+
+    memcpy_wait(out_put_handle[buf_dbflag]);
+    memcpy_wait(out_put_handle[1 - buf_dbflag]);
+
+    rt_spm_free(spm_out0);
+    rt_spm_free(spm_out1);
+    rt_spm_free(spm_x0);
+    rt_spm_free(spm_x1);
+    rt_spm_free(spm_mask0);
+    rt_spm_free(spm_mask1);
+}
+
+template __global__ void tecoKernelMaskedSelectNobroadcast<int32_t, uint8_t>(MaskedSelectArgs arg);
+
+}  // namespace kernel
+}  // namespace ual
+}  // namespace tecoal

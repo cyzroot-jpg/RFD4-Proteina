@@ -1,0 +1,59 @@
+op_name: "masked_fill"
+input {
+  id: "input"
+  shape {
+    dims: 1
+    dims: 6
+    dims: 6
+    dims: 19
+    dims: 20
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  random_data {
+    seed: 86048857
+    lower_bound: -100.0
+    upper_bound: 100.0
+    distribution: UNIFORM
+  }
+  ttype: TENSOR
+}
+input {
+  id: "mask"
+  shape {
+    dims: 1
+    dims: 6
+    dims: 6
+    dims: 19
+    dims: 20
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_BOOL
+  random_data {
+    seed: 7952776
+    lower_bound: 0.0
+    upper_bound: 2.0
+    distribution: UNIFORM
+  }
+  ttype: TENSOR
+}
+output {
+  id: "output"
+  shape {
+    dims: 1
+    dims: 6
+    dims: 6
+    dims: 19
+    dims: 20
+  }
+  layout: LAYOUT_ARRAY
+  dtype: DTYPE_FLOAT
+  reused: true
+  ttype: TENSOR
+}
+tecoal_param {
+  masked_fill_param {
+    value: 265.5045471191406
+    algo: ALGO_0
+  }
+}

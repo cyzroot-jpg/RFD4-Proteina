@@ -1,0 +1,142 @@
+---
+name: teco-adpate
+description: 自定义算子的开发与模型适配
+---
+
+# 模型适配指南
+
+## 1. 前期准备
+
+适配之前，请确保原仓库中的源码、模型、数据集和metric指标满足适配需求：
+1. 选择适配的源码，源码优先级：指定源码>官方源码>第三方开源>个人开源。
+2. 确认适配的模型具体信息，例如：ResNet有多个系列，应明确是哪一个版本，如：ResNet50。
+3. 确认需要适配的数据集和对应的metric指标。
+4. 在PyTorch的CPU或GPU环境中复现源码的metric指标，确保源码、模型和数据集的准确无误。
+
+## 2. 训练环境准备
+
+当前提供的环境已经包含所有的基础环境及TecoPyTorch训练框架，您只需要根据算法需求安装其他依赖即可。
+您可以通过以下命令验证当前环境是否可用。
+
+**说明**：
+以下回显中涉及的软件版本及环境信息仅为展示用，请以实际使用环境为准（注：龙芯环境无conda）
+```
+(py311) bash-5.2#  source /opt/tecoai/setvars.sh  
+(py311) bash-5.2# python -c "import torch,torch_sdaa"  //验证torch_sdaa组件及依赖
+--------------+----------------------------------------------
+ Host IP      | 10.71.12.125
+ PyTorch      | 2.7.1
+ Torch-SDAA   | 3.2.0
+--------------+----------------------------------------------
+ SDAA Driver  | 3.2.0 (N/A)
+ SDAA Runtime | 3.2.0 (/opt/tecoai/lib64/libsdaart.so)
+ SDPTI        | 1.7.0 (/opt/tecoai/lib64/libsdpti.so)
+ TecoDNN      | 3.2.0 (/opt/tecoai/lib64/libtecodnn.so)
+ TecoBLAS     | 3.2.0 (/opt/tecoai/lib64/libtecoblas.so)
+ CustomDNN    | 3.2.1a0 (/opt/tecoai/lib64/libtecocustom.so)
+ TecoRAND     | 3.1.0 (/opt/tecoai/lib64/libtecorand.so)
+ TCCL         | 3.2.0 (/opt/tecoai/lib64/libtccl.so)
+--------------+----------------------------------------------
+(py311) bash-5.2# teco-smi                    //查看太初AI加速卡的硬件信息（teco-smi -c 可以查看具体核组占用）
++-----------------------------------------------------------------------------+
+|  TECO-SMI: 1.15.0        SDAADriver: 3.2.0        SDAARuntime: 3.2.0        |
+|-------------------------------+----------------------+----------------------|
+| Index  Name                   | Bus-Id               | Health      SPE-Util |
+|        Temp          Pwr Usage|          Memory-Usage|                      |
+|=============================================================================|
+|   0    TECO_AICARD_01         | 00000000:01:00.0     | OK                0% |
+|        34C                88W |        0MB / 16384MB |                      |
+|-------------------------------+----------------------+----------------------|
+|   1    TECO_AICARD_01         | 00000000:01:00.0     | OK                0% |
+|        34C                88W |        0MB / 16384MB |                      |
+|-------------------------------+----------------------+----------------------|
+|   2    TECO_AICARD_01         | 00000000:01:00.0     | OK                0% |
+|        34C                88W |        0MB / 16384MB |                      |
+|-------------------------------+----------------------+----------------------|
+|   3    TECO_AICARD_01         | 00000000:01:00.0     | OK                0% |
+|        34C                88W |        0MB / 16384MB |                      |
++-------------------------------+----------------------+----------------------+
++-----------------------------------------------------------------------------+
+| Processes:                                                                  |
+|  Tcaicard     PID      Process name                            Memory Usage |
+|=============================================================================|
+| No Process Running                                                          |
++-----------------------------------------------------------------------------+
+```
+
+本次赛事采用组织 + 私有仓库模式。报名后提供队名及队长 GitHub 账号，组委会为每队创建私有仓库：
+- **算子仓库**：`https://github.com/tecorigin-caet/teco-ops-{队名}`
+- **模型仓库**：`https://github.com/tecorigin-caet/teco-modelzoo-{队名}`
+  
+队长通过邮箱接受邀请后获得仓库权限，后续由队长负责添加队员。各队伍在私有仓库下进行开发。
+```bash
+git clone https://github.com/tecorigin-caet/teco-ops-{队名}
+git clone https://github.com/tecorigin-caet/teco-modelzoo-{队名}
+```
+
+本次赛事需要适配的小模型源码仓库：https://github.com/Tecorigin/Deformable-DETR （比赛模型要求及精度标准见该仓库训练比赛部分，其他要求见本适配指南说明）
+
+说明：小模型所需的框架环境是pytorch2.7.1+python3.11，这点与vllm大模型不同，请选手在给定的容器镜像中source /home/py311/bin/activate 使用py311虚拟环境
+
+
+## 3. 模型迁移
+
+### 3.1 整体流程
+
+1. 迁移模型代码：修改模型相关代码，将模型迁移到SDAA上运行。
+2. 算子开发和接入：如果模型迁移中存在SDAA不支持或者精度不达标的算子，可以进行算子开发，并将算子接入到TecoPyTorch框架。
+3. 精度调试：如果迁移后的模型精度不达标，需要进行精度调试，确保其满足精度要求。
+4. 性能调优：如果迁移后的模型性能不达标，需要进行性能调优，确保其满足性能要求。
+5. 模型合入：在模型精度和性能满足要求后，根据仓库的合入规范，提交PR，进行模型合入。
+
+
+### 3.2 迁移模型代码
+
+#### 3.2.1 迁移约束
+
+由于编程模型、算子支持程度以及加速卡硬件特性等方面的差异，将模型从CUDA迁移至SDAA进行训练时存在一些约束、限制及注意事项，具体可参考: reference\迁移约束。
+
+#### 3.2.2 自动迁移
+TecoPyTorch提供了模型的自动迁移方法。只需在原始模型训练脚本中导入自动迁移代码，或者在运行模型训练脚本前设置自动迁移环境变量，即可实现训练模型从CUDA设备到太初AI加速卡上的迁移。
+
+关于自动迁移的详细，请参考太初元碁官方文档[自动迁移](http://docs.tecorigin.com/release/torch2.7/#43f57522d9f15c4995ff2295a0fab1f6)。
+
+#### 3.2.3 手动迁移
+您可以手动方式修改代码，进行模型迁移，具体可参考请参考太初元碁官方文档: reference\手动迁移。
+
+### 3.3 算子开发和接入 
+
+如果模型迁移中存在SDAA不支持或者精度不达标的算子，可以进行算子开发，并将算子接入到TecoPyTorch框架。
+- 算子回落cpu，请参考太初元碁官方文档[算子回落CPU](http://docs.tecorigin.com/release/torch2.7/#4a874c135b5d580d951745e868a681f0)。
+- 算子开发以及算子接入TecoPyTorch框架，请参考太初元: reference\teco-ops仓库。
+- 针对小模型训练比赛的Deformable-DETR模型自定义算子开发建议参考: reference\适配建议。
+
+  
+<!--- 算子开发，请参考太初元碁官方文档[SDAA C编程指南](http://docs.tecorigin.net/release/sdaac/)。
+- 算子接入TecoPyTorch框架，请参考太初元碁官方文档[自定义SDAA C算子接入](http://docs.tecorigin.net/release/torch_2.4/v2.1.0/#6fb567bef4285602b1a1541a3828d14a)。-->
+
+<!--您也可以参考[太初元碁算子提需模板](https://gitee.com/tecorigin/teco-torch/blob/main/ops_feedback_requirement.md)，将缺失算子的信息提交给太初元碁工程师，用于后续复现和支持该算子。-->
+
+### 3.4 精度调试
+
+模型迁移至SDAA后，如果训练精度不能满足需求，则需要进行精度异常原因分析和调优。具体方法可以参考太初元碁官方文档[精度调测](http://docs.tecorigin.com/release/torch2.7/#b3e97d9bef7252cc934390a144e983ae)。
+
+### 3.5 性能调优
+
+模型迁移至SDAA后，如果训练性能不能满足需求，则需要进行性能分析和调优。具体方法可以参考太初元碁官方文档[性能调优](http://docs.tecorigin.com/release/torch2.7/#635c0237394751a39d04448079fe06b7)。
+
+
+### 3.6 合入模型
+
+在模型精度和性能满足要求后，根据仓库的合入规范准备合入文件并提交PR，将模型合入到太初仓库。
+
+- PR合入规范及合入文件要求，请参考: reference\提交规范。
+- PR提交方法，请参考: reference\PR提交。
+
+## 4. 常见问题
+
+- 模型迁移常见问题和解决方法，请参考[模型迁移问题排查](http://docs.tecorigin.com/release/torch2.7/#327fba82f336599087b2d0114d24d813)。  
+- 模型迁移精度常见问题和解决方法，请参考[模型精度问题排查](http://docs.tecorigin.com/release/torch2.7/#8f232201b32c593eae3a0d72eb290b65)。
+
+## 5. 对于适配模型的其他规则限制
+- 请参考比赛模型https://github.com/Tecorigin/Deformable-DETR/blob/main/README.md 中比赛规则部分。

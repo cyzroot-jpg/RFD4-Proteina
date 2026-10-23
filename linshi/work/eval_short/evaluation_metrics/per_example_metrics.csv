@@ -1,0 +1,2 @@
+example_id,dataset_name,task,designed_structure_path,output_base_dir,metrics_tags,designed_chain_path,pre_oracle_pass,chain_of_interest,developability.pass,developability.all_metrics_present
+monomer-short_generated_ab62b115,inference_samples,all,linshi/work/gen_default/short/inference_samples/monomer-short/monomer-short_generated.cif,linshi/work/eval_short/evaluation_samples,"design,developability",,0.0,,0.0,0.0

@@ -1,0 +1,7565 @@
+# TecoLIBRT用户手册 v1.2.0
+
+离线抓取页数：145
+
+## 目录
+
+- [1. TecoLIBRT用户手册](#page-1)
+- [2. 什么是TecoLIBRT](#page-2)
+- [3. 核心概念](#page-3)
+- [4. 命名规则](#page-4)
+- [5. 最新动态](#page-5)
+- [6. 快速入门](#page-6)
+- [7. 功能特性](#page-7)
+- [8. 预定义变量](#page-8)
+- [9. SPM管理](#page-9)
+- [10. rt_ldm_malloc()](#page-10)
+- [11. rt_ldm_malloc_try_left()](#page-11)
+- [12. rt_ldm_malloc_try_right()](#page-12)
+- [13. rt_ldm_free()](#page-13)
+- [14. 计算接口](#page-14)
+- [15. SPE间同步](#page-15)
+- [16. rt_synchronized_array()](#page-16)
+- [17. rt_synchronized_col()](#page-17)
+- [18. rt_synchronized_row()](#page-18)
+- [19. rt_synchronized_peer()](#page-19)
+- [20. rt_synchronized_col_p2p()](#page-20)
+- [21. rt_synchronized_row_p2p()](#page-21)
+- [22. rt_synchronized_col_lefthalf()](#page-22)
+- [23. rt_synchronized_col_righthalf()](#page-23)
+- [24. 矩阵乘法](#page-24)
+- [25. rt_ace_config_kernel()](#page-25)
+- [26. rt_ace_load_north()](#page-26)
+- [27. rt_ace_load_west()](#page-27)
+- [28. rt_ace_writeback()](#page-28)
+- [29. rt_ace_barrier_kernel()](#page-29)
+- [30. rt_ace_north_count()](#page-30)
+- [31. rt_ace_west_count()](#page-31)
+- [32. rt_wait_north()](#page-32)
+- [33. rt_wait_west()](#page-33)
+- [34. 远程访问SPM](#page-34)
+- [35. rt_remote_load()](#page-35)
+- [36. rt_remote_store()](#page-36)
+- [37. 时间统计](#page-37)
+- [38. rt_time_cycle()](#page-38)
+- [39. SPE间通信](#page-39)
+- [40. 通用接口](#page-40)
+- [41. rt_rma()](#page-41)
+- [42. rt_rma_wait_value()](#page-42)
+- [43. rt_memcpy()](#page-43)
+- [44. rt_memmove()](#page-44)
+- [45. 数据读取](#page-45)
+- [46. rt_rma_get()](#page-46)
+- [47. rt_rma_iget()](#page-47)
+- [48. 数据写出](#page-48)
+- [49. rt_rma_put()](#page-49)
+- [50. rt_rma_iput()](#page-50)
+- [51. 广播操作](#page-51)
+- [52. 广播发起的SPE接收广播数据](#page-52)
+- [53. rt_rma_bcast()](#page-53)
+- [54. rt_rma_ibcast()](#page-54)
+- [55. rt_rma_col_bcast()](#page-55)
+- [56. rt_rma_col_ibcast()](#page-56)
+- [57. rt_rma_row_bcast()](#page-57)
+- [58. rt_rma_row_ibcast()](#page-58)
+- [59. rt_rma_col_bcast_coll()](#page-59)
+- [60. rt_rma_row_bcast_coll()](#page-60)
+- [61. 广播发起的SPE不接收广播数据](#page-61)
+- [62. rt_rma_bcast_other()](#page-62)
+- [63. rt_rma_col_bcast_other()](#page-63)
+- [64. rt_rma_col_ibcast_other()](#page-64)
+- [65. rt_rma_row_bcast_other()](#page-65)
+- [66. rt_rma_row_ibcast_other()](#page-66)
+- [67. rt_rma_col_bcast_coll_other()](#page-67)
+- [68. rt_rma_row_bcast_coll_other()](#page-68)
+- [69. 行/列多播](#page-69)
+- [70. rt_rma_col_mcast()](#page-70)
+- [71. rt_rma_col_imcast()](#page-71)
+- [72. rt_rma_col_mcast_other()](#page-72)
+- [73. rt_rma_col_imcast_other()](#page-73)
+- [74. rt_rma_row_mcast()](#page-74)
+- [75. rt_rma_row_imcast()](#page-75)
+- [76. rt_rma_row_mcast_other()](#page-76)
+- [77. rt_rma_row_imcast_other()](#page-77)
+- [78. 设备内存访问](#page-78)
+- [79. 通用接口](#page-79)
+- [80. rt_dma()](#page-80)
+- [81. rt_dma_wait_value()](#page-81)
+- [82. 数据读取](#page-82)
+- [83. rt_dma_get()](#page-83)
+- [84. rt_dma_iget()](#page-84)
+- [85. rt_dma_get_stride()](#page-85)
+- [86. rt_dma_iget_stride()](#page-86)
+- [87. rt_dma_phy_get()](#page-87)
+- [88. rt_dma_phy_iget()](#page-88)
+- [89. rt_dma_phy_get_stride()](#page-89)
+- [90. rt_dma_phy_iget_stride()](#page-90)
+- [91. rt_h_dma_trans_get()](#page-91)
+- [92. rt_h_dma_trans_iget()](#page-92)
+- [93. rt_s_dma_trans_get()](#page-93)
+- [94. rt_s_dma_trans_iget()](#page-94)
+- [95. rt_unaligned_dma_get()](#page-95)
+- [96. rt_unaligned_dma_get_stride()](#page-96)
+- [97. 数据写出](#page-97)
+- [98. rt_dma_put()](#page-98)
+- [99. rt_dma_iput()](#page-99)
+- [100. rt_dma_put_stride()](#page-100)
+- [101. rt_dma_iput_stride()](#page-101)
+- [102. rt_dma_phy_put()](#page-102)
+- [103. rt_dma_phy_iput()](#page-103)
+- [104. rt_dma_phy_put_stride()](#page-104)
+- [105. rt_dma_phy_iput_stride()](#page-105)
+- [106. rt_unaligned_dma_put()](#page-106)
+- [107. rt_unaligned_dma_put_stride()](#page-107)
+- [108. 广播操作](#page-108)
+- [109. 全广播](#page-109)
+- [110. rt_dma_ibcast()](#page-110)
+- [111. rt_dma_ibcast_stride()](#page-111)
+- [112. rt_h_dma_trans_ibcast()](#page-112)
+- [113. rt_s_dma_trans_ibcast()](#page-113)
+- [114. 列广播](#page-114)
+- [115. rt_dma_col_ibcast()](#page-115)
+- [116. rt_dma_col_ibcast_stride()](#page-116)
+- [117. rt_h_dma_trans_col_ibcast()](#page-117)
+- [118. rt_s_dma_trans_col_ibcast()](#page-118)
+- [119. 行广播](#page-119)
+- [120. rt_dma_row_ibcast()](#page-120)
+- [121. rt_dma_row_ibcast_stride()](#page-121)
+- [122. rt_h_dma_trans_row_ibcast()](#page-122)
+- [123. rt_s_dma_trans_row_ibcast()](#page-123)
+- [124. 规约操作](#page-124)
+- [125. rt_rma_allreduce()](#page-125)
+- [126. rt_rma_reduce()](#page-126)
+- [127. rt_rma_allreduce_to()](#page-127)
+- [128. rt_rma_col_reduce()](#page-128)
+- [129. rt_rma_col_reduce_to()](#page-129)
+- [130. rt_rma_row_reduce()](#page-130)
+- [131. rt_rma_row_reduce_to()](#page-131)
+- [132. 检查与打印](#page-132)
+- [133. 检查接口](#page-133)
+- [134. rt_align_n()](#page-134)
+- [135. rt_equal_f()](#page-135)
+- [136. rt_nequal_f()](#page-136)
+- [137. rt_equal_zero_f()](#page-137)
+- [138. rt_nequal_zero_f()](#page-138)
+- [139. 打印接口](#page-139)
+- [140. rt_log()](#page-140)
+- [141. rt_log_if()](#page-141)
+- [142. rt_warning()](#page-142)
+- [143. rt_warning_if()](#page-143)
+- [144. 常见问题](#page-144)
+- [145. 版权声明](#page-145)
+
+<a id="page-1"></a>
+## 1. TecoLIBRT用户手册
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc159d1a1fcb11eebaac0242ac11000c
+
+什么是TecoLIBRT最新动态快速入门功能特性常见问题版权声明
+
+
+<a id="page-2"></a>
+## 2. 什么是TecoLIBRT
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#47b58614207611eebaac0242ac11000c
+
+## 概述
+TecoLIBRT面向已经熟练掌握SDAA C编程的用户，提供了一系列较为底层的运行时接口和通用属性，为性能优化的开发者提供更灵活、丰富的运行时支持。
+
+同时，TecoLIBRT迭代补充了有助于片上计算性能优化的接口，比如规约接口、SPE间通信接口等，也增加了部分错误调试的功能，比如越界检查、SPM分配失败检查等。
+
+## 核心功能
+TecoLIBRT主要包含以下几类功能接口：
+
+接口分类
+
+ | 说明
+
+ |
+预定义变量
+
+ | 获取当前SPE的编号、行号、列号信息。
+
+ |
+SPM管理
+
+ | 申请、释放SPE的SPM空间。
+
+ |
+计算接口
+
+ | 包含SPE间同步、矩阵乘法、远程访问SPM、时间统计等功能。
+
+ |
+SPE间通信
+
+ | 包含SPE间的数据读写、广播操作（支持灵活选择广播的行/列），并提供阻塞、非阻塞式实现。
+
+ |
+设备内存访问
+
+ | 包含设备内存与SPE间的数据读写、广播操作。
+
+- 数据读写支持跨步、转置、物理地址、地址非对齐等情况的阻塞式、非阻塞式实现。
+
+- 广播支持非阻塞式的跨步、转置、行/列的灵活选择。
+
+ |
+规约操作
+
+ | 支持行、列、全阵列的累加运算，并将结果更新到指定SPE。
+
+ |
+检查与打印
+
+ | 提供输入参数地址是否对齐、参数是否为零、参数是否相等的检查。提供INFO或ERROR，两种级别的日志打印功能。
+
+ |
+
+
+<a id="page-3"></a>
+## 3. 核心概念
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc19e3841fcb11eebaac0242ac11000c
+
+## SPE的行号和列号
+每个计算核心阵列SPA包含四行八列，共32个计算核心SPE。其中，列号0~3为左半区，列号4~7为右半区。每个SPE从左上角到右下角编号为0~31。每个计算核心SPE有各自的行号和列号，以9号核心为例，行号为1，列号为1。
+
+![image](images/1703349181-f046e6c2-a1b0-11ee-abe8-024214151608.png)
+
+图2.1 SPA内的SPE编号示意图
+
+## 地址对齐
+地址对齐(Aligned Address)是指数据在内存中的存放位置需要满足一定的规则或要求，即：数据的起始地址必须符合一定的边界条件，通常以数据类型的字节长度为基准。例如，对于一个4字节的整型变量，要求其起始地址是4的倍数（如0、4、8、12等）。
+
+这样的对齐方式可以让计算机在读取数据时更高效，减少访问的时间和成本，可以通过rt_align_n()检查地址对齐状态。
+
+## 掩码
+掩码(Mask)主要用于选择或屏蔽其他二进制数据中的特定位，通常与位运算结合使用。
+
+具体而言，可以将需要选中的位设置为1，不需要选中的位设置为0。通过与运算(AND)将掩码与目标数据进行逻辑运算，实现清零或屏蔽选中位之外的操作目标。
+
+例如，针对8位的二进制数 `11001101`，需要选中其中的第3位和第6位（从右向左数），可以通过以下步骤实现：
+
+- 首先，创建掩码，将选中位设置为1，其他位设置为0，即 `00100100`。
+
+- 其次，将这个掩码与原始数据进行与运算，得到一个结果为 `00000100` 的8位二进制数。
+
+这意味着第3位和第6位被选中，其他位都被清零。
+
+## 跨步操作
+跨步操作(Stride Operation)可以根据需求选择性地跳过某些元素或以特定步长从存储介质加载数据，而不是按照顺序逐个元素地加载。具体选择可以通过设置跨步参数，定义步长(Stride)和数量来实现，步长表示每次读取操作应该跳过的元素数量，数量表示需要读取的元素总数。步长(Stride)统一从跨步向量块(bsize)的end开始计算，而非start。
+
+
+<a id="page-4"></a>
+## 4. 命名规则
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#5eaa37b6207611eebaac0242ac11000c
+
+针对大量高灵活性的功能组合，TecoLIBRT接口命名由以下关键字组成，通过关键字的组合，限定接口功能。例如，rt_dma_col_ibcast_stride() 含 `dma`、`col`、`i`、`bcast`、`stride`这5个关键字，代表着设备内存与SPE间的跨步列广播操作，属于非阻塞式。
+
+关键字
+
+ | 含义
+
+ |
+`col`
+
+ | 列操作。
+
+ |
+`row`
+
+ | 行操作。
+
+ |
+`rma`
+
+ | SPE间通信。
+
+ |
+`dma`
+
+ | 设备内存（Global存储空间）与SPE间通信。
+
+ |
+`i`
+
+ | 非阻塞式。
+
+ |
+`bcast`
+
+ | 广播。
+
+ |
+`mcast`
+
+ | 多播。
+
+ |
+`other`
+
+ | 当前SPE不接收数据。
+
+ |
+`coll`
+
+ | 指定行/列。
+
+ |
+`stride`
+
+ | 跨步。
+
+ |
+`trans`
+
+ | 转置，支持 s类型`16*16*4B`和 h类型`32*32*2B`。
+
+ |
+`phy`
+
+ | 物理地址。
+
+ |
+`unaligned`
+
+ | 地址非对齐。
+
+ |
+`reduce`
+
+ | 规约。
+
+ |
+
+
+<a id="page-5"></a>
+## 5. 最新动态
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc1bc8a21fcb11eebaac0242ac11000c
+
+## v1.2.0版本
+- 新增功能
+
+名称
+
+ | 说明
+
+ |
+rt_synchronized_peer()
+
+ | SPE间点对点同步。
+
+ |
+rt_rma_row_mcast_other()
+
+ | SPE间行多播（当前SPE不接收数据）。
+
+ |
+rt_rma_col_imcast_other()
+
+ | 非阻塞式，SPE间列多播（当前SPE不接收数据）。
+
+ |
+rt_rma_row_imcast_other()
+
+ | 非阻塞式，SPE间行多播（当前SPE不接收数据）。
+
+ |
+
+## v1.1.0版本
+- 新增功能
+
+名称
+
+ | 说明
+
+ |
+rt_unaligned_dma_get()
+
+ | 地址非对齐情况下，设备内存和SPE间的数据读取操作。
+
+ |
+rt_unaligned_dma_put()
+
+ | 地址非对齐情况下，设备内存和SPE间的数据写出操作。
+
+ |
+rt_unaligned_dma_get_stride()
+
+ | 地址非对齐情况下，设备内存和SPE间的数据跨步读取操作。
+
+ |
+rt_unaligned_dma_put_stride()
+
+ | 地址非对齐情况下，设备内存和SPE间的数据跨步写出操作。
+
+ |
+
+## v1.0.0版本
+初版发布。
+
+
+<a id="page-6"></a>
+## 6. 快速入门
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc1db2ca1fcb11eebaac0242ac11000c
+
+本节将以设备内存访问和矩阵乘法为例，演示相关接口的使用方式。其中，
+
+- 设备内存访问部分：提供了阻塞式和非阻塞式两种接入情况，详见下方代码及其注释。
+
+- 矩阵乘法部分：提供了矩阵不拆分计算和矩阵拆分计算两种接入情况，详见下方代码及其注释。
+
+## 设备内存访问示例
+
+### 阻塞接口
+
+```c
+int blk_num = 1024;
+
+// 分别为 x, y, z 申请SPM存储空间
+float *x_buf = rt_ldm_malloc(blk_num * sizeof(float));
+float *y_buf = rt_ldm_malloc(blk_num * sizeof(float));
+float *z_buf = rt_ldm_malloc(blk_num * sizeof(float));
+
+// 将 x, y的数据从设备内存读取到SPM上
+rt_dma_get(x_buf, x, blk_num * sizeof(float));
+rt_dma_get(y_buf, y, blk_num * sizeof(float));
+
+// 执行 z = x + y 的运算操作
+for(int i = 0; i < blk_num; i++){
+    z_buf[i] = x_buf[i] + y_buf[i];
+}
+
+// 将结果数据 z 从SPM上，写入设备内存
+rt_dma_put(z, z_buf, blk_num * sizeof(float));
+
+// 释放 x, y, z 的SPM存储空间
+rt_ldm_free(x_buf);
+rt_ldm_free(y_buf);
+rt_ldm_free(z_buf);
+
+```
+
+### 非阻塞双缓冲计算
+
+```c
+if(curr_num > 0){
+    // 将 x, y的数据从设备内存读取到SPM上
+    rt_dma_iget(pD_x, x + tid * blk_num, curr_num * sizeof(float), &x_get_reply);
+    rt_dma_iget(pD_y, y + tid * blk_num, curr_num * sizeof(float), &y_get_reply);
+}
+
+for(int idx =(tid * blk_num); idx < data_num; idx += (slave_core_num*blk_num)){
+    next_num = MIN(blk_num, data_num - idx - slave_core_num * blk_num);
+
+    rt_dma_wait_value(&x_get_reply, 1); x_get_reply = 0;
+    rt_dma_wait_value(&y_get_reply, 1); y_get_reply = 0;
+
+    pTemp = pC_x; pC_x = pD_x; pD_x = pTemp;
+    pTemp = pC_y; pC_y = pD_y; pD_y = pTemp;
+
+    if(next_num>0){
+        rt_dma_iget(pD_x, x + idx + slave_core_num * blk_num, next_num * sizeof(float), &x_get_reply);
+        rt_dma_iget(pD_y, y + idy + slave_core_num * blk_num, next_num * sizeof(float), &y_get_reply);
+    }
+
+    // 执行 z = x + y 的运算操作
+    for(int i = 0; i < curr_num; i++){
+        pC_z[i] = pC_x[i] + pC_y[i]
+    }
+
+    rt_dma_wait_value(&z_put_reply, 1);
+    z_put_reply = 0;
+    pTemp = pC_z; pC_z = pD_z; pD_z = pTemp;
+
+    // 将结果数据 z 从SPM上，写入设备内存
+    rt_dma_iput(z + idx, pD_z, curr_num * sizeof(float), &z_put_reply);
+    curr_num = next_num
+}
+rt_dma_wait_value(&z_put_reply, 1);
+
+```
+
+## 矩阵乘法示例
+
+### 普通情况
+
+```c
+int i, j, k;
+int M, N, K;
+
+M = 128;
+N = 32;
+K = 32;
+
+// 分别为 ldm_a, ldm_b, ldm_c_ace 申请SPM存储空间
+_Float16 *ldm_a = rt_ldm_malloc(M * K * sizeof(_Float16));
+_Float16 *ldm_b = rt_ldm_malloc(K * N * sizeof(_Float16));
+_Float16 *ldm_c_ace = rt_ldm_malloc(M * N * sizeof(_Float16));
+
+memset(ldm_c_ace, 0, M * N * sizeof(_Float16));
+
+// 填充矩阵数据
+for(i = 0; i < M * K; i++){
+    ldm_a[i] = i % K + i;
+}
+for(i = 0; i < K * N; i++){
+    ldm_b[i] = 1;
+}
+
+// 配置脉动阵列
+rt_ace_config_kernel(1);
+
+// 加载北向数据
+rt_ace_load_north(ldm_b, 0);
+
+// 加载西向数据
+rt_ace_load_west(ldm_a, 0, 1, M, 0, 1, 0, 1);
+
+// 累加结果写回
+ace_reply = 0;
+rt_ace_writeback(ldm_c_ace, M, &ace_reply, 0);
+while(ace_reply != 1);
+
+// 释放 ldm_a, ldm_b, ldm_c_ace 的SPM存储空间
+rt_ldm_free(ldm_a);
+rt_ldm_free(ldm_b);
+rt_ldm_free(ldm_c_ace);
+
+```
+
+### 数据分块情况
+
+```c
+M = 128;
+N = 64;
+K = 96;
+
+// 分别为 ldm_a, ldm_b, ldm_c_ace 申请SPM存储空间
+ldm_a = rt_ldm_malloc(M * K * sizeof(_Float16));
+ldm_b = rt_ldm_malloc(K * N * sizeof(_Float16));
+ldm_c_ace = rt_ldm_malloc(M * N * sizeof(_Float16));
+
+memset(ldm_c_ace, 0, M * N * sizeof(_Float16));
+
+// 填充矩阵数据
+for(i = 0; i < M * K; i++){
+    ldm_a[i] = i % K + i;
+}
+for(i = 0; i < K * N; i++){
+    ldm_b[i] = i % N - i;
+}
+
+// 假设ldm_a上的数据维度为[M, K]
+// 假设ldm_b上的数据维度为[K/32, N/32, 32, 32]
+// 分块计算
+for(j = 0; j < N; j += 32){
+    for(k = 0; k < K; k += 32){
+        // 加载北向数据
+        rt_ace_load_north(ldm_b + k * N + j* 32, 0);
+        // 加载西向数据
+        rt_ace_load_west(ldm_a + k, 0, 1, M, (K - 32) / 32, (k + 32 >= K), 0, 1);
+    }
+
+    // 累加结果写回
+    ace_reply = 0;
+    rt_ace_writeback(ldm_c_ace + M * j, M, &ace_reply, 0);
+    while(ace_reply == 0);
+}
+
+// 释放 ldm_a, ldm_b, ldm_c_ace 的SPM存储空间
+rt_ldm_free(ldm_a);
+rt_ldm_free(ldm_b);
+rt_ldm_free(ldm_c_ace);
+
+```
+
+
+<a id="page-7"></a>
+## 7. 功能特性
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#f993b15e1fcb11eebaac0242ac11000c
+
+预定义变量SPM管理计算接口SPE间通信设备内存访问规约操作检查与打印
+
+
+<a id="page-8"></a>
+## 8. 预定义变量
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc1e92121fcb11eebaac0242ac11000c
+
+## rt_tid
+功能介绍
+
+计算核心SPE的编号（0~31）。
+
+## rt_rid
+功能介绍
+
+计算核心SPE的行号（0~3）。
+
+## rt_cid
+功能介绍
+
+计算核心SPE的列号（0~7）。
+
+
+<a id="page-9"></a>
+## 9. SPM管理
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc1f86d61fcb11eebaac0242ac11000c
+
+rt_ldm_malloc()rt_ldm_malloc_try_left()rt_ldm_malloc_try_right()rt_ldm_free()
+
+
+<a id="page-10"></a>
+## 10. rt_ldm_malloc()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc20d9d21fcb11eebaac0242ac11000c
+
+```c
+void* rt_ldm_malloc(
+    size_t  size);
+
+```
+
+## 功能介绍
+在计算核心SPE的SPM上申请64字节对齐的空间。默认从左半区开始申请，与rt_ldm_malloc_try_left()功能效果相同。
+
+## 注意事项
+必须配合rt_ldm_free()使用，不能与libos_ldm_free()或者libos_ldm_malloc()混用。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+size
+
+ | 输入
+
+ | 申请空间大小，单位：字节。
+
+ |
+
+## 返回值
+名称
+
+ | 说明
+
+ |
+结果指针
+
+ | 空间申请成功。
+
+ |
+NULL
+
+ | 空间申请失败。
+
+ |
+
+
+<a id="page-11"></a>
+## 11. rt_ldm_malloc_try_left()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc2239761fcb11eebaac0242ac11000c
+
+```c
+void* rt_ldm_malloc_try_left(
+    size_t  size);
+
+```
+
+## 功能介绍
+在SPM存储空间的左半区申请64字节对齐的空间。若左半区空间不足，超出部分会分布在右半区。
+
+## 注意事项
+必须配合rt_ldm_free()使用，不能与libos_ldm_free()或者libos_ldm_malloc()混用。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+size
+
+ | 输入
+
+ | 申请空间大小，单位：字节。
+
+ |
+
+## 返回值
+名称
+
+ | 说明
+
+ |
+结果指针
+
+ | 空间申请成功。
+
+ |
+NULL
+
+ | 空间申请失败。
+
+ |
+
+
+<a id="page-12"></a>
+## 12. rt_ldm_malloc_try_right()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc23924e1fcb11eebaac0242ac11000c
+
+```c
+void* rt_ldm_malloc_try_right(
+    size_t  size);
+
+```
+
+## 功能介绍
+在SPM存储空间的右半区申请64字节对齐的空间。若右半区空间不足，超出部分会分布在左半区。
+
+## 注意事项
+必须配合rt_ldm_free()使用，不能与libos_ldm_free()或者libos_ldm_malloc()混用。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+size
+
+ | 输入
+
+ | 申请空间大小，单位：字节。
+
+ |
+
+## 返回值
+名称
+
+ | 说明
+
+ |
+结果指针
+
+ | 空间申请成功。
+
+ |
+NULL
+
+ | 空间申请失败。
+
+ |
+
+
+<a id="page-13"></a>
+## 13. rt_ldm_free()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc24c43e1fcb11eebaac0242ac11000c
+
+```c
+void rt_ldm_free(
+    void    *ptr);
+
+```
+
+## 功能介绍
+释放由rt_ldm_malloc()，rt_ldm_malloc_try_left()，rt_ldm_malloc_try_right()申请的SPM存储空间。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+ptr
+
+ | 输入
+
+ | 需要释放空间的SPM首地址。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-14"></a>
+## 14. 计算接口
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc2610f01fcb11eebaac0242ac11000c
+
+SPE间同步矩阵乘法远程访问SPM时间统计
+
+
+<a id="page-15"></a>
+## 15. SPE间同步
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc26b5781fcb11eebaac0242ac11000c
+
+rt_synchronized_array()rt_synchronized_col()rt_synchronized_row()rt_synchronized_peer()rt_synchronized_col_p2p()rt_synchronized_row_p2p()rt_synchronized_col_lefthalf()rt_synchronized_col_righthalf()
+
+
+<a id="page-16"></a>
+## 16. rt_synchronized_array()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc278c501fcb11eebaac0242ac11000c
+
+```c
+int rt_synchronized_array();
+
+```
+
+## 功能介绍
+全阵列同步，同步全部32个计算核心SPE。
+
+## 注意事项
+无。
+
+## 参数解释
+无。
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-17"></a>
+## 17. rt_synchronized_col()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc286a621fcb11eebaac0242ac11000c
+
+```c
+int rt_synchronized_col();
+
+```
+
+## 功能介绍
+列同步，同步同一列上所有计算核心SPE。
+
+## 注意事项
+无。
+
+## 参数解释
+无。
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-18"></a>
+## 18. rt_synchronized_row()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc2940221fcb11eebaac0242ac11000c
+
+```c
+int rt_synchronized_row();
+
+```
+
+## 功能介绍
+行同步，同步同一行上所有计算核心SPE。
+
+## 注意事项
+无。
+
+## 参数解释
+无。
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-19"></a>
+## 19. rt_synchronized_peer()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc2a59301fcb11eebaac0242ac11000c
+
+```c
+int rt_synchronized_peer(
+    int     tid);
+
+```
+
+## 功能介绍
+点对点同步，同步当前计算核心SPE与指定SPE。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+tid
+
+ | 输入
+
+ | 设置与当前SPE进行同步的SPE编号，二进制低5位有效，左两位表示SPE的行号，右三位表示SPE的列号。例如：在`01001`中，`01`表示行号，`001`表示列号，即指定编号为9的SPE与当前SPE进行同步。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-20"></a>
+## 20. rt_synchronized_col_p2p()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc2b75c21fcb11eebaac0242ac11000c
+
+```c
+int rt_synchronized_col_p2p(
+    int     row_ssync_mask);
+
+```
+
+## 功能介绍
+同步同一列中，由掩码参数指定的所有计算核心SPE。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+row_ssync_mask
+
+ | 输入
+
+ | 设置参与同步的计算核心SPE行号掩码，仅低4位有效。若某位为1，表示该列对应行上的计算核心SPE参与同步，详见核心概念中的掩码介绍。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-21"></a>
+## 21. rt_synchronized_row_p2p()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc2c87501fcb11eebaac0242ac11000c
+
+```c
+int rt_synchronized_row_p2p(
+    int     col_ssync_mask);
+
+```
+
+## 功能介绍
+同步同一行中，由掩码参数指定的所有计算核心SPE。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+col_ssync_mask
+
+ | 输入
+
+ | 设置参与同步的计算核心SPE列号掩码，仅低8位有效。若某位为1，表示该行对应列上的SPE参与同步，详见核心概念中的掩码介绍。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-22"></a>
+## 22. rt_synchronized_col_lefthalf()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc2d60261fcb11eebaac0242ac11000c
+
+```c
+int rt_synchronized_col_lefthalf();
+
+```
+
+## 功能介绍
+同步列号为0~3的所有计算核心SPE，即计算阵列SPA的左半区。
+
+## 注意事项
+无。
+
+## 参数解释
+无。
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-23"></a>
+## 23. rt_synchronized_col_righthalf()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc2e44e61fcb11eebaac0242ac11000c
+
+```c
+int rt_synchronized_col_righthalf();
+
+```
+
+## 功能介绍
+同步列号为4~7的所有计算核心SPE，即计算阵列SPA的右半区。
+
+## 注意事项
+无。
+
+## 参数解释
+无。
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-24"></a>
+## 24. 矩阵乘法
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc2ee6bc1fcb11eebaac0242ac11000c
+
+rt_ace_config_kernel()rt_ace_load_north()rt_ace_load_west()rt_ace_writeback()rt_ace_barrier_kernel()rt_ace_north_count()rt_ace_west_count()rt_wait_north()rt_wait_west()
+
+
+<a id="page-25"></a>
+## 25. rt_ace_config_kernel()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc2ffc141fcb11eebaac0242ac11000c
+
+```c
+int rt_ace_config_kernel(
+    ACE_CONFIG         Comptype);
+
+```
+
+## 功能介绍
+配置脉动阵列常用的参数，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+Comptype
+
+ | 输入
+
+ | 选择计算加速引擎内的操作种类。
+
+- 1：`_Float16`。
+
+- 2：`int16`。
+
+- 4：`int8`。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-26"></a>
+## 26. rt_ace_load_north()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc33418a1fcb11eebaac0242ac11000c
+
+```c
+int rt_ace_load_north(
+    void    *Waddr,
+    int     Loadstride);
+
+```
+
+## 功能介绍
+加载北向数据，通常为矩阵A∗BA*BA∗B中的矩阵BBB，非阻塞式。
+
+## 注意事项
+北向数据矩阵大小限制为32*32。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+Waddr
+
+ | 输入
+
+ | 当前SPE的SPM存储空间起始访问地址，地址必须64字节对齐。
+
+ |
+Loadstride
+
+ | 输入
+
+ | 访问北向数据的掩码，一般设为0，表示32行矩阵全部加载。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-27"></a>
+## 27. rt_ace_load_west()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc3536a21fcb11eebaac0242ac11000c
+
+```c
+int rt_ace_load_west(
+    void    *Xaddr,
+    int     Accumaddr,
+    int     Accumflag,
+    int     Xsize,
+    int     Loadstride,
+    int     Lastflag,
+    int     Precision,
+    int     Northflag);
+
+```
+
+## 功能介绍
+加载西向数据，通常为矩阵A∗BA*BA∗B中的矩阵AAA，非阻塞式。
+
+## 注意事项
+西向数据矩阵大小限制为(≤128) * 32。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+Xaddr
+
+ | 输入
+
+ | 当前SPE的SPM存储空间起始访问地址，地址必须64字节对齐。
+
+ |
+Accumaddr
+
+ | 输入
+
+ | 计算结果累加器缓冲写入的矩阵起始地址，单位：行，取值范围：0~127，0表示第0行。
+
+ |
+Accumflag
+
+ | 输入
+
+ | 是否更新起始写入地址。
+
+- 0：表示紧跟在前一次计算结果之后写入，此时显式设置的地址无效。若前一次结果写入已经到达累加缓冲器的最后位置，则下一次加载西向数据必须显式设置累加器缓冲的起始写入地址，否则会产生不可预知的结果。
+
+- 1：表示累加器写入起始地址为Accumaddr指定的值。
+
+ |
+Xsize
+
+ | 输入
+
+ | 西向数据量，即累加器更新条目，取值范围：1~128。
+
+ |
+Loadstride
+
+ | 输入
+
+ | 数据加载跨步，跨步向量块大小为64字节，0表示一个跨步。
+
+ |
+Lastflag
+
+ | 输入
+
+ | 累加结束标志，即：是否为最后一次计算。
+
+- 0：表示累加尚未结束。
+
+- 1：表示累加结束，切换累加器缓冲区。
+
+ |
+Precision
+
+ | 输入
+
+ | 仅在rt_ace_config_kernel()配置为int8时有效，用于选择高位还是低位参与累加运算。在其余数据类型配置下，该位失效。
+
+- 0：表示低位参与运算。
+
+- 1：表示高位参与运算。
+
+ |
+Northflag
+
+ | 输入
+
+ | 是否需要更新北向数据。
+
+- 0：表示不切换北向数据缓冲区。
+
+- 1：表示切换北向数据缓冲区。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-28"></a>
+## 28. rt_ace_writeback()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc368f481fcb11eebaac0242ac11000c
+
+```c
+int rt_ace_writeback(
+    void        *Yaddr,
+    int         Ysize,
+    void        *Yrply,
+    ACE_PREC    Precisionflag);
+```
+
+## 功能介绍
+将累加结果写回SPE的SPM存储空间，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+Yaddr
+
+ | 输入
+
+ | 当前SPE的SPM存储空间起始访问地址，地址必须64字节对齐。
+
+ |
+Ysize
+
+ | 输入
+
+ | 表示128条目中，需要写回的条目数，0表示128个条目全部写回。每个条目为一整行，即64字节数据。
+
+ |
+Yrply
+
+ | 输入
+
+ | 回答字地址，地址必须4字节对齐。
+
+ |
+Precisionflag
+
+ | 输出
+
+ | 累加结果写回精度。
+
+- 0：表示按照16位结果写回。
+
+- 1：表示按照32位结果写回。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-29"></a>
+## 29. rt_ace_barrier_kernel()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc3773fe1fcb11eebaac0242ac11000c
+
+```c
+int rt_ace_barrier_kernel();
+
+```
+
+## 功能介绍
+累加结果写回栏栅，保证在累加器中的值对所有线程可见，防止对该值的重排序，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+无。
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-30"></a>
+## 30. rt_ace_north_count()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#11ba42b279ee11eeb4c00242ac110008
+
+```c
+int rt_ace_north_count();
+
+```
+
+## 功能介绍
+获取北向数据完成加载次数。
+
+## 注意事项
+无。
+
+## 参数解释
+无。
+
+## 返回值
+北向数据完成加载次数。
+
+
+<a id="page-31"></a>
+## 31. rt_ace_west_count()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#b708241479ee11eebca50242ac110008
+
+```c
+int rt_ace_west_count();
+
+```
+
+## 功能介绍
+获取西向数据完成加载次数。
+
+## 注意事项
+无。
+
+## 参数解释
+无。
+
+## 返回值
+西向数据完成加载次数。
+
+
+<a id="page-32"></a>
+## 32. rt_wait_north()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#f17e649679ee11eebca50242ac110008
+
+```c
+int rt_wait_north(end, start);
+
+```
+
+## 功能介绍
+等待北向数据加载完成。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+end
+
+ | 输入
+
+ | 北向数据完成加载次数， 由rt_ace_north_count()获得。
+
+ |
+start
+
+ | 输入
+
+ | 发起北向数据加载指令次数。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-33"></a>
+## 33. rt_wait_west()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#43b1d55879f011eebca50242ac110008
+
+```c
+int rt_wait_west(end, start);
+
+```
+
+## 功能介绍
+等待西向数据加载完成。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+end
+
+ | 输入
+
+ | 西向数据完成加载次数， 由rt_ace_west_count()获得。
+
+ |
+start
+
+ | 输入
+
+ | 发起西向数据加载指令次数。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-34"></a>
+## 34. 远程访问SPM
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc3813901fcb11eebaac0242ac11000c
+
+rt_remote_load()rt_remote_store()
+
+
+<a id="page-35"></a>
+## 35. rt_remote_load()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc3959bc1fcb11eebaac0242ac11000c
+
+```c
+void rt_remote_load(
+    void    var,
+    int     remote_core_id,
+    void    *r_ptr);
+
+```
+
+## 功能介绍
+从目标计算核心SPE的指定SPM存储空间上加载数据，阻塞式。
+
+## 前提条件
+必须保证当前计算核心SPE与目标计算核心SPE都申请了该SPM存储空间。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+var
+
+ | 输出
+
+ | 加载数据值。
+
+ |
+remote_core_id
+
+ | 输入
+
+ | 目标计算核心SPE的编号（0~31）。
+
+ |
+r_ptr
+
+ | 输入
+
+ | 目标SPE的SPM存储空间地址。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-36"></a>
+## 36. rt_remote_store()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc3aa8d01fcb11eebaac0242ac11000c
+
+```c
+void rt_remote_store(
+    void    val,
+    int     remote_core_id,
+    void    *r_ptr);
+
+```
+
+## 功能介绍
+在目标计算核心SPE的指定SPM存储空间上存储数据，阻塞式。
+
+## 前提条件
+必须保证当前计算核心SPE与目标计算核心SPE都申请了该SPM存储空间。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+val
+
+ | 输入
+
+ | 存储数据值。
+
+ |
+remote_core_id
+
+ | 输入
+
+ | 目标计算核心SPE的编号（0~31）。
+
+ |
+r_ptr
+
+ | 输入
+
+ | 目标SPE的SPM存储空间地址。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-37"></a>
+## 37. 时间统计
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc3b48bc1fcb11eebaac0242ac11000c
+
+rt_time_cycle()
+
+
+<a id="page-38"></a>
+## 38. rt_time_cycle()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc3c1ad01fcb11eebaac0242ac11000c
+
+```c
+unsigned long rt_time_cycle();
+
+```
+
+## 功能介绍
+获取计算核心SPE的时间周期，与C标准库(time.h)中clock()函数对应，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+无。
+
+## 返回值
+计算核心SPE的周期数。
+
+
+<a id="page-39"></a>
+## 39. SPE间通信
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc3cc4081fcb11eebaac0242ac11000c
+
+通用接口数据读取数据写出广播操作
+
+
+<a id="page-40"></a>
+## 40. 通用接口
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc3d65481fcb11eebaac0242ac11000c
+
+rt_rma()rt_rma_wait_value()rt_memcpy()rt_memmove()
+
+
+<a id="page-41"></a>
+## 41. rt_rma()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc3f98fe1fcb11eebaac0242ac11000c
+
+```c
+int rt_rma(
+    rma_mode        Mode,
+    rma_op          Op,
+    void            *Remote_ldm_ddr,
+    void            *Ldm_addr,
+    int             Len,
+    void            *Remote_rrply,
+    void            *Rrply,
+    int             Bcast_mask,
+    int             Remote_id);
+
+```
+
+## 功能介绍
+在同一计算核心阵列SPA内，在当前SPE指定的SPM存储空间和远端SPE指定的SPM存储空间传输数据，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+Mode
+
+ | 输入
+
+ | RMA传输命令模式。
+
+- `0x0`：单计算核心SPE模式。
+
+- `0x1`：行多播模式（当前SPE不接收数据）。
+
+- `0x2`：列多播模式（当前SPE不接收数据）。
+
+- `0x5`：行多播模式。
+
+- `0x6`：列多播模式。
+
+ |
+Op
+
+ | 输入
+
+ | RMA传输命令操作码。
+
+- `0x0`：表示数据写出，从当前SPE传输数据到远端SPE。
+
+- `0x1`：表示数据读取，从远端SPE传输数据到当前SPE。
+
+ |
+Remote_ldm_ddr
+
+ | 输入
+
+ | 数据搬运的目的地址，远端SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+Ldm_addr
+
+ | 输入
+
+ | 数据搬运的源地址，当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+Len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节。
+
+ |
+Remote_rrply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+Rrply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+Bcast_mask
+
+ | 输入
+
+ | 用于选择参与多播的行/列。
+
+- 行多播时，用于选择参与多播的行，仅低4位有效。
+
+- 列多播时，用于选择参与多播的列，仅低8位有效。
+
+具体选择方式如下，详见核心概念中的掩码介绍。
+
+- 某位为1，表示对应的行/列参与多播。
+
+- 某位为0，表示对应的行/列不参与多播。
+
+ |
+Remote_id
+
+ | 输入
+
+ | 远端计算核心SPE的编号（0~31）。仅`mode`为0x0，即单SPE模式下有效。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-42"></a>
+## 42. rt_rma_wait_value()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc40c0941fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_wait_value(
+    void    *reply,
+    int     value);
+
+```
+
+## 功能介绍
+等待RMA数据搬运结束，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+reply
+
+ | 输入
+
+ | RMA传输回答字的地址，地址必须4字节对齐。
+
+ |
+value
+
+ | 输入
+
+ | RMA传输完成时，回答字的目标值。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-43"></a>
+## 43. rt_memcpy()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc41f9f01fcb11eebaac0242ac11000c
+
+```c
+void rt_memcpy(
+    void    *dest,
+    void    *src,
+    int     len);
+
+```
+
+## 功能介绍
+支持大数据量，地址不对齐情况下，同一个计算核心SPE内的数据复制操作。
+
+## 注意事项
+不支持SPM存储空间内存重叠的情况。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | 数据复制的目标SPM存储空间地址。
+
+ |
+src
+
+ | 输入
+
+ | 数据复制的源SPM存储空间地址。
+
+ |
+len
+
+ | 输入
+
+ | 待复制的数据量，单位：字节。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-44"></a>
+## 44. rt_memmove()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc4334dc1fcb11eebaac0242ac11000c
+
+```c
+void rt_memmove(
+    void    *dest,
+    void    *src,
+    int     len);
+
+```
+
+## 功能介绍
+支持大数据量，地址不对齐情况下，同一个计算核心SPE内的数据移动操作。
+
+## 注意事项
+能够处理SPM存储空间内存重叠的问题。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | 数据移动的源SPM存储空间地址。
+
+ |
+src
+
+ | 输入
+
+ | 数据移动的目标SPM存储空间地址。
+
+ |
+len
+
+ | 输入
+
+ | 待移动的数据量，单位：字节。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-45"></a>
+## 45. 数据读取
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc43e3e61fcb11eebaac0242ac11000c
+
+rt_rma_get()rt_rma_iget()
+
+
+<a id="page-46"></a>
+## 46. rt_rma_get()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc455ab41fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_get(
+    void    *l_addr,
+    int     len,
+    int     r_tid,
+    void    *r_addr,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+在同一计算核心阵列SPA内，将远端计算核心SPE中指定的SPM存储数据以阻塞的方式搬运到当前计算核心SPE中指定的SPM存储空间内。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+l_addr
+
+ | 输入
+
+ | 数据搬运的目的地址，当前计算核心的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_tid
+
+ | 输入
+
+ | 目标计算核心SPE的编号（0~31）。
+
+ |
+r_addr
+
+ | 输入
+
+ | 数据搬运的源地址，远端计算核心的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-47"></a>
+## 47. rt_rma_iget()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc46f1261fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_iget(
+    void    *l_addr,
+    void    *l_rply,
+    int     len,
+    int     r_tid,
+    void    *r_addr,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+在同一计算核心阵列SPA内，将远端计算核心SPE中指定的SPM存储数据以非阻塞的方式搬运到当前计算核心SPE中指定的SPM存储空间内。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+l_addr
+
+ | 输入
+
+ | 数据搬运的目的地址，当前计算核心的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+l_rply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_tid
+
+ | 输入
+
+ | 目标计算核心SPE的编号（0~31）。
+
+ |
+r_addr
+
+ | 输入
+
+ | 数据搬运的源地址，远端计算核心的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-48"></a>
+## 48. 数据写出
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc47a1d41fcb11eebaac0242ac11000c
+
+rt_rma_put()rt_rma_iput()
+
+
+<a id="page-49"></a>
+## 49. rt_rma_put()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc493b981fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_put(
+    void    *l_addr,
+    int     len,
+    int     r_tid,
+    void    *r_addr,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+在同一计算核心阵列SPA内，将当前计算核心SPE中指定的SPM存储数据以阻塞的方式搬运到远端计算核心SPE中指定的SPM存储空间内。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+l_addr
+
+ | 输入
+
+ | 数据搬运的源地址，当前计算核心的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_tid
+
+ | 输入
+
+ | 目标计算核心SPE的编号（0~31）。
+
+ |
+r_addr
+
+ | 输入
+
+ | 数据搬运的目的地址，远端计算核心的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-50"></a>
+## 50. rt_rma_iput()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc4adb241fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_iput(
+    void    *l_addr,
+    void    *l_rply,
+    int     len,
+    int     r_tid,
+    void    *r_addr,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+在同一计算核心阵列SPA内，将当前计算核心SPE中指定的SPM存储数据以非阻塞的方式搬运到远端计算核心SPE中指定的SPM存储空间内。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+l_addr
+
+ | 输入
+
+ | 数据搬运的源地址，当前计算核心的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+l_rply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_tid
+
+ | 输入
+
+ | 目标计算核心SPE的编号（0~31）。
+
+ |
+r_addr
+
+ | 输入
+
+ | 数据搬运的目的地址，远端计算核心的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-51"></a>
+## 51. 广播操作
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc4b88e41fcb11eebaac0242ac11000c
+
+广播发起的SPE接收广播数据广播发起的SPE不接收广播数据行/列多播
+
+
+<a id="page-52"></a>
+## 52. 广播发起的SPE接收广播数据
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc4c2d9e1fcb11eebaac0242ac11000c
+
+rt_rma_bcast()rt_rma_ibcast()rt_rma_col_bcast()rt_rma_col_ibcast()rt_rma_row_bcast()rt_rma_row_ibcast()rt_rma_col_bcast_coll()rt_rma_row_bcast_coll()
+
+
+<a id="page-53"></a>
+## 53. rt_rma_bcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc4da0f21fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_bcast(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+在同一计算核心阵列SPA内，将发送方计算核心SPE中指定的SPM存储数据以阻塞的方式搬运到SPA内所有SPE。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-54"></a>
+## 54. rt_rma_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc4f37a01fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_ibcast(
+    void    *dst,
+    void    *src,
+    void    *l_rply,
+    int     len,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+在同一计算核心阵列SPA内，将发送方计算核心SPE中指定的SPM存储数据以非阻塞的方式搬运到SPA内所有SPE。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+l_rply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-55"></a>
+## 55. rt_rma_col_bcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc50ac2a1fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_col_bcast(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA列广播数据，由特定计算核心SPE发起，同一列上所有SPE接收数据，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-56"></a>
+## 56. rt_rma_col_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc5242561fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_col_ibcast(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *l_rply,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA列广播数据，由特定计算核心SPE发起，同一列上所有SPE接收数据，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+l_rply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-57"></a>
+## 57. rt_rma_row_bcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc53ba961fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_row_bcast(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA行广播数据，由特定计算核心SPE发起，同一行上所有SPE接收数据，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-58"></a>
+## 58. rt_rma_row_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc55d4b61fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_row_ibcast(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *l_rply,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA行广播数据，由特定计算核心SPE发起，同一行上所有SPE接收数据，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+l_rply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-59"></a>
+## 59. rt_rma_col_bcast_coll()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc579ed61fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_col_bcast_coll(
+    void    *dst,
+    void    *src,
+    int     len,
+    int     root);
+
+```
+
+## 功能介绍
+RMA列广播数据，由指定行上的计算核心SPE发起，同一列上所有SPE接收数据，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+root
+
+ | 输入
+
+ | 指定发起RMA广播的计算核心SPE所在的目标行。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-60"></a>
+## 60. rt_rma_row_bcast_coll()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc59229c1fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_row_bcast_coll(
+    void    *dst,
+    void    *src,
+    int     len,
+    int     root);
+
+```
+
+## 功能介绍
+RMA行广播数据，由指定列上的计算核心SPE发起，同一行上所有SPE接收数据，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+root
+
+ | 输入
+
+ | 指定发起RMA广播的计算核心SPE所在的目标列。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-61"></a>
+## 61. 广播发起的SPE不接收广播数据
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc59e0561fcb11eebaac0242ac11000c
+
+rt_rma_bcast_other()rt_rma_col_bcast_other()rt_rma_col_ibcast_other()rt_rma_row_bcast_other()rt_rma_row_ibcast_other()rt_rma_col_bcast_coll_other()rt_rma_row_bcast_coll_other()
+
+
+<a id="page-62"></a>
+## 62. rt_rma_bcast_other()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc5bf65c1fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_bcast_other(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA广播数据给所有计算核心SPE（当前SPE不接收数据），阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-63"></a>
+## 63. rt_rma_col_bcast_other()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc5e66f81fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_col_bcast_other(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA列广播数据，由特定计算核心SPE发起，同一列上所有SPE接收数据（当前SPE不接收数据），阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-64"></a>
+## 64. rt_rma_col_ibcast_other()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc60d7f81fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_col_ibcast_other(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *l_rply,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA列广播数据，由特定计算核心SPE发起，同一列上所有SPE接收数据（当前SPE不接收数据），非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+l_rply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-65"></a>
+## 65. rt_rma_row_bcast_other()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc62ac9a1fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_row_bcast_other(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA行广播数据，由特定计算核心SPE发起，同一行上所有SPE接收数据（当前SPE不接收数据），阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-66"></a>
+## 66. rt_rma_row_ibcast_other()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc651eee1fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_row_ibcast_other(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *l_rply,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA行广播数据，由特定计算核心SPE发起，同一行上所有SPE接收数据（当前SPE不接收数据），非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+l_rply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-67"></a>
+## 67. rt_rma_col_bcast_coll_other()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc678e721fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_col_bcast_coll_other(
+    void    *dst,
+    void    *src,
+    int     len,
+    int     root);
+
+```
+
+## 功能介绍
+RMA列广播数据，由指定行上的计算核心SPE发起，同一列上所有SPE接收数据（当前SPE不接收数据），阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+root
+
+ | 输入
+
+ | 指定发起RMA广播的计算核心SPE所在的目标行。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-68"></a>
+## 68. rt_rma_row_bcast_coll_other()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc6967061fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_row_bcast_coll_other(
+    void    *dst,
+    void    *src,
+    int     len,
+    int     root);
+
+```
+
+## 功能介绍
+RMA行广播数据，由指定列上的计算核心SPE发起，同一行上所有SPE接收数据（当前SPE不接收数据），阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+root
+
+ | 输入
+
+ | 指定发起RMA广播的计算核心SPE所在的目标列。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-69"></a>
+## 69. 行/列多播
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc6a157a1fcb11eebaac0242ac11000c
+
+rt_rma_col_mcast()rt_rma_col_imcast()rt_rma_col_mcast_other()rt_rma_col_imcast_other()rt_rma_row_mcast()rt_rma_row_imcast()rt_rma_row_mcast_other()rt_rma_row_imcast_other()
+
+
+<a id="page-70"></a>
+## 70. rt_rma_col_mcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc6c784c1fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_col_mcast(
+    void    *dst,
+    void    *src,
+    int     len,
+    int     r_cols_mask,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA列多播数据，由特定计算核心SPE发起，指定多列上的所有SPE接收数据，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_cols_mask
+
+ | 输入
+
+ | 参与多播的列。某位为1，表示对应的列参与多播，仅低8位有效，详见核心概念中的掩码介绍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-71"></a>
+## 71. rt_rma_col_imcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc6e4b361fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_col_imcast(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *l_rply,
+    int     r_cols_mask,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA列多播数据，由特定计算核心SPE发起，指定多列上的所有SPE接收数据，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+l_rply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+r_cols_mask
+
+ | 输入
+
+ | 参与多播的列。某位为1，表示对应的列参与多播，仅低8位有效，详见核心概念中的掩码介绍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-72"></a>
+## 72. rt_rma_col_mcast_other()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc700f8e1fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_col_mcast_other(
+    void    *dst,
+    void    *src,
+    int     len,
+    int     r_cols_mask,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA列多播数据，由特定计算核心SPE发起，指定多列上的所有SPE接收数据（当前SPE不接收数据），阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_cols_mask
+
+ | 输入
+
+ | 参与多播的列。某位为1，表示对应的列参与多播，仅低8位有效，详见核心概念中的掩码介绍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-73"></a>
+## 73. rt_rma_col_imcast_other()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc71e0fc1fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_col_imcast_other(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *l_rply,
+    int     r_cols_mask,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA列多播数据，由特定计算核心SPE发起，指定多列上的所有SPE接收数据（当前SPE不接收数据），非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+l_rply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+r_cols_mask
+
+ | 输入
+
+ | 参与多播的列。某位为1，表示对应的列参与多播，仅低8位有效，详见核心概念中的掩码介绍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-74"></a>
+## 74. rt_rma_row_mcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc738b0a1fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_row_mcast(
+    void    *dst,
+    void    *src,
+    int     len,
+    int     r_rows_mask,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA行多播数据，由特定计算核心SPE发起，指定多行上的所有SPE接收数据，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_rows_mask
+
+ | 输入
+
+ | 参与多播的行。某位为1，表示对应的行参与多播，仅低4位有效，详见核心概念中的掩码介绍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-75"></a>
+## 75. rt_rma_row_imcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc7553f41fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_row_imcast(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *l_rply,
+    int     r_rows_mask,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA行多播数据，由特定计算核心SPE发起，指定多行上的所有SPE接收数据，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+l_rply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+r_rows_mask
+
+ | 输入
+
+ | 参与多播的行。某位为1，表示对应的行参与多播，仅低4位有效，详见核心概念中的掩码介绍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-76"></a>
+## 76. rt_rma_row_mcast_other()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc7703661fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_row_mcast_other(
+    void    *dst,
+    void    *src,
+    int     len,
+    int     r_rows_mask,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA行多播数据，由特定计算核心SPE发起，指定多行上的所有SPE接收数据（当前SPE不接收数据），阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+r_rows_mask
+
+ | 输入
+
+ | 参与多播的行。某位为1，表示对应的行参与多播，仅低4位有效，详见核心概念中的掩码介绍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-77"></a>
+## 77. rt_rma_row_imcast_other()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc78c8541fcb11eebaac0242ac11000c
+
+```c
+int rt_rma_row_imcast_other(
+    void    *dst,
+    void    *src,
+    int     len,
+    void    *l_rply,
+    int     r_rows_mask,
+    void    *r_rply);
+
+```
+
+## 功能介绍
+RMA行多播数据，由特定计算核心SPE发起，指定多行上的所有SPE接收数据（当前SPE不接收数据），非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dst
+
+ | 输入
+
+ | RMA广播目标SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | RMA广播当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | RMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+l_rply
+
+ | 输入
+
+ | RMA当前传输回答字地址，地址必须4字节对齐。
+
+ |
+r_rows_mask
+
+ | 输入
+
+ | 参与多播的行。某位为1，表示对应的行参与多播，仅低4位有效，详见核心概念中的掩码介绍。
+
+ |
+r_rply
+
+ | 输入
+
+ | RMA远程传输回答字地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-78"></a>
+## 78. 设备内存访问
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc79ea2c1fcb11eebaac0242ac11000c
+
+通用接口数据读取数据写出广播操作
+
+
+<a id="page-79"></a>
+## 79. 通用接口
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc7a85721fcb11eebaac0242ac11000c
+
+rt_dma()rt_dma_wait_value()
+
+
+<a id="page-80"></a>
+## 80. rt_dma()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc7d0d601fcb11eebaac0242ac11000c
+
+```c
+int rt_dma(
+    dma_mode        Mode,
+    DMA_OP          Op,
+    void            *Addr,
+    void            *Ldm_addr,
+    int             Len,
+    void            *Rrply,
+    int             Bcast_mask,
+    int             Stride,
+    int             Bsize);
+
+```
+
+## 功能介绍
+在设备内存和SPE的SPM间进行数据传输。传输模式由mode指定，传输方向由op指定，非阻塞式。分为以下两种情况：
+
+- SPM读取设备内存的数据，将设备内存的数据读取到SPM的指定位置。
+
+- SPM向设备内存写入数据，将SPM的数据写入设备内存的指定位置。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+Mode
+
+ | 输入
+
+ | DMA传输命令模式，二进制低四位有效，dma_mode[3]要求为0。
+
+- `0x0`：单计算核心SPE模式。
+
+- `0x1`：行多播模式，仅dma_get使用。
+
+- `0x2`：列多播模式，仅dma_get使用。
+
+- 其他：保留。
+
+ |
+Op
+
+ | 输入
+
+ | DMA传输命令操作码，二进制低四位有效。DMA_OP[3]是转置标志，为1表示转置。该标志仅在数据读取（即[3:0]=0x1或0x3）时有效。
+
+- `0x0`：数据写出。
+
+- `0x1`：数据读取。
+
+- `0x2`：数据写出（物理地址）。
+
+- `0x3`：数据读取（物理地址）。
+
+- 其他：保留。
+
+ |
+Addr
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+Ldm_addr
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+Len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节。
+
+ |
+Rrply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+Bcast_mask
+
+ | 输入
+
+ | DMA传输多播使能。列多播时，表示参与多播的列。即：某位为1，表示对应的列参加多播，详见核心概念中的掩码介绍。仅支持同个SPA内的列多播。
+
+ |
+Stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节。
+
+ |
+Bsize
+
+ | 输入
+
+ | 跨步向量块大小，DMA跨步传输时有效，表示DMA传输的跨步向量块大小，单位：字节。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-81"></a>
+## 81. rt_dma_wait_value()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc7e4c981fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_wait_value(
+    void    *reply,
+    int     value);
+
+```
+
+## 功能介绍
+等待DMA回答字，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+value
+
+ | 输入
+
+ | DMA传输完成时，回答字的目标值。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-82"></a>
+## 82. 数据读取
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc7eff801fcb11eebaac0242ac11000c
+
+rt_dma_get()rt_dma_iget()rt_dma_get_stride()rt_dma_iget_stride()rt_dma_phy_get()rt_dma_phy_iget()rt_dma_phy_get_stride()rt_dma_phy_iget_stride()rt_h_dma_trans_get()rt_h_dma_trans_iget()rt_s_dma_trans_get()rt_s_dma_trans_iget()rt_unaligned_dma_get()rt_unaligned_dma_get_stride()
+
+
+<a id="page-83"></a>
+## 83. rt_dma_get()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc805b781fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_get(
+    void    *dest,
+    void    *src,
+    int     len);
+
+```
+
+## 功能介绍
+将设备内存的数据读取到SPM存储空间的指定位置，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-84"></a>
+## 84. rt_dma_iget()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc826a441fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_iget(
+    void    *dest,
+    void    *src,
+    int     len,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存的数据读取到SPM存储空间的指定位置，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-85"></a>
+## 85. rt_dma_get_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc8463e41fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_get_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride);
+
+```
+
+## 功能介绍
+将设备内存的数据读取到SPM存储空间的指定位置，含跨步操作，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，单位：字节，需为4的整数倍。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为4的整数倍。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-86"></a>
+## 86. rt_dma_iget_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc861cfc1fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_iget_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存的数据读取到SPM存储空间的指定位置，含跨步操作，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，单位：字节，需为4的整数倍。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-87"></a>
+## 87. rt_dma_phy_get()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc8781141fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_phy_get(
+    void    *dest,
+    void    *src,
+    int     len);
+
+```
+
+## 功能介绍
+使用物理地址，将设备内存的数据读取到SPM存储空间的指定位置，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间物理地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-88"></a>
+## 88. rt_dma_phy_iget()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc88ebb21fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_phy_iget(
+    void    *dest,
+    void    *src,
+    int     len,
+    void    *reply);
+
+```
+
+## 功能介绍
+使用物理地址，将设备内存的数据读取到SPM存储空间的指定位置，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间物理地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-89"></a>
+## 89. rt_dma_phy_get_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc8a845e1fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_phy_get_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride);
+
+```
+
+## 功能介绍
+使用物理地址，将设备内存的数据读取到SPM存储空间的指定位置，含跨步操作，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间物理地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，单位：字节，需为4的整数倍。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为4的整数倍。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-90"></a>
+## 90. rt_dma_phy_iget_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc8c51261fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_phy_iget_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride,
+    void    *reply);
+
+```
+
+## 功能介绍
+使用物理地址，将设备内存的数据读取到SPM存储空间的指定位置，含跨步操作，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间物理地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，单位：字节，需为4的整数倍。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-91"></a>
+## 91. rt_h_dma_trans_get()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc8dba5c1fcb11eebaac0242ac11000c
+
+```c
+int rt_h_dma_trans_get(
+    _Float16    *dest,
+    _Float16    *src,
+    int         stride);
+
+```
+
+## 功能介绍
+将设备内存上的`_Float16`数据转置读取到SPM存储空间的指定位置，一次完成`32*32*2B`向量块的转置读取，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须64字节对齐。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为64的整数倍。在转置DMA中，跨步向量块为64字节。配置此参数时，需要固定减去64字节的跨步向量块。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-92"></a>
+## 92. rt_h_dma_trans_iget()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc8f527c1fcb11eebaac0242ac11000c
+
+```c
+int rt_h_dma_trans_iget(
+    _Float16    *dest,
+    _Float16    *src,
+    int         stride,
+    void        *reply);
+
+```
+
+## 功能介绍
+将设备内存上的`_Float16`数据转置读取到SPM存储空间的指定位置，一次完成`32*32*2B`向量块的转置读取，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须64字节对齐。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为64的整数倍。在转置DMA中，跨步向量块为64字节。配置此参数时，需要固定减去64字节的跨步向量块。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-93"></a>
+## 93. rt_s_dma_trans_get()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc90cc381fcb11eebaac0242ac11000c
+
+```c
+int rt_s_dma_trans_get(
+    float   *dest,
+    float   *src,
+    int     stride);
+
+```
+
+## 功能介绍
+将设备内存上的`float`数据转置读取到SPM存储空间的指定位置，一次完成`16*16*4B`向量块的转置读取，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须64字节对齐。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为64的整数倍。在转置DMA中，跨步向量块为64字节。配置此参数时，需要固定减去64字节的跨步向量块。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-94"></a>
+## 94. rt_s_dma_trans_iget()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc9253be1fcb11eebaac0242ac11000c
+
+```c
+int rt_s_dma_trans_iget(
+    float   *dest,
+    float   *src,
+    int     stride,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存上的`float`数据转置读取到SPM存储空间的指定位置，一次完成`16*16*4B`向量块的转置读取，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须64字节对齐。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为64的整数倍。在转置DMA中，跨步向量块为64字节。配置此参数时，需要固定减去64字节的跨步向量块。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-95"></a>
+## 95. rt_unaligned_dma_get()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc93ac5a1fcb11eebaac0242ac11000c
+
+```c
+void rt_unaligned_dma_get(
+    void    *dest,
+    void    *src,
+    int     len);
+
+```
+
+## 功能介绍
+支持地址非对齐情况下，将设备内存的数据读取到SPM存储空间的指定位置，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，无任何对齐要求。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，无任何对齐要求。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，以字节为单位，可为不超过SPM存储空间大小的任意整数。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-96"></a>
+## 96. rt_unaligned_dma_get_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc9559d81fcb11eebaac0242ac11000c
+
+```c
+void rt_unaligned_dma_get_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride);
+
+```
+
+## 功能介绍
+支持地址非对齐情况下，将设备内存的数据读取到SPM存储空间的指定位置，含跨步操作，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，无任何对齐要求。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，无任何对齐要求。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，以字节为单位，可为不超过SPM存储空间大小的任意整数。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，以字节为单位，可为不超过SPM存储空间大小的任意整数。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，以字节为单位， 可为任意整数。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-97"></a>
+## 97. 数据写出
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc9609be1fcb11eebaac0242ac11000c
+
+rt_dma_put()rt_dma_iput()rt_dma_put_stride()rt_dma_iput_stride()rt_dma_phy_put()rt_dma_phy_iput()rt_dma_phy_put_stride()rt_dma_phy_iput_stride()rt_unaligned_dma_put()rt_unaligned_dma_put_stride()
+
+
+<a id="page-98"></a>
+## 98. rt_dma_put()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc97765a1fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_put(
+    void    *dest,
+    void    *src,
+    int     len);
+
+```
+
+## 功能介绍
+将SPM存储空间的数据写入到设备内存的指定位置，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-99"></a>
+## 99. rt_dma_iput()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc98feb21fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_iput(
+    void    *dest,
+    void    *src,
+    int     len,
+    void    *reply);
+
+```
+
+## 功能介绍
+将SPM存储空间的数据写入到设备内存的指定位置，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-100"></a>
+## 100. rt_dma_put_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc9a9cea1fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_put_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride);
+
+```
+
+## 功能介绍
+将SPM存储空间的数据写入到设备内存的指定位置，含跨步操作，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，单位：字节，需为4的整数倍。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为4的整数倍。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-101"></a>
+## 101. rt_dma_iput_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc9c65481fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_iput_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride,
+    void    *reply);
+
+```
+
+## 功能介绍
+将SPM存储空间的数据写入到设备内存的指定位置，含跨步操作，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，单位：字节，需为4的整数倍。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-102"></a>
+## 102. rt_dma_phy_put()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc9e162c1fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_phy_put(
+    void    *dest,
+    void    *src,
+    int     len);
+
+```
+
+## 功能介绍
+使用物理地址，将SPM存储空间的数据写入到设备内存的指定位置，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间物理地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-103"></a>
+## 103. rt_dma_phy_iput()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bc9f86d81fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_phy_iput(
+    void    *dest,
+    void    *src,
+    int     len,
+    void    *reply);
+
+```
+
+## 功能介绍
+使用物理地址，将SPM存储空间的数据写入到设备内存的指定位置，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间物理地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-104"></a>
+## 104. rt_dma_phy_put_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bca117b41fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_phy_put_stride(
+    void    *dest,
+    void    *src,
+    int    len,
+    int    bsize,
+    int    stride);
+
+```
+
+## 功能介绍
+使用物理地址，将SPM存储空间的数据写入到设备内存的指定位置，含跨步操作，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间物理地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，单位：字节，需为4的整数倍。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为4的整数倍。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-105"></a>
+## 105. rt_dma_phy_iput_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bca2f87c1fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_phy_iput_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride,
+    void    *reply);
+
+```
+
+## 功能介绍
+使用物理地址，将SPM存储空间的数据写入到设备内存的指定位置，含跨步操作，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间物理地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，单位：字节，需为4的整数倍。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-106"></a>
+## 106. rt_unaligned_dma_put()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bca45a821fcb11eebaac0242ac11000c
+
+```c
+void rt_unaligned_dma_put(
+    void    *dest,
+    void    *src,
+    int     len);
+
+```
+
+## 功能介绍
+支持地址非对齐情况下，将SPM存储空间的数据写入到设备内存的指定位置，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输设备内存地址，无任何对齐要求。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，无任何对齐要求。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，以字节为单位，可为不超过SPM存储空间大小的任意整数。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-107"></a>
+## 107. rt_unaligned_dma_put_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bca600621fcb11eebaac0242ac11000c
+
+```c
+void rt_unaligned_dma_put_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride);
+
+```
+
+## 功能介绍
+支持地址非对齐情况下，将SPM存储空间的数据写入到设备内存的指定位置，含跨步操作，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输设备内存地址，无任何对齐要求。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，无任何对齐要求。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，以字节为单位，可为不超过SPM存储空间大小的任意整数。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，以字节为单位，可为不超过SPM存储空间大小的任意整数。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，以字节为单位， 可为任意整数。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-108"></a>
+## 108. 广播操作
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bca6c2861fcb11eebaac0242ac11000c
+
+全广播列广播行广播
+
+
+<a id="page-109"></a>
+## 109. 全广播
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bca770641fcb11eebaac0242ac11000c
+
+rt_dma_ibcast()rt_dma_ibcast_stride()rt_h_dma_trans_ibcast()rt_s_dma_trans_ibcast()
+
+
+<a id="page-110"></a>
+## 110. rt_dma_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bca8e4441fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_ibcast(
+    void    *dest,
+    void    *src,
+    int     len,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存上的数据，广播到所有计算核心SPE的SPM指定位置，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-111"></a>
+## 111. rt_dma_ibcast_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcaab4ea1fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_ibcast_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存上的数据，跨步广播到所有计算核心SPE的SPM指定位置，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，单位：字节，需为4的整数倍。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-112"></a>
+## 112. rt_h_dma_trans_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcac6f061fcb11eebaac0242ac11000c
+
+```c
+int rt_h_dma_trans_ibcast(
+    _Float16    *dest,
+    _Float16    *src,
+    int         stride,
+    void        *reply);
+
+```
+
+## 功能介绍
+将设备内存上的`_Float16`数据，转置广播到所有计算核心SPE的SPM指定位置，一次完成`32*32*2B`向量块的转置广播，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须64字节对齐。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为64的整数倍。在转置DMA中，跨步向量块为64字节。配置此参数时，需要固定减去64字节的跨步向量块。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-113"></a>
+## 113. rt_s_dma_trans_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcae09241fcb11eebaac0242ac11000c
+
+```c
+int rt_s_dma_trans_ibcast(
+    float   *dest,
+    float   *src,
+    int     stride,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存上的`float`数据，转置广播到所有计算核心SPE的SPM指定位置，一次完成`16*16*4B`向量块的转置广播，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须64字节对齐。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为64的整数倍。在转置DMA中，跨步向量块为64字节。配置此参数时，需要固定减去64字节的跨步向量块。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-114"></a>
+## 114. 列广播
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcaec1ca1fcb11eebaac0242ac11000c
+
+rt_dma_col_ibcast()rt_dma_col_ibcast_stride()rt_h_dma_trans_col_ibcast()rt_s_dma_trans_col_ibcast()
+
+
+<a id="page-115"></a>
+## 115. rt_dma_col_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcb03ff01fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_col_ibcast(
+    void    *dest,
+    void    *src,
+    int     len,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存上的数据，广播到同一列计算核心SPE的SPM指定位置，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-116"></a>
+## 116. rt_dma_col_ibcast_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcb253941fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_col_ibcast_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存上的数据，跨步广播到同一列计算核心SPE的SPM指定位置，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，单位：字节，需为4的整数倍。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-117"></a>
+## 117. rt_h_dma_trans_col_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcb3ed801fcb11eebaac0242ac11000c
+
+```c
+int rt_h_dma_trans_col_ibcast(
+    _Float16    *dest,
+    _Float16    *src,
+    int         stride,
+    void        *reply);
+
+```
+
+## 功能介绍
+将设备内存上的`_Float16`数据，转置广播到同一列计算核心SPE的SPM指定位置，一次完成`32*32*2B`向量块的转置广播，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须64字节对齐。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为64的整数倍。在转置DMA中，跨步向量块为64字节。配置此参数时，需要固定减去64字节的跨步向量块。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-118"></a>
+## 118. rt_s_dma_trans_col_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcb634321fcb11eebaac0242ac11000c
+
+```c
+int rt_s_dma_trans_col_ibcast(
+    float   *dest,
+    float   *src,
+    int     stride,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存上的`float`数据，转置广播到同一列计算核心SPE的SPM指定位置，一次完成`16*16*4B`向量块的转置广播，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须64字节对齐。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为64的整数倍。在转置DMA中，跨步向量块为64字节。配置此参数时，需要固定减去64字节的跨步向量块。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-119"></a>
+## 119. 行广播
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcb6ffc01fcb11eebaac0242ac11000c
+
+rt_dma_row_ibcast()rt_dma_row_ibcast_stride()rt_h_dma_trans_row_ibcast()rt_s_dma_trans_row_ibcast()
+
+
+<a id="page-120"></a>
+## 120. rt_dma_row_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcb8f12c1fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_row_ibcast(
+    void    *dest,
+    void    *src,
+    int     len,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存上的数据，广播到同一行计算核心SPE的SPM指定位置，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-121"></a>
+## 121. rt_dma_row_ibcast_stride()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcbaf6341fcb11eebaac0242ac11000c
+
+```c
+int rt_dma_row_ibcast_stride(
+    void    *dest,
+    void    *src,
+    int     len,
+    int     bsize,
+    int     stride,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存上的数据，跨步广播到同一行计算核心SPE的SPM指定位置，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须4字节对齐。
+
+ |
+len
+
+ | 输入
+
+ | DMA传输数据量，单位：字节，需为4的整数倍。
+
+ |
+bsize
+
+ | 输入
+
+ | 跨步向量块大小，单位：字节，需为4的整数倍。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为4的整数倍。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-122"></a>
+## 122. rt_h_dma_trans_row_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcbcc1b21fcb11eebaac0242ac11000c
+
+```c
+int rt_h_dma_trans_row_ibcast(
+    _Float16    *dest,
+    _Float16    *src,
+    int         stride,
+    void        *reply);
+
+```
+
+## 功能介绍
+将设备内存上的`_Float16`数据，转置广播到同一行计算核心SPE的SPM指定位置，一次完成`32*32*2B`向量块的转置广播，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须64字节对齐。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为64的整数倍。在转置DMA中，跨步向量块为64字节。配置此参数时，需要固定减去64字节的跨步向量块。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-123"></a>
+## 123. rt_s_dma_trans_row_ibcast()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcbe874a1fcb11eebaac0242ac11000c
+
+```c
+int rt_s_dma_trans_row_ibcast(
+    float   *dest,
+    float   *src,
+    int     stride,
+    void    *reply);
+
+```
+
+## 功能介绍
+将设备内存上的`float`数据，转置广播到同一行计算核心SPE的SPM指定位置，一次完成`16*16*4B`向量块广播，非阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+dest
+
+ | 输入
+
+ | DMA传输当前SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+src
+
+ | 输入
+
+ | DMA传输设备内存地址，地址必须64字节对齐。
+
+ |
+stride
+
+ | 输入
+
+ | 设备内存跨步，单位：字节，需为64的整数倍。在转置DMA中，跨步向量块为64字节。配置此参数时，需要固定减去64字节的跨步向量块。
+
+ |
+reply
+
+ | 输入
+
+ | DMA传输回答字地址，必须为SPE的SPM存储空间地址，地址必须4字节对齐。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-124"></a>
+## 124. 规约操作
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcbf3cc61fcb11eebaac0242ac11000c
+
+rt_rma_allreduce()rt_rma_reduce()rt_rma_allreduce_to()rt_rma_col_reduce()rt_rma_col_reduce_to()rt_rma_row_reduce()rt_rma_row_reduce_to()
+
+
+<a id="page-125"></a>
+## 125. rt_rma_allreduce()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcc161c21fcb11eebaac0242ac11000c
+
+```c
+void rt_rma_allreduce(
+    void        *data,
+    void        *buf,
+    int         len,
+    RED_TYPE    type);
+
+```
+
+## 功能介绍
+对一个计算核心阵列SPA内，所有SPE上的数据做累加，并在32个SPE上更新累加结果，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+data
+
+ | 输入/输出
+
+ | 执行全阵列规约的32个SPE的SPM地址，地址必须4字节对齐。内存空间大小应不大于buf。
+
+ |
+buf
+
+ | 输入
+
+ | 用于计算核心之间通信的当前SPE的SPM缓存地址，地址必须4字节对齐。内存空间大小应不小于data。
+
+ |
+len
+
+ | 输入
+
+ | 执行全阵列规约的数据个数。
+
+ |
+type
+
+ | 输入
+
+ | 执行全阵列规约的数据类型，具体如下：
+
+RED_TYPE取值
+
+ | 说明
+
+ |
+`FLOAT_TYPE`
+
+ | 单精度浮点数
+
+ |
+`HALF_TYPE`
+
+ | 半精度浮点数
+
+ |
+`INT_TYPE`
+
+ | 整数
+
+ |
+`UINT_TYPE`
+
+ | 无符号整数
+
+ |
+`SHORT_TYPE`
+
+ | 短整数
+
+ |
+`USHORT_TYPE`
+
+ | 无符号短整数
+
+ |
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-126"></a>
+## 126. rt_rma_reduce()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcc2f8f21fcb11eebaac0242ac11000c
+
+```c
+void rt_rma_reduce(
+    void        *data,
+    void        *buf,
+    int         len,
+    RED_TYPE    type);
+
+```
+
+## 功能介绍
+对一个计算核心阵列SPA内，所有SPE上的数据做累加，在0号SPE上更新累加结果，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+data
+
+ | 输入/输出
+
+ | 执行全阵列规约的当前SPE的SPM地址，地址必须4字节对齐。内存空间大小应不大于buf。
+
+ |
+buf
+
+ | 输入
+
+ | 用于核间通信的当前SPE的SPM缓存地址，地址必须4字节对齐。内存空间大小应不小于data。
+
+ |
+len
+
+ | 输入
+
+ | 执行全阵列规约的数据个数。
+
+ |
+type
+
+ | 输入
+
+ | 执行全阵列规约的数据类型，具体如下：
+
+RED_TYPE取值
+
+ | 说明
+
+ |
+`FLOAT_TYPE`
+
+ | 单精度浮点数
+
+ |
+`HALF_TYPE`
+
+ | 半精度浮点数
+
+ |
+`INT_TYPE`
+
+ | 整数
+
+ |
+`UINT_TYPE`
+
+ | 无符号整数
+
+ |
+`SHORT_TYPE`
+
+ | 短整数
+
+ |
+`USHORT_TYPE`
+
+ | 无符号短整数
+
+ |
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-127"></a>
+## 127. rt_rma_allreduce_to()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcc4b0e81fcb11eebaac0242ac11000c
+
+```c
+void rt_rma_allreduce_to(
+    int         core_id,
+    void        *data,
+    void        *buf,
+    int         len,
+    RED_TYPE    type);
+
+```
+
+## 功能介绍
+对一个计算核心阵列SPA内，所有SPE上的数据做累加，并在指定SPE上更新累加结果，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+core_id
+
+ | 输入
+
+ | 更新累加结果的目标SPE编号（0~31）。
+
+ |
+data
+
+ | 输入/输出
+
+ | 执行全阵列规约的当前SPE的SPM地址，地址必须4字节对齐。内存空间大小应不大于buf。
+
+ |
+buf
+
+ | 输入
+
+ | 用于核间通信的当前SPE的SPM缓存地址，地址必须4字节对齐。内存空间大小应不小于data。
+
+ |
+len
+
+ | 输入
+
+ | 执行全阵列规约的数据个数。
+
+ |
+type
+
+ | 输入
+
+ | 执行全阵列规约的数据类型，具体如下：
+
+RED_TYPE取值
+
+ | 说明
+
+ |
+`FLOAT_TYPE`
+
+ | 单精度浮点数
+
+ |
+`HALF_TYPE`
+
+ | 半精度浮点数
+
+ |
+`INT_TYPE`
+
+ | 整数
+
+ |
+`UINT_TYPE`
+
+ | 无符号整数
+
+ |
+`SHORT_TYPE`
+
+ | 短整数
+
+ |
+`USHORT_TYPE`
+
+ | 无符号短整数
+
+ |
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-128"></a>
+## 128. rt_rma_col_reduce()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcc6c48c1fcb11eebaac0242ac11000c
+
+```c
+void rt_rma_col_reduce(
+    void        *data,
+    void        *buf,
+    int         len,
+    RED_TYPE    type);
+
+```
+
+## 功能介绍
+对一个计算核心阵列SPA内，将与当前SPE同一列上所有SPE的数据做累加，在该列第0行上的SPE更新累加结果，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+data
+
+ | 输入/输出
+
+ | 执行列规约的当前SPE的SPM地址，地址必须4字节对齐。内存空间大小应不大于buf。
+
+ |
+buf
+
+ | 输入
+
+ | 用于核间通信的当前SPE的SPM缓存地址，地址必须4字节对齐。内存空间大小应不小于data。
+
+ |
+len
+
+ | 输入
+
+ | 执行列规约的数据个数。
+
+ |
+type
+
+ | 输入
+
+ | 执行列规约的数据类型，具体如下：
+
+RED_TYPE取值
+
+ | 说明
+
+ |
+`FLOAT_TYPE`
+
+ | 单精度浮点数
+
+ |
+`HALF_TYPE`
+
+ | 半精度浮点数
+
+ |
+`INT_TYPE`
+
+ | 整数
+
+ |
+`UINT_TYPE`
+
+ | 无符号整数
+
+ |
+`SHORT_TYPE`
+
+ | 短整数
+
+ |
+`USHORT_TYPE`
+
+ | 无符号短整数
+
+ |
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-129"></a>
+## 129. rt_rma_col_reduce_to()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcc873cc1fcb11eebaac0242ac11000c
+
+```c
+void rt_rma_col_reduce_to(
+    int         core_id,
+    void        *data,
+    void        *buf,
+    int         len,
+    RED_TYPE    type);
+
+```
+
+## 功能介绍
+对一个计算核心阵列SPA内，将与当前SPE同一列上所有SPE的数据做累加，在指定SPE上更新累加结果，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+core_id
+
+ | 输入
+
+ | 更新累加结果的目标SPE的行号（0~3）。
+
+ |
+data
+
+ | 输入/输出
+
+ | 执行列规约的当前SPE的SPM地址，地址必须4字节对齐。内存空间大小应不大于buf。
+
+ |
+buf
+
+ | 输入
+
+ | 用于核间通信的当前SPE的SPM缓存地址，地址必须4字节对齐。内存空间大小应不小于data。
+
+ |
+len
+
+ | 输入
+
+ | 执行列规约的数据个数。
+
+ |
+type
+
+ | 输入
+
+ | 执行列规约的数据类型，具体如下：
+
+RED_TYPE取值
+
+ | 说明
+
+ |
+`FLOAT_TYPE`
+
+ | 单精度浮点数
+
+ |
+`HALF_TYPE`
+
+ | 半精度浮点数
+
+ |
+`INT_TYPE`
+
+ | 整数
+
+ |
+`UINT_TYPE`
+
+ | 无符号整数
+
+ |
+`SHORT_TYPE`
+
+ | 短整数
+
+ |
+`USHORT_TYPE`
+
+ | 无符号短整数
+
+ |
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-130"></a>
+## 130. rt_rma_row_reduce()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcca6d081fcb11eebaac0242ac11000c
+
+```c
+void rt_rma_row_reduce(
+    void        *data,
+    void        *buf,
+    int         len,
+    RED_TYPE    type);
+
+```
+
+## 功能介绍
+对一个计算核心阵列SPA内，将与当前SPE同一行上所有SPE的数据做累加，在该行第0列上的SPE更新累加结果，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+data
+
+ | 输入/输出
+
+ | 执行行规约的当前SPE的SPM地址，地址必须4字节对齐。内存空间大小应不大于buf。
+
+ |
+buf
+
+ | 输入
+
+ | 用于核间通信的当前SPE的SPM缓存地址，地址必须4字节对齐。内存空间大小应不小于data。
+
+ |
+len
+
+ | 输入
+
+ | 执行行规约的数据个数。
+
+ |
+type
+
+ | 输入
+
+ | 执行行规约的数据类型，具体如下：
+
+RED_TYPE取值
+
+ | 说明
+
+ |
+`FLOAT_TYPE`
+
+ | 单精度浮点数
+
+ |
+`HALF_TYPE`
+
+ | 半精度浮点数
+
+ |
+`INT_TYPE`
+
+ | 整数
+
+ |
+`UINT_TYPE`
+
+ | 无符号整数
+
+ |
+`SHORT_TYPE`
+
+ | 短整数
+
+ |
+`USHORT_TYPE`
+
+ | 无符号短整数
+
+ |
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-131"></a>
+## 131. rt_rma_row_reduce_to()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bccbf7041fcb11eebaac0242ac11000c
+
+```c
+void rt_rma_row_reduce_to(
+    int         core_id,
+    void        *data,
+    void        *buf,
+    int         len,
+    RED_TYPE    type);
+
+```
+
+## 功能介绍
+对一个计算核心阵列SPA内，将与当前SPE同一行上所有SPE的数据做累加，在指定SPE上更新累加结果，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+core_id
+
+ | 输入
+
+ | 更新累加结果的目标SPE的列号（0~7）。
+
+ |
+data
+
+ | 输入/输出
+
+ | 执行行规约的当前SPE的SPM地址，地址必须4字节对齐。内存空间大小应不大于buf。
+
+ |
+buf
+
+ | 输入
+
+ | 用于核间通信的当前SPE的SPM缓存地址，地址必须4字节对齐。内存空间大小应不小于data。
+
+ |
+len
+
+ | 输入
+
+ | 执行行规约的数据个数。
+
+ |
+type
+
+ | 输入
+
+ | 执行行规约的数据类型，具体如下：
+
+RED_TYPE取值
+
+ | 说明
+
+ |
+`FLOAT_TYPE`
+
+ | 单精度浮点数
+
+ |
+`HALF_TYPE`
+
+ | 半精度浮点数
+
+ |
+`INT_TYPE`
+
+ | 整数
+
+ |
+`UINT_TYPE`
+
+ | 无符号整数
+
+ |
+`SHORT_TYPE`
+
+ | 短整数
+
+ |
+`USHORT_TYPE`
+
+ | 无符号短整数
+
+ |
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-132"></a>
+## 132. 检查与打印
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bccca5781fcb11eebaac0242ac11000c
+
+检查接口打印接口
+
+
+<a id="page-133"></a>
+## 133. 检查接口
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bccd48ca1fcb11eebaac0242ac11000c
+
+rt_align_n()rt_equal_f()rt_nequal_f()rt_equal_zero_f()rt_nequal_zero_f()
+
+
+<a id="page-134"></a>
+## 134. rt_align_n()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcceb9581fcb11eebaac0242ac11000c
+
+```c
+int rt_align_n(
+    void    *v,
+    int     n);
+
+```
+
+## 功能介绍
+判断地址是否按照指定要求对齐，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+v
+
+ | 输入
+
+ | 待检查地址。
+
+ |
+n
+
+ | 输入
+
+ | 地址对齐的长度。
+
+ |
+
+## 返回值
+名称
+
+ | 说明
+
+ |
+1
+
+ | 满足地址对齐要求。
+
+ |
+0
+
+ | 不满足地址对齐要求。
+
+ |
+
+
+<a id="page-135"></a>
+## 135. rt_equal_f()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcd01ece1fcb11eebaac0242ac11000c
+
+```c
+int rt_equal_f(
+    float   a,
+    float   b);
+
+```
+
+## 功能介绍
+判断浮点数a, b是否相等。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+a
+
+ | 输入
+
+ | 待比较的浮点数。
+
+ |
+b
+
+ | 输入
+
+ | 待比较的浮点数。
+
+ |
+
+## 返回值
+名称
+
+ | 说明
+
+ |
+1
+
+ | a, b相等。
+
+ |
+0
+
+ | a, b不相等。
+
+ |
+
+
+<a id="page-136"></a>
+## 136. rt_nequal_f()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcd17ddc1fcb11eebaac0242ac11000c
+
+```c
+int rt_nequal_f(
+    float   a,
+    float   b);
+
+```
+
+## 功能介绍
+判断浮点数a, b是否不相等。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+a
+
+ | 输入
+
+ | 待比较的浮点数。
+
+ |
+b
+
+ | 输入
+
+ | 待比较的浮点数。
+
+ |
+
+## 返回值
+名称
+
+ | 说明
+
+ |
+1
+
+ | a, b不相等。
+
+ |
+0
+
+ | a, b相等。
+
+ |
+
+
+<a id="page-137"></a>
+## 137. rt_equal_zero_f()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcd2bea41fcb11eebaac0242ac11000c
+
+```c
+int rt_equal_zero_f(
+    float   a);
+
+```
+
+## 功能介绍
+判断浮点数a是否为0。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+a
+
+ | 输入
+
+ | 待判断的浮点数。
+
+ |
+
+## 返回值
+名称
+
+ | 说明
+
+ |
+1
+
+ | a等于0。
+
+ |
+0
+
+ | a不等于0。
+
+ |
+
+
+<a id="page-138"></a>
+## 138. rt_nequal_zero_f()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcd512bc1fcb11eebaac0242ac11000c
+
+```c
+int rt_nequal_zero_f(
+    float   a);
+
+```
+
+## 功能介绍
+判断浮点数a是否不为0。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+a
+
+ | 输入
+
+ | 待判断的浮点数。
+
+ |
+
+## 返回值
+名称
+
+ | 说明
+
+ |
+1
+
+ | a不等于0。
+
+ |
+0
+
+ | a等于0。
+
+ |
+
+
+<a id="page-139"></a>
+## 139. 打印接口
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcd5abf01fcb11eebaac0242ac11000c
+
+rt_log()rt_log_if()rt_warning()rt_warning_if()
+
+
+<a id="page-140"></a>
+## 140. rt_log()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcd6b00e1fcb11eebaac0242ac11000c
+
+```c
+void rt_log(
+    string  format,
+    ...);
+
+```
+
+## 功能介绍
+打印INFO级日志，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+format
+
+ | 输入
+
+ | 需要打印的内容。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-141"></a>
+## 141. rt_log_if()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcd877041fcb11eebaac0242ac11000c
+
+```c
+void rt_log_if(
+    string  cond,
+    string  format,
+    ...);
+
+```
+
+## 功能介绍
+当满足指定条件时，打印INFO级日志，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+cond
+
+ | 输入
+
+ | 需要满足的条件。
+
+ |
+format
+
+ | 输入
+
+ | 需要打印的内容。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-142"></a>
+## 142. rt_warning()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcd97e7e1fcb11eebaac0242ac11000c
+
+```c
+void rt_warning(
+    string  format,
+    ...);
+
+```
+
+## 功能介绍
+打印ERROR级日志，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+format
+
+ | 输入
+
+ | 需要打印的内容。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-143"></a>
+## 143. rt_warning_if()
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcdaa2181fcb11eebaac0242ac11000c
+
+```c
+void rt_warning_if(
+    string  cond,
+    string  format,
+    ...);
+
+```
+
+## 功能介绍
+当满足指定条件时，打印ERROR级日志，阻塞式。
+
+## 注意事项
+无。
+
+## 参数解释
+名称
+
+ | 输入/输出
+
+ | 说明
+
+ |
+cond
+
+ | 输入
+
+ | 需要满足的条件。
+
+ |
+format
+
+ | 输入
+
+ | 需要打印的内容。
+
+ |
+
+## 返回值
+暂无明确含义。
+
+
+<a id="page-144"></a>
+## 144. 常见问题
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#bcdb4b781fcb11eebaac0242ac11000c
+
+## 矩阵计算类接口常见报错原因
+调用矩阵计算接口出现报错时，可以从以下角度排查：
+
+- 西向指令、北向指令不匹配，比如没有指定切换北向的标志。
+
+- 西向指令没有在合适的时候指定切换输出缓冲的标记，导致写回数据失败。
+
+- 数据地址没有64字节对齐。
+
+## 数据传输类接口常见报错原因
+进行数据传输过程中出现报错，可以从以下角度排查：
+
+- DMA接口的参数没有4字节对齐。
+
+- RMA接口的参数没有4字节对齐。
+
+- 回答字没有使用C/C++中的`volatile`关键字标识，导致偶发错误。
+
+- 缺少同步指令，导致偶发计算错误。
+
+- 广播操作没有在清零回答字以后同步。
+
+
+<a id="page-145"></a>
+## 145. 版权声明
+更新时间：2025-03-06 14:57:17
+http://docs.tecorigin.net/release/tecolibrt/v1.2.0/#f1c89eee1fcb11ee90930242ac11000c
+
+本版权声明是太初（无锡）电子科技有限公司（以下简称“太初科技”）关于软件产品（下称“产品”）、编程指南以及软件使用手册的全部版本（包含现有版本及未来更新版本）及与软件产品、编程指南以及软件使用手册全部版本相关的源程序、源代码、示例、模型、场景、数据、域名、结构设计、图标、标志、标识、版面设计、文档资料等以及任何由太初科技基于软件技术维护或支持服务所提供的数据、资料等（下称“产品信息”）做出的法律声明。
+
+## 免责声明
+太初科技不就产品和产品信息做出任何担保、条件、陈述和保证（无论是明示的还是默示的，无论是依据成文法、普通法、惯例还是其他任何原因），包括但不限于性能、结果、安全、不侵权、适销性、完整性、准确性、可不受干扰性、可销售品质以及特定用途，太初科技不应对因下列原因产生的任何违约、损害赔偿、费用或问题承担赔偿责任，包括但不限于：
+
+- 用户未按照软件使用手册/指南内容规范使用产品；
+
+- 因用户自身设计问题导致的损失；
+
+- 因用户将软件产品与非太初科技提供的任何其他软件、程序或设备的组合或使用而产生的损失；
+
+- 因电力供应故障、通讯网络故障等公共服务因素或移动通讯终端病毒或黑客攻击、系统不稳定等第三人因素产生的损失；
+
+- 因不可抗力等风险因素（是指不能预见、不能克服并不能避免且对一方或双方造成重大影响的客观事件，包括但不限于自然灾害如洪水、地震、风暴等以及社会事件如战争、动乱、政府行为等。）致使软件产品的使用出现中断或终止而产生的损失；
+
+- 在太初科技已尽善意管理或善意提醒的情况下，因常规或紧急的设备与系统维护、设备与系统故障、网络信息与数据安全等因素产生的损失；
+
+- 因您提供的产品反馈信息侵犯第三方权利致使软件产品侵权而发生的侵权索赔；
+
+- 非因太初科技的原因引起的与软件产品有关的其它损失。
+
+## 责任限制
+除法律规定不得排除或限制的赔偿责任外，无论相关责任是基于违约、违反保证、侵权（包括疏忽）、产品责任或任何其他诉讼或责任理论而产生的，太初科技在任何情况下都无需对用户因使用或无法使用产品和产品信息而产生的任何商业损害或间接经济损失承担赔偿责任（包括但不限于商誉损失、利润损失、信息损失、业务中断、计算机故障、第三方索赔或因无法使用软件产品而寻求替代方案的支出费用），即使太初科技已被告知出现这种损失、损害、索赔或费用的可能性。依据本声明以及太初科技的销售条款，太初科技在任何情况下承担的总体赔付金额仅限于用户购买产品所支付的款项（如有）。
+
+## 信息准确性
+上述产品信息属于太初科技所有，且太初科技保留不经通知随时对产品信息或对任何产品和服务做出任何更改的权利，但不承诺更新产品信息。产品使用指南/手册列出的性能测试和等级要使用特定芯片或计算机系统或组件来测量。经该等测试，产品使用手册/指南所示结果反映了太初科技产品的测试性能。系统硬件或软件设计或配置的差异会影响产品的实际性能。如上所述，太初科技不担保或保证产品性能及特定用途，用户需就产品进行必要测试以确认产品适合并适用于用户计划或自行设计的应用及应用程序。
+
+## 知识产权通知
+产品及其产品信息的著作权、商标权、专利权等知识产权以及商业秘密属于太初科技及/或相关权利人专属所有或持有，受《中华人民共和国著作权法》《计算机软件保护条例》《中华人民共和国商标法》《中华人民共和国专利法》及适用之国际公约中有关著作权、商标权、专利权及/或其他财产所有权法律的保护。
+
+任何单位和个人未经太初科技书面授权，不得以任何目的（包括但不限于学习、研究等非商业用途）修改、截取、编纂、上传、出版、发布等或以任何方式和媒介复制、转载和传播产品信息的任何部分，否则将视为侵权，太初科技保留依法追究其侵权损害赔偿责任。除了用户使用产品和产品信息的权利，太初科技不就任何专利、版权、商标、商业秘密或任何其他知识产权或所有权授予任何明示或暗示的权利或许可。
+
+太初科技的“太初元碁”“Tecorigin”等文字及/或标识，以及太初科技的其他标志、标识、徽记、产品和服务名称均为太初科技在中国和其他国家的商标，如有宣传、展示等使用需要，需事先取得太初科技的书面授权。
+
+版权声明
+
+© 2023 太初（无锡）电子科技有限公司 保留一切权利。

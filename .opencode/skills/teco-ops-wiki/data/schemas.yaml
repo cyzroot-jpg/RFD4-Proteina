@@ -1,0 +1,50 @@
+page_types:
+  source-local:
+    id_prefix: source-local-
+    required: [id, title, source_category, path, captured_at]
+  source-doc:
+    id_prefix: doc-
+    required: [id, title, type, source_category, product_version, published_at, captured_at]
+  source-doc-part:
+    id_prefix: doc-
+    id_suffix: "-pNN"
+    required: [id, title, type, parent_doc, product_version, raw_text, raw_line_range]
+    note: "官方文档的完整结构化分卷页；正文按章节切分，无损保留全部 API/表/约束/示例，可经 raw_text 逐行追溯。父索引页为 parent_doc。"
+  wiki-hardware:
+    id_prefix: hw-
+    required: [id, title, type, architectures, tags, confidence, sources]
+  wiki-technique:
+    id_prefix: technique-
+    required: [id, title, type, architectures, tags, confidence, reproducibility, sources]
+  wiki-pattern:
+    id_prefix: pattern-
+    required: [id, title, type, symptoms, candidate_techniques, sources]
+  wiki-kernel:
+    id_prefix: kernel-
+    required: [id, title, type, architectures, kernel_types, confidence, sources]
+  wiki-language:
+    id_prefix: lang-
+    required: [id, title, type, architectures, tags, confidence, reproducibility, sources]
+  wiki-compiler:
+    id_prefix: compiler-
+    required: [id, title, type, architectures, tags, confidence, reproducibility, sources]
+  wiki-runtime:
+    id_prefix: runtime-
+    required: [id, title, type, architectures, tags, confidence, reproducibility, sources]
+  wiki-migration:
+    id_prefix: migration-
+    required: [id, title, type, architectures, tags, confidence, reproducibility, sources]
+  wiki-example:
+    id_prefix: example-
+    required: [id, title, type, architectures, tags, confidence, reproducibility, sources]
+confidence:
+  verified: "由官方文档和实现/profiler 证据共同支持。"
+  source-reported: "由本地笔记、表格或报告支持。"
+  inferred: "从多个本地来源综合推断。"
+  experimental: "需要复测或官方确认。"
+reproducibility:
+  concept: "仅文本概念。"
+  pseudocode: "算法草图。"
+  snippet: "代码片段或具体命令模式。"
+  runnable: "自包含可运行样例。"
+  benchmarked: "可运行且有 benchmark/profiler 证据。"

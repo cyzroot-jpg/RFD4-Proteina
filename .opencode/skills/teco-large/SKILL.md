@@ -1,0 +1,626 @@
+---
+name: large-dapate
+description: 在 SDAA/太初环境为大模型做推理迁移适配：模型分析、组网与注册、接入 tecoops 三算子（flash_attn_varlen_func/reshape_and_cache/rms_norm）、精度与性能验证、提交 PR。用于对任意目标模型（Hy-MT2-1.8B、MiniCPM5-1B、InternVL3_5-8B、gemma-4-12B-it 等）完成端到端适配。
+---
+## 0. 执行总纲（Agent 必读）
+
+> 本文是赛事规则原文。**每一步怎么做、精确命令、真机踩坑与排查见 `reference/`：**
+> - `reference/执行手册.md` — 阶段 0–7 完整流程（环境确认/恢复、模型分析、选参考实现、组网注册、算子接入、编译安装、验证、提交）
+> - `reference/算子接入约束.md` — tecoops 三算子接口与硬约束（HND、block_size=32、sliding window、softmax_scale、head_dim>128 需缩 BM）；teco-ops 改造位置
+> - `reference/排错手册.md` — 现象 → 原因 → 处理 速查表（环境版本、config/tokenizer、权重、算子、超时等）
+> - `reference/model_skeleton.py` — 可直接改写的组网骨架
+> - `reference/gemma4_dense.py` — **已验证的进阶样例**（dual head_dim、sliding/full 混合、k_eq_v、
+>   proportional RoPE、多模态 config 只取文本栈、k→v 复制加载）
+> - `reference/config_custom_model_type.py` — 自定义 `model_type` 的 Config 注册样例
+> - `reference/PR提交规范.md`、`reference/qwen3_dense.py`、`reference/离线推理.py`、`reference/VLLM官网适配.md`
+>
+> **开工顺序**：选模型（可只适配不优化）→ 环境版本确认 → 模型分析（config + 权重名）→ 选参考实现 →
+> 组网 + 注册 + tecoops 层接入 → 按需改 teco-ops kernel → 编译安装 → 离线/在线冒烟 → 精度 → run.sh/性能 → 提交。
+> **卡住先查 `reference/排错手册.md`。**
+
+## 1. 需要适配的模型选择
+需要让用户自己选择模型，模型的列表如下：
+Hy-MT2-1.8B、MiniCPM5-1B、InternVL3_5-8B、gemma-4-12B-it，
+还需要选择是否只进行适配迁移，不进行性能优化。
+
+## 2. 模型适配
+
+### 2.1 模型分析
+
+适配前请完成以下确认，以保障后续流程顺利开展：
+
+1. **模型可运行验证**：确认模型在 CPU 或 GPU 环境下能正常加载并完成基础推理，无报错或异常退出。
+2. **量化格式确认**：当前仅支持 **FP16** 和 **INT8** 两种量化格式，其他格式暂不兼容。
+3. **并行策略确认**：
+   - **TP（张量并行）**：按硬件核组数配置，单卡为 4 核组，单卡运行时 TP = 4。
+   > **说明**：以上 TP 配置适用于 SDAA 平台。第 4 节精度测试中 CUDA 环境使用 `--tensor-parallel-size 1`，SDAA 环境下 TP 按上述规则配置。
+
+### 2.2 模型组网
+
+使用 `torch` 和 `torch_sdaa` 提供的算子与函数实现模型的网络结构。具体实现方式请参考 vLLM 官网的：skill\teco-large\reference\VLLM官网适配.md。
+
+本文使用的 Qwen3-0.6B 模型网络结构实现代码，见 skill\teco-large\reference\qwen3_dense.py。
+
+> 进阶样例：`reference/gemma4_dense.py`（gemma-4-12B-it，含 sliding/full 混合注意力、dual head_dim、
+> k_eq_v、proportional RoPE、自定义 config 注册），`reference/config_custom_model_type.py`（未知 `model_type` 的 config 注册）。
+> 通用骨架：`reference/model_skeleton.py`。算子接入硬约束：`reference/算子接入约束.md`。
+
+> **说明**：本节以 Qwen3-0.6B 作为示例模型演示模型组网流程，该模型仅用于教学参考，**并非本赛事的四个目标模型**（Hy-MT2-1.8B、MiniCPM5-1B、InternVL3_5-8B、gemma-4-12B-it）。实际适配时请以目标模型为准。
+
+### 2.3 模型注册
+
+TecovLLM 通过插件机制 `tecovllm_models` 管理自定义模型。该插件已集成在 TecovLLM-ModelZoo 仓库中，目录结构如下：
+
+```
+tecovllm_models/
+├── __init__.py              # 模型注册入口
+├── layers/                  # 公共模块（如 RMSNorm、RoPE 等）
+│   └── ...
+└── models/                  # 模型组网
+    ├── __init__.py
+    └── ...
+```
+
+注册流程分为以下三步：
+
+**步骤 1：放置模型组网文件**
+
+将实现好的模型组网文件放到 `tecovllm_models/models/` 目录下。例如，将 `qwen3_dense.py` 放入该目录：
+
+```
+tecovllm_models/models/
+├── __init__.py
+└── qwen3_dense.py         # 新增的模型组网文件
+```
+
+模型组网文件中需实现 `embed_input_ids`、`forward`、`compute_logits`、`load_weights` 等接口，具体实现请参考已有示例。
+
+**步骤 2：注册模型**
+
+在 `tecovllm_models/__init__.py` 中添加 `ModelRegistry.register_model` 调用：
+
+```python
+from vllm import ModelRegistry
+
+ModelRegistry.register_model(
+    model_arch="Qwen3DenseForCausalLM",
+    model_cls="tecovllm_models.models.qwen3_dense:Qwen3DenseForCausalLM"
+)
+```
+
+其中：
+
+| 参数 | 说明 |
+|------|------|
+| `model_arch` | 模型架构名，**必须与模型配置文件中 `architectures[0]` 一致**。若不一致，启动时需通过 `--hf-override '{"architectures": ["Qwen3DenseForCausalLM"]}'` 覆盖 |
+| `model_cls` | 模型类的模块导入路径，格式为 `模块路径:类名` |
+
+> **一次注册多个模型**：如需同时注册多个模型，直接在后面追加 `ModelRegistry.register_model(...)` 即可，无需修改其他代码。
+
+**步骤 3：编译并安装插件**
+
+在 tecovllm_models 目录下运行：
+
+```bash
+python setup.py bdist_wheel
+```
+
+或使用开发模式免去每次修改后重复编译：
+
+```bash
+python setup.py develop
+```
+
+编译安装完成后，模型即可被 TecovLLM 推理引擎识别并正常加载运行。
+
+### 2.4 运行模型
+
+#### 2.4.1 离线推理
+
+参考 skill\teco-large\reference\离线推理.py，完成模型离线推理验证。
+
+#### 2.4.2 在线推理
+
+参考 [在线推理文档](http://docs.tecorigin.com/release/teco_vllm/v3.1.0/#43351f4b9e305913b221a171b0a5a59d)，完成模型在线推理验证。
+
+---
+
+## 3. 自定义算子开发与接入
+
+### 3.1 算子优化
+
+本赛事需对以下三个算子进行性能优化：
+
+| 算子 | 优化要求 | 适用模型 |
+|------|----------|----------|
+| `flash_attn_varlen_func` | 性能优化；**gemma-4-12B-it 额外需要支持 sliding attention** | 全部四个模型 |
+| `reshape_and_cache` | 性能优化 | 全部四个模型 |
+| `rms_norm` | 性能优化 | 全部四个模型 |
+
+> **功能完备性说明**：Hy-MT2-1.8B、MiniCPM5-1B、InternVL3_5-8B 三个模型算子功能已完备，仅需性能优化；gemma-4-12B-it 的 `flash_attn_varlen_func` 还需额外支持 sliding attention。
+
+---
+
+**优化指导建议**：
+
+1. 充分理解算法逻辑，设计实现方案时可以结合数学公式看是否可从计算上进行优化
+2. 分析算法细节，合理设计任务的粒度和负载均衡，充分发挥众核架构多核心的优势进行并行操作（任务拆解到多个核心并行处理）
+3. 充分利用 SPM 优势将数据尽可能多的重复利用，减少主存数据搬运
+4. 根据情况可考虑是否需要额外的主存来存储中间计算结果，或者对部分数据进行重计算
+5. 一些常用的优化手段包括：双缓冲，向量化计算，负载均衡，主存数据连续搬运等
+
+更详细的性能优化指导，可查阅 [性能优化手册-算子篇](http://docs.tecorigin.com/release/op_perf_opt/v1.1.0/#5728df579b864ac3a8b108b812e60611)。
+
+### 3.2 自定义算子库编译安装
+
+自定义算子库编译：
+
+1. 在项目目录下构建自定义算子库 `wheel` 包：
+
+   ```bash
+   # 导入Tecorigin软件栈环境变量
+   source /opt/tecoai/setvars.sh
+   # 构建teco-ops wheel包，仅构建PyTorch 扩展（不包含 Plugin）
+   WITH_TORCH=ON WITH_INFERENCE_PLUGIN=OFF python setup.py bdist_wheel
+   ```
+
+2. 安装 tecoops 自定义算子库：
+
+   - 构建完成后在项目 `dist` 目录下生成 `tecoops-0.0.0-cp312-cp312-linux_loongarch64.whl` 包
+   - 执行 `pip install tecoops-0.0.0-cp312-cp312-linux_loongarch64.whl` 安装。
+
+3. 卸载 tecoops 自定义算子库：`pip uninstall tecoops -y`
+
+4. 更新 tecoops 自定义算子库，提供两种方式：
+
+   - 方式一：先卸载旧的 `tecoops`，再安装新的。
+   - 方式二：执行 `pip install tecoops-0.0.0-cp312-cp312-linux_loongarch64.whl --force-reinstall` 强制更新。
+
+### 3.3 自定义算子库验证
+
+#### C++ 接口验证
+
+设置 `torch` 的 `lib` 目录到系统环境变量：
+
+```bash
+# 获取 torch lib 目录
+python -c "import os;import torch;print(os.path.join(os.path.dirname(torch.__file__), 'lib'))" 2> /dev/null | tail -n 1
+# 设置系统环境变量
+export LD_LIBRARY_PATH=$(python -c "import os;import torch;print(os.path.join(os.path.dirname(torch.__file__), 'lib'))" 2> /dev/null | tail -n 1):$LD_LIBRARY_PATH
+```
+
+进入项目的 `test` 目录：
+
+```bash
+# 构建所有算子 C++ 接口测试代码
+source env.sh
+bash build.sh --arch teco
+
+# 运行全部算子测试（通过 gid 参数指定核组号）
+./build/demo --gid=0
+
+# 运行指定算子的单条测例（--perf_repeat: 性能测试重复次数, --warm_repeat: 预热次数, --gtest_repeat: 测例重复次数）
+./build/demo --gid=0 --perf_repeat=50 --warm_repeat=3 --gtest_repeat=1 --case_path=zoo/teco/my_op/test_case/case_0.prototxt
+```
+
+#### PyTorch 接口验证
+
+进入项目的 `python_api_test` 目录下执行：`pytest -vs .`，测例全部 `pass` 即可。
+
+> **提示**：
+> - 结果中出现 `warnings` 属于正常现象，不影响验证结论。
+> - 若日志中出现 `Error in cpuinfo: processor architecture is not supported in cpuinfo`，是由于 cpuinfo 库不识别龙芯架构导致的，可忽略。
+
+---
+
+## 4. 精度验证
+
+模型适配完成后，需通过精度验证确认推理结果正确性。
+
+以下为四个目标模型在 CUDA 环境下的 vLLM 服务启动命令与 Evalscope 评测命令。SDAA 环境下 Evalscope 评测命令须与此保持一致，vLLM 服务启动命令可按需调整。
+
+> **环境要求**：vLLM 版本为 **0.20.2**，Evalscope 版本为 **1.8.1**。
+
+> **采样参数**：各模型的采样参数（temperature、top_p、top_k 等）均使用模型官方推荐的设置方式，以保证评测结果与官方基准可比。
+
+> **思考模式**：所有模型的精度评测均采用非思考模式（`enable_thinking: false`），主要目的是避免模型在推理过程中输出过长的思考链，导致单条评测耗时显著增加、影响整体测试效率。
+
+### 4.1 模型评测命令
+
+#### Tencent-Hunyuan/Hy-MT2-1.8B
+
+**评测数据集**：wmt24pp（子集 en-zh_cn）
+
+**启动 vLLM 服务**：
+
+```bash
+vllm serve <model_path> \
+    --trust-remote-code \
+    --tensor-parallel-size 1 \
+    --port <port> \
+    --max_num_seqs 32 \
+    --max_model_len 262144 \
+    --no-enable-prefix-caching \
+    --host <ip>
+```
+
+**运行 Evalscope 评测**：
+
+```bash
+export HF_ENDPOINT=https://hf-mirror.com
+evalscope eval \
+    --model <model_path> \
+    --api-url http://<ip>:<port>/v1/chat/completions \
+    --api-key EMPTY_TOKEN \
+    --datasets wmt24pp \
+    --dataset-args '{"wmt24pp": {"subset_list": ["en-zh_cn"], "metric_list": [{"comet": {"model_id_or_path": "evalscope/wmt22-comet-da"}}]}}' \
+    --eval-batch-size 8 \
+    --limit 200 \
+    --generation-config do_sample=true,temperature=0.7,top_p=0.6,top_k=20,repetition_penalty=1.05,max_tokens=1024,timeout=3600 \
+    --ignore-errors
+```
+
+#### OpenBMB/MiniCPM5-1B
+
+**评测数据集**：mmlu_pro（子集 computer science）
+
+**启动 vLLM 服务**：
+
+```bash
+vllm serve <model_path> \
+    --trust-remote-code \
+    --tensor-parallel-size 1 \
+    --port <port> \
+    --max_num_seqs 32 \
+    --max_model_len 131072 \
+    --no-enable-prefix-caching \
+    --host <ip>
+```
+
+**运行 Evalscope 评测**：
+
+```bash
+evalscope eval \
+    --model <model_path> \
+    --api-url http://<ip>:<port>/v1/chat/completions \
+    --api-key EMPTY_TOKEN \
+    --datasets mmlu_pro \
+    --dataset-args '{"mmlu_pro": {"subset_list": ["computer science"]}}' \
+    --eval-batch-size 8 \
+    --limit 200 \
+    --generation-config '{"do_sample":true,"temperature":0.9,"top_p":0.95,"max_tokens":1024,"timeout":7200,"extra_body":{"chat_template_kwargs":{"enable_thinking":false}}}' \
+    --ignore-errors
+```
+
+#### OpenGVLab/InternVL3_5-8B
+
+**评测数据集**：mmlu_pro（子集 computer science）
+
+**启动 vLLM 服务**：
+
+```bash
+vllm serve <model_path> \
+    --trust-remote-code \
+    --tensor-parallel-size 1 \
+    --port <port> \
+    --max_num_seqs 32 \
+    --max_model_len 40960 \
+    --no-enable-prefix-caching \
+    --host <ip>
+```
+
+**运行 Evalscope 评测**：
+
+```bash
+evalscope eval \
+    --model <model_path> \
+    --api-url http://<ip>:<port>/v1/chat/completions \
+    --api-key EMPTY_TOKEN \
+    --datasets mmlu_pro \
+    --dataset-args '{"mmlu_pro": {"subset_list": ["computer science"]}}' \
+    --eval-batch-size 8 \
+    --limit 200 \
+    --generation-config do_sample=true,temperature=0.6,max_tokens=1024,timeout=3600 \
+    --ignore-errors
+```
+
+#### google/gemma-4-12B-it
+
+**评测数据集**：mmlu_pro（子集 computer science）
+
+**启动 vLLM 服务**：
+
+```bash
+vllm serve <model_path> \
+    --trust-remote-code \
+    --tensor-parallel-size 1 \
+    --port <port> \
+    --max_num_seqs 32 \
+    --max_model_len 262144 \
+    --no-enable-prefix-caching \
+    --host <ip>
+```
+
+**运行 Evalscope 评测**：
+
+```bash
+evalscope eval \
+    --model <model_path> \
+    --api-url http://<ip>:<port>/v1/chat/completions \
+    --api-key EMPTY_TOKEN \
+    --datasets mmlu_pro \
+    --dataset-args '{"mmlu_pro": {"subset_list": ["computer science"]}}' \
+    --eval-batch-size 8 \
+    --limit 200 \
+    --generation-config '{"do_sample":true,"temperature":1.0,"top_p":0.95,"top_k":64,"max_tokens":1024,"timeout":7200,"extra_body":{"chat_template_kwargs":{"enable_thinking":false}}}' \
+    --ignore-errors
+```
+
+### 4.2 基准精度与目标精度
+
+以上基准精度在 **CUDA 环境**下测试得出（vLLM 使用默认配置，不启用任何优化策略）。在 SDAA 环境上运行评测时，vLLM 服务启动命令可**按需调整**，Evalscope 评测命令须与 CUDA 环境**完全一致**。SDAA 得分落入允许区间即视为精度达标。
+
+| 模型 | 数据集 | 子集 | Case 数 | 评分指标 | CUDA 基准得分 | SDAA 可接受范围 |
+|------|--------|------|---------|----------|--------------|----------------|
+| Hy-MT2-1.8B | wmt24pp | en-zh_cn | 200 | mean_bert_score | 0.8486 | CUDA 基线 +0.01 |
+| MiniCPM5-1B | mmlu_pro | computer science | 200 | mean_acc | 0.345  | CUDA 基线 ±0.1 |
+| InternVL3_5-8B | mmlu_pro | computer science | 200 | mean_acc | 0.69 | CUDA 基线 ±0.1 |
+| gemma-4-12B-it | mmlu_pro | computer science | 200 | mean_acc | 0.83 | CUDA 基线 ±0.1 |
+
+### 4.3 精度判定标准和精度分析工具
+
+#### 精度分析工具
+
+若精度不达标，可使用精度分析工具定位差异来源：
+
+| 工具 | 说明 | 参考文档 |
+|------|------|----------|
+| **精度分析工具** | 当模型精度异常时，使用该工具逐层对齐 CUDA 与 SDAA 的推理精度，定位精度异常的层，帮助加快精度排查进度 | [精度分析工具使用指南](http://docs.tecorigin.com/release/teco_precision/) |
+| **Evalscope** | 评测工具，用于在多任务场景下验证模型整体精度表现 | [Evalscope 模型评测指南](https://evalscope.readthedocs.io/zh-cn/latest/get_started/supported_dataset/index.html) |
+
+> **精度基线建议**：InternVL3_5-8B、MiniCPM5-1B、Hy-MT2-1.8B 三个模型建议使用基础版算子 dump 各层的矩阵值作为基线，供精度分析工具逐层对齐时参考对照。
+
+> **注意**：该工具只能排查每层是否存在精度问题，无法定位到具体算子。
+
+## 5. 性能测试
+
+性能测试使用 **Evalscope** 工具，**vLLM 服务启动命令须与精度测试（第 4 节）完全一致**，直接复用已启动的服务，无需单独启动。
+
+**Warmup**：正式测试前，先发送一次 warmup 请求（bs=1, 输入 1024 tokens + 输出 10 tokens），预热推理引擎，避免首次请求的冷启动开销影响测试结果。
+
+> **说明**：性能测试过程中可能出现结果波动的现象。随着算子优化带来加速卡计算效率的显著提升，主机侧 CPU 的处理与调度能力可能逐渐成为系统链路中的瓶颈环节，导致同一用例多次测试的 TTFT/TPOT 出现一定幅度的抖动。此属异构计算系统在深度优化后的常见现象。最终评分环节会进行多次测试，取最优结果作为该队伍的最终性能成绩，以尽可能排除环境波动带来的影响。
+
+### 5.1 文本类性能测试
+
+所有模型统一使用以下 4 组文本性能测试用例，取 **TTFT**（Time To First Token，首 token 延迟）和 **TPOT**（Time Per Output Token，每输出 token 耗时）作为评测指标。
+
+| 序号 | 场景 | 并发数 | 请求数 | 输入长度 | 输出长度 |
+|------|------|--------|--------|----------|----------|
+| T1 | 2K 串行 | 1 | 10 | 2048 (2K) | 100 |
+| T2 | 4K 串行 | 1 | 10 | 4096 (4K) | 100 |
+| T3 | 8K 串行 | 1 | 10 | 8192 (8K) | 100 |
+| T4 | 16K 串行 | 1 | 10 | 16384 (16K) | 100 |
+
+**T1 — 2K 串行 (bs=1, 2K→100)**：
+
+```bash
+evalscope perf \
+    --model <model_name> \
+    --url http://<ip>:<port>/v1/chat/completions \
+    --api openai \
+    --tokenizer-path <tokenizer_path> \
+    --dataset random \
+    --min-prompt-length 2048 \
+    --max-prompt-length 2048 \
+    --max-tokens 100 \
+    --min-tokens 100 \
+    --extra-args '{"ignore_eos": true}' \
+    --parallel 1 \
+    --number 10
+```
+
+**T2 — 4K 串行 (bs=1, 4K→100)**：
+
+```bash
+evalscope perf \
+    --model <model_name> \
+    --url http://<ip>:<port>/v1/chat/completions \
+    --api openai \
+    --tokenizer-path <tokenizer_path> \
+    --dataset random \
+    --min-prompt-length 4096 \
+    --max-prompt-length 4096 \
+    --max-tokens 100 \
+    --min-tokens 100 \
+    --extra-args '{"ignore_eos": true}' \
+    --parallel 1 \
+    --number 10
+```
+
+**T3 — 8K 串行 (bs=1, 8K→100)**：
+
+```bash
+evalscope perf \
+    --model <model_name> \
+    --url http://<ip>:<port>/v1/chat/completions \
+    --api openai \
+    --tokenizer-path <tokenizer_path> \
+    --dataset random \
+    --min-prompt-length 8192 \
+    --max-prompt-length 8192 \
+    --max-tokens 100 \
+    --min-tokens 100 \
+    --extra-args '{"ignore_eos": true}' \
+    --parallel 1 \
+    --number 10
+```
+
+**T4 — 16K 串行 (bs=1, 16K→100)**：
+
+```bash
+evalscope perf \
+    --model <model_name> \
+    --url http://<ip>:<port>/v1/chat/completions \
+    --api openai \
+    --tokenizer-path <tokenizer_path> \
+    --dataset random \
+    --min-prompt-length 16384 \
+    --max-prompt-length 16384 \
+    --max-tokens 100 \
+    --min-tokens 100 \
+    --extra-args '{"ignore_eos": true}' \
+    --parallel 1 \
+    --number 10
+```
+
+### 5.2 命令参数说明
+
+| 参数 | 说明 |
+|------|------|
+| `--model` | 模型名称或路径 |
+| `--url` | vLLM 服务 OpenAI 兼容 API 地址 |
+| `--api` | API 类型，固定为 `openai` |
+| `--tokenizer-path` | tokenizer 路径，用于计算 token 数 |
+| `--dataset` | 数据集类型：`random`（随机文本）、`random_vl`（随机图片） |
+| `--min-prompt-length` / `--max-prompt-length` | 输入 prompt 的 token 数范围，两端设为相同值即固定长度 |
+| `--min-tokens` / `--max-tokens` | 输出 token 数范围，两端设为相同值即固定长度 |
+| `--extra-args` | 透传给 API 的额外参数，`ignore_eos: true` 使模型忽略 EOS 持续生成至指定 token 数 |
+| `--parallel` | 并发请求数（对应 batch size） |
+| `--number` | 总请求数 |
+
+### 5.3 测试用例汇总
+
+| 序号 | 类型 | 场景 | 适用模型 | bs | 并发 | 请求数 | 输入规格 | 输出 | 指标 |
+|------|------|------|----------|----|------|--------|----------|------|------|
+| T1 | 文本 | 2K 串行 | 全部 | 1 | 1 | 10 | 2K tokens | 100 | TTFT, TPOT |
+| T2 | 文本 | 4K 串行 | 全部 | 1 | 1 | 10 | 4K tokens | 100 | TTFT, TPOT |
+| T3 | 文本 | 8K 串行 | 全部 | 1 | 1 | 10 | 8K tokens | 100 | TTFT, TPOT |
+| T4 | 文本 | 16K 串行 | 全部 | 1 | 1 | 10 | 16K tokens | 100 | TTFT, TPOT |
+
+---
+
+### 5.4 性能得分计算标准
+
+每个模型的总分为 **100 分**，由两部分组成：
+
+| 得分项 | 满分 | 说明 |
+|--------|------|------|
+| 精度基础分 | 50 分 | 精度测试达标即可获得，不区分达标程度 |
+| 性能得分 | 50 分 | 在精度达标的前提下，根据推理性能排名计算 |
+
+即：
+
+$$
+\text{TotalScore}_M = 50\ (\text{精度达标}) + \text{PerfScore}_M\ (\text{满分 50})
+$$
+
+> **精度不达标**：若某模型的精度测试未落入 [4.2 节](#42-基准精度与目标精度) 规定的允许范围，则该模型总分为 **0 分**，不参与性能评分。
+
+以下为性能得分（满分 50 分）的计算方法。TTFT 与 TPOT 各占 25 分，分开独立计算。
+
+#### 5.4.1 数据汇总
+
+对每个模型 $M$ 和每个性能指标 $i \in \{\text{TTFT}, \text{TPOT}\}$，将该模型所有性能测试用例（T1、T2、T3、T4）的 $i$ 值分别求和，作为该队伍在该模型上的最终指标数据：
+
+$$
+\text{Sum}_{i,M} = \sum_{c \in \{T1, T2, T3, T4\}} \text{Metric}_{i,M,c}
+$$
+
+#### 5.4.2 得分公式
+
+在所有参赛队伍中，以 Sum 值**最低**（性能最优）的队伍作为该指标该模型的 **Best**，Sum 值**最高**（性能最差）的队伍作为 **Baseline (B)**。对每一支队伍的 $\text{Actual}_{i,M} = \text{Sum}_{i,M}$，按下式计算归一化得分：
+
+$$
+\text{Score}_{i,M} = \frac{B_{i,M} - \text{Actual}_{i,M}}{B_{i,M} - \text{Best}_{i,M}}
+$$
+
+其中：
+
+| 符号 | 含义 |
+|------|------|
+| $B_{i,M}$ | 所有参赛队伍中，模型 $M$ 指标 $i$ 的 **最高** Sum 值（性能最差者，即基线） |
+| $\text{Best}_{i,M}$ | 所有参赛队伍中，模型 $M$ 指标 $i$ 的 **最低** Sum 值（性能最优者） |
+| $\text{Actual}_{i,M}$ | 当前队伍在模型 $M$ 指标 $i$ 上的实际 Sum 值 |
+
+#### 5.4.3 最终得分
+
+每个指标得分乘以其权重（各 25 分），模型 $M$ 的最终性能得分为二者之和：
+
+$$
+\text{FinalScore}_M = 25 \times \text{Score}_{\text{TTFT},M} + 25 \times \text{Score}_{\text{TPOT},M}
+$$
+
+直观上：
+- $\text{Actual} = \text{Best}$（该指标性能最优）：$\text{Score} = 1 $，得 **25 分**
+- $\text{Actual} = B$（该指标性能最差）：$\text{Score} = 0 $，得 **0 分**
+- 其他人按相对位置在 0～25 分之间线性插值
+
+#### 5.4.4 示例
+
+假设模型 MiniCPM5-1B 的 TTFT 数据（T1+T2+T3+T4 求和）如下：
+
+| 队伍 | $\text{Sum}_{\text{TTFT}}$ (ms) |
+|------|--------------------------------------|
+| Team A（最优） | 800 |
+| Team B | 1200 |
+| Team C（最差） | 2000 |
+
+则 $B = 2000 $，$\text{Best} = 800 $：
+
+- Team A：$\text{Score}_{\text{TTFT}} = \frac{2000 - 800}{2000 - 800} = 1.0 $，得 **25 分**
+- Team B：$\text{Score}_{\text{TTFT}} = \frac{2000 - 1200}{2000 - 800} = 0.667 $，得 **16.7 分**
+- Team C：$\text{Score}_{\text{TTFT}} = \frac{2000 - 2000}{2000 - 800} = 0 $，得 **0 分**
+
+TPOT 同理独立计算，二者相加即得该模型最终性能得分（满分 50 分）。
+
+> **注意**：若某个性能用例 Sum 值所有队伍完全相同（即 $B = \text{Best}$），则该指标所有队伍均得 **25 分**，避免除零。
+
+---
+
+## 6. 提交 PR
+
+完成所有测试并通过后，将代码提交到 TecovLLM-ModelZoo 仓库。PR 须包含以下两个部分：
+
+1. **模型适配代码**：模型组网文件、注册代码等，按仓库现有结构放置。
+2. **`model-adaptations/<团队名称>/run.sh`**：可直接运行的 vLLM 服务启动命令，包含完整的模型路径、端口及所有必要参数。
+
+PR 提交流程请参考 skill\teco-large\reference\PR提交规范.md。
+
+> **代码评审与答辩**：提交完成后，主办方将对所提交的代码进行人工 review，并组织队伍答辩。
+
+> **CI 要求**：
+> - **`tools/ci_pipline/` 下的文件不可修改**，否则 PR 无法通过检查、无法合并。
+> - **`model-adaptations/<团队名称>/run.sh`** 中的命令**必须包含 `--served-model-name`**，且参数必须为 `"Hy-MT2-1.8B"`、`"MiniCPM5-1B"`、`"InternVL3_5-8B"`、`"gemma-4-12B-it"` 四个之一，否则 CI 会因为找不到对应模型测例直接挂掉。
+> - **vllm serve 请勿使用默认端口**，必须通过 `--port` 显式指定端口号，避免与其他任务端口冲突。
+> - **run.sh 中必须包含 `--trust-remote-code`**，否则部分模型的 tokenizer 或模型配置可能无法正常加载。
+> - **run.sh 中必须包含 `--no-enable-prefix-caching`**，禁用前缀缓存以避免性能测试结果波动。
+
+---
+
+## 7. 规则限制
+
+1. **算子优化限制**：算子优化不可以进行定制 shape 优化，或直接跳过算子计算过程。
+2. **模型组网限制**：不可以修改模型原始组网结构，或跳过部分步骤或网络层计算。
+3. **框架修改限制**：TecovLLM 推理框架不可直接修改，但允许在满足第 1、2 条的前提下，通过算子仓库间接修改调度策略等。
+4. **最终解释权**：本赛事规则最终解释权归主办方所有。
+
+---
+
+## 8. 实战补充（关键约束速记）
+
+> 详细版见 `reference/执行手册.md`、`reference/算子接入约束.md`、`reference/排错手册.md`。
+
+- **算子边界**：`vLLM`(引擎) + `vllm_sdaa`(SDAA 平台插件，由 `tecovllm` 发行) + `tecovllm_models`(自定义模型插件)；
+  不可改 `vllm`/`vllm_sdaa`，模型改动放 `tecovllm_models`，算子改动放 `teco-ops`。
+- **tecoops FA 硬约束**：KV 必须 **HND** `[blocks, kv_heads, block_size=32, head_dim]`；必须透传
+  `window_size`(sliding) 与 `softmax_scale`；`head_dim>128` 需缩 Q tile(`BM`)避免 SPM(~256KB/SPE) 溢出。
+- **tecoops rms_norm**：2D fp16，weight 不能为 None（weight-less 传全 1）。
+- **未知 `model_type`**：自定义 `PretrainedConfig` 并用 `AutoConfig.register`；嵌套 `text_config` 转子 config。
+- **tokenizer 兼容**：`tokenizer_config.json` 的 `extra_special_tokens` 在新旧 transformers 间 list/dict 不兼容，
+  可提供“软链权重 + 覆盖 tokenizer_config”的模型目录（evalscope perf 也从该路径加载 tokenizer）。
+- **TP=4**：`export SDAA_VISIBLE_DEVICES=0,1,2,3`；`--dtype float16`。
+- **验证顺序**：先用 `TECO_BASIC_FA=1`(纯 torch) 确认模型数学正确，再切 tecoops；不连贯先查权重/kernel。
+- **精度评测**：用 spec 的 `max_tokens=1024`（太小会截断 `ANSWER:` 导致假低分）；`enable_thinking:false`。
+- **性能超时**：`VLLM_EXECUTE_MODEL_TIMEOUT_SECONDS`(默认 300s) 不足时 run.sh 内 `export ...=3600`。
+- **提交**：`run.sh` 必须含 `--served-model-name`(四者之一)/`--port`/`--trust-remote-code`/`--no-enable-prefix-caching`；
+  不改 `tools/ci_pipline/`；新增 `.py` 加 License 头；文件名/目录名用下划线。

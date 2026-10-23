@@ -1,0 +1,1894 @@
+SDAA C零基础入门
+
+
+
+产品版本号：v1.1.0
+发布日期：2025.05.14
+
+
+
+
+太初(无锡)电子科技有限公司
+SDAA C零基础入门                                       版权声明
+
+
+
+
+版权声明
+本版权声明是太初（无锡）电子科技有限公司（以下简称“太初科技”）关于软件产品（下称“产品”）、编程指南以及软
+件使用手册的全部版本（包含现有版本及未来更新版本）及与软件产品、编程指南以及软件使用手册全部版本相关的
+源程序、源代码、示例、模型、场景、数据、域名、结构设计、图标、标志、标识、版面设计、文档资料等以及任何
+由太初科技基于软件技术维护或支持服务所提供的数据、资料等（下称“产品信息”）做出的法律声明。
+
+
+
+免责声明：
+
+太初科技不就产品和产品信息做出任何担保、条件、陈述和保证（无论是明示的还是默示的，无论是依据成文法、普
+通法、惯例还是其他任何原因），包括但不限于性能、结果、安全、不侵权、适销性、完整性、准确性、可不受干扰
+性、可销售品质以及特定用途，太初科技不应对因下列原因产生的任何违约、损害赔偿、费用或问题承担赔偿责任，
+包括但不限于：
+
+（1）用户未按照软件使用手册/指南内容规范使用产品；
+
+（2）因用户自身设计问题导致的损失；
+
+（3）因用户将软件产品与非太初科技提供的任何其他软件、程序或设备的组合或使用而产生的损失；
+
+（4）因电力供应故障、通讯网络故障等公共服务因素或移动通讯终端病毒或黑客攻击、系统不稳定等第三人因素产生
+的损失；
+
+（5） 因不可抗力等风险因素（是指不能预见、不能克服并不能避免且对一方或双方造成重大影响的客观事件，包括但
+不限于自然灾害如洪水、地震、风暴等以及社会事件如战争、动乱、政府行为等。）致使软件产品的使用出现中断或
+终止而产生的损失；
+
+（6）在太初科技已尽善意管理或善意提醒的情况下，因常规或紧急的设备与系统维护、设备与系统故障、网络信息与
+数据安全等因素产生的损失；
+
+（7）因您提供的产品反馈信息侵犯第三方权利致使软件产品侵权而发生的侵权索赔；
+
+（8）非因太初科技的原因引起的与软件产品有关的其它损失。
+
+
+
+责任限制：
+
+除法律规定不得排除或限制的赔偿责任外，无论相关责任是基于违约、违反保证、侵权（包括疏忽）、产品责任或任
+何其他诉讼或责任理论而产生的，太初科技在任何情况下都无需对用户因使用或无法使用产品和产品信息而产生的任
+何商业损害或间接经济损失承担赔偿责任（包括但不限于商誉损失、利润损失、信息损失、业务中断、计算机故障、
+第三方索赔或因无法使用软件产品而寻求替代方案的支出费用），即使太初科技已被告知出现这种损失、损害、索赔
+或费用的可能性。依据本声明以及太初科技的销售条款，太初科技在任何情况下承担的总体赔付金额仅限于用户购买
+产品所支付的款项（如有）。
+
+
+
+
+文档版本：v1.1.0          版权所有 © 太初(无锡)电子科技有限公司               I1
+SDAA C零基础入门                                            版权声明
+
+
+
+
+信息准确性：
+
+上述产品信息属于太初科技所有，且太初科技保留不经通知随时对产品信息或对任何产品和服务做出任何更改的权
+利，但不承诺更新产品信息。产品使用指南/手册列出的性能测试和等级要使用特定芯片或计算机系统或组件来测量。
+经该等测试，产品使用手册/指南所示结果反映了太初科技产品的测试性能。系统硬件或软件设计或配置的差异会影响
+产品的实际性能。如上所述，太初科技不担保或保证产品性能及特定用途，用户需就产品进行必要测试以确认产品适
+合并适用于用户计划或自行设计的应用及应用程序。
+
+
+
+知识产权通知：
+
+产品及其产品信息的著作权、商标权、专利权等知识产权以及商业秘密属于太初科技及/或相关权利人专属所有或持
+有，受《中华人民共和国著作权法》《计算机软件保护条例》《中华人民共和国商标法》《中华人民共和国专利法》
+及适用之国际公约中有关著作权、商标权、专利权及/或其他财产所有权法律的保护。
+
+任何单位和个人未经太初科技书面授权，不得以任何目的（包括但不限于学习、研究等非商业用途）修改、截取、编
+纂、上传、出版、发布等或以任何方式和媒介复制、转载和传播产品信息的任何部分，否则将视为侵权，太初科技保
+留依法追究其侵权损害赔偿责任。除了用户使用产品和产品信息的权利，太初科技不就任何专利、版权、商标、商业
+秘密或任何其他知识产权或所有权授予任何明示或暗示的权利或许可。
+
+太初科技的“太初元碁”“Tecorigin”等文字及/或标识，以及太初科技的其他标志、标识、徽记、产品和服务名称均为太
+初科技在中国和其他国家的商标，如有宣传、展示等使用需要，需事先取得太初科技的书面授权。
+
+版权声明
+
+© 2024 太初（无锡）电子科技有限公司 保留一切权利。
+
+
+
+
+文档版本：v1.1.0          版权所有 © 太初(无锡)电子科技有限公司                II
+                                                          2
+SDAA C零基础入门                                     目录
+
+
+
+
+目录
+1. 概述                                             1
+ 1.1 什么是算子开发                                      1
+ 1.2 算子基本概念                                       1
+ 1.3 SDAA编程模型                                    3
+   1.3.1 SDAA异构并行计算平台                            3
+   1.3.2 SDAA异构并行模型                              4
+   1.3.3 Kernel函数                                4
+ 1.4 算子开发流程                                      5
+
+2. 最新动态                                          6
+ 2.1 v1.1.0更新记录                                  6
+ 2.2 v1.0.0更新记录                                  6
+
+3. 环境安装                                          7
+4. 快速入门                                          8
+5. 开发加法算子                                        11
+ 5.1 算子分析                                        11
+ 5.2 算子实现                                        11
+   5.2.1 实现流程                                   12
+   5.2.2 步骤一：申请主机端内存并初始化输入数据                    12
+   5.2.3 步骤二：申请Global存储空间并搬运数据（主机端至Global）      13
+   5.2.4 步骤三：申请SPM存储空间并搬运数据（Global至SPM）至SPM进行计算 14
+   5.2.5 步骤四：搬运数据（SPM至Global）                   15
+   5.2.6 步骤五：搬运数据（Global至主机端）                   15
+   5.2.7 步骤六：算子测试                               16
+   5.2.8 完整程序                                   18
+ 5.3 编译运行                                       19
+
+
+
+文档版本：v1.1.0           版权所有 © 太初(无锡)电子科技有限公司      III
+                                                  3
+SDAA C零基础入门                               目录
+
+
+
+
+6. 开发矩阵乘算子                                21
+ 6.1 算子分析                                 21
+ 6.2 算子实现                                 22
+   6.2.1 设备端矩阵乘                           22
+   6.2.2 主机端矩阵乘                           25
+   6.2.3 完整程序                             26
+ 6.3 编译运行                                 30
+
+7. 性能优化                                   31
+
+
+
+
+文档版本：v1.1.0       版权所有 © 太初(无锡)电子科技有限公司    IV
+                                            4
+SDAA C零基础入门                                               概述
+
+
+
+
+1. 概述
+1.1 什么是算子开发
+算子（Operator）通常是指在深度学习、机器学习或其他数值计算领域中，用于执行特定数学操作的函数，例如：加
+法、矩阵乘、卷积等。
+
+算子是模型训练推理的重要组成部分，主要用于构建、部署深度学习神经网络模型等。一个高性能的算子可以提升模
+型的性能，加速模型的训练和推理。
+
+在以下场景，需要进行算子开发：
+
+   训练场景下，将模型迁移到太初AI加速卡上，存在不支持的算子。
+
+   推理场景下，将模型转换为太初推理框架支持的模型时，存在不支持的算子。
+
+   提升模型性能，需要开发更高性能的算子。
+
+
+1.2 算子基本概念
+ 算子类型（Type）
+
+算子类型用于描述实现逻辑相同的一类算子，例如：卷积类算子、池化类算子等。
+
+
+     说明：
+
+         在一个神经网络中，同一类型的算子可能会存在多个，例如：在某个神经网络中，存在2个卷积类算子
+         conv1，conv2。
+
+         同一类型算子的实现可能会存在差别，例如：conv1，conv2都属于卷积类算子，但实现会根据具体的使
+         用情况而不同。
+
+
+
+ 算子名称（Name）
+
+神经网络中具体算子的名称，算子名称在同一神经网络中需要保持唯一。
+
+ 算子数据结构（Tensor）
+
+张量（Tensor）是存储算子输入数据和输出数据的基本数据结构。张量的属性主要包括：名称（name）、形状
+（shape）、数据类型（dtype）和数据排布格式（format）。
+
+ 张量名称（name）
+
+张量的名称，可以根据名称对张量进行索引。
+
+
+
+
+文档版本：v1.1.0            版权所有 © 太初(无锡)电子科技有限公司                  1
+SDAA C零基础入门                                               概述
+
+
+
+
+ 张量形状（shape）
+
+张量的形状用于描述张量的维度及其大小，表述形式：(S1, S2, …SN)，其中SN是正整数。例如：
+
+   (6)：有6个正整数的一维张量即向量，如：(1,2,3,4,5,6)
+
+   (2,3)：有2个维度的张量，右起第一个维度矩阵宽度（W）是3，第二个维度矩阵高度（H）是2，是一个 2 × 3
+              1 2 3
+   的矩阵，如： (        )
+              4 5 6
+              ​   ​   ​
+
+
+
+
+   (3,2,3)：有3个维度的张量，右起第一个维度矩阵宽度（W）是3，第二个维度矩阵高度（H）是2，第三个维度矩
+   阵个数（N）是3，表示3个 2 × 3 矩阵
+
+
+
+
+                                 图1 张量形状
+
+
+ 张量的数据类型（dtype）
+
+张量中存储的数据的类型，取值范围：int8、int16、float16、float32等。
+
+ 张量的数据排布格式（format）
+
+在内存中张量数据的存储格式，不同的数据排布格式会影响数据的访问模式、内存利用率和算子的性能。
+
+以四维张量(N, H, W, C)为例，四个维度结合图像方面的物理含义如下：
+
+   N（Batch）：一个批次内图片的数量，即一次处理的图片数量。
+
+   H（Height）：特征图的高，即垂直高度方向的像素个数。
+
+   W（Width）：特征图的宽，即水平宽度方向的像素个数。
+
+   C（Channels）：特征图的通道数，例如：灰度图像为通道数1，彩色RGB图像为3。
+
+由于内存中只能进行线性存储，因此对于四维张量需要根据不同的顺序进行存储，例如：
+
+
+
+
+文档版本：v1.1.0               版权所有 © 太初(无锡)电子科技有限公司               2
+SDAA C零基础入门                                                              概述
+
+
+
+
+                                图2 张量的数据排布格式
+
+
+1.3 SDAA编程模型
+1.3.1 SDAA异构并行计算平台
+SDAA C（Software Defined Accelerator Architecture C）是运行在SDAA异构并行计算平台上的编程模型。以太
+初AI加速卡为计算核心，支持C/C++编程语言，您仅需学习少量的SDAA C编程语法即可快速上手编程。同时SDAA C
+最大化地隐藏了底层硬件的实现细节，用户无需深入了解硬件的体系架构就可以正常使用太初AI加速卡提供的强大算
+力，大幅度地降低学习成本，以便您可以专注于并行程序的开发。SDAA C的详细信息，可参考《SDAA C编程指
+南》。
+
+ SDAA异构并行计算平台
+
+SDAA异构并行计算平台是太初元碁针对AI场景，自主研发的众核异构计算架构，能够充分发挥太初AI加速卡的计算能
+力，为科学计算、人工智能等领域提供完整的解决方案。
+
+
+
+
+                               图1 SDAA异构并行计算平台
+
+SDAA异构并行计算平台以太初元碁人工智能系列硬件（太初AI加速卡）为基础，基础软件层完成对硬件驱动及操作系
+统的高度抽象，并提供完整的运行时库，编程模型及配套的编译、调试和分析工具；加速库提供包括TecoDNN、
+TecoBLAS等基础且丰富的算子库；应用层整合了当前主流的深度学习框架。
+
+SDAA C运行于基础软件层，对下屏蔽了硬件的物理特性，对上提供了丰富的编程接口，以及代码调试、调优工具。用
+户无需感知底层的硬件细节，仅需遵从SDAA C的编程规范即可使用太初AI加速卡，为高并发、大数据运算提供强有力
+
+
+
+文档版本：v1.1.0                版权所有 © 太初(无锡)电子科技有限公司                           3
+SDAA C零基础入门                                                               概述
+
+
+
+
+的算力支撑。
+
+
+1.3.2 SDAA异构并行模型
+SDAA异构并行模型采用主从异构的物理架构，即Host-Device运行模式。
+
+
+
+
+                                 图1 SDAA异构并行模型
+
+   主机端（Host端）：由CPU构成，主要负责对设备端（Device端）内存资源的申请和释放，并控制设备端
+   （Device端）处理任务的资源。
+   设备端（Device端）：由太初AI加速卡构成，负责处理大规模的数据运算。太初AI加速卡通过高效的运算部件
+   （SPE）和访存部件（Global存储器等）弥补了通用处理器在处理高并发、大数据场景下计算和访存上的短板，
+   提高了数据处理的效率。
+       太初AI加速卡由计算核心阵列SPA（Synergistic Processor Element Array）和对应的Global高带宽存储
+       器构成。
+       每个计算核心阵列SPA是一个协从运算单元，由计算核心SPE（Synergistic Processor Element）构成。
+
+
+
+
+                                  图2 太初AI加速卡
+
+
+1.3.3 Kernel函数
+太初AI加速卡负责处理大规模的数据运算，计算核心SPE在SDAA C中相当于一个线程，用户可以使用SPE进行异构并
+行计算。
+
+Kernel函数是由__global__（详情请参考《SDAA C编程指南》的__global__章节）关键字修饰的函数，在设备
+端执行（类似于线程代码）。在使用SDAA C时，主机端通过调用Kernel函数将大量的计算任务分配给SPE执行，从而
+
+
+文档版本：v1.1.0                 版权所有 © 太初(无锡)电子科技有限公司                              4
+SDAA C零基础入门                                                 概述
+
+
+
+
+提高数据的处理效率。
+
+
+
+
+                                   图1 Kernel函数
+
+
+1.4 算子开发流程
+算子开发的整体流程主要分为：算子分析、算子实现和编译运行三个阶段。
+
+
+
+
+                                   图1 算子开发流程
+
+  1. 算子分析：主要是分析算子的数学计算逻辑、输入输出数据，并明确算子的实现流程。
+
+ 2. 算子实现：实现算子计算逻辑的核心步骤，包括：
+
+     a. 申请主机端内存，并搬运输入数据
+
+     b. 申请Global存储空间，并搬运输入数据（主机端至Global）
+
+     c. 申请SPM存储空间，并搬运输入数据（Global至SPM）到SPM进行计算，计算结果存储在SPM。
+
+     d. 搬运输出数据（SPM至Global）
+
+     e. 搬运输出数据（Global至主机端）
+
+      f. 算子测试
+
+ 3. 编译运行：开发完成的算子，编译运行后可以获得目标结果。
+
+
+
+
+文档版本：v1.1.0                  版权所有 © 太初(无锡)电子科技有限公司           5
+SDAA C零基础入门                               最新动态
+
+
+
+
+2. 最新动态
+2.1 v1.1.0更新记录
+ 更新内容
+
+ 描述                      文档
+
+ 将算子开发章节的名称修改为开发加法算子。    开发加法算子
+
+ 将最佳实践章节的名称修改为开发矩阵乘算
+                         开发矩阵乘算子
+ 子。
+
+
+2.2 v1.0.0更新记录
+ 更新内容
+
+本版本为首次正式发布版本。
+
+
+
+
+文档版本：v1.1.0       版权所有 © 太初(无锡)电子科技有限公司      6
+SDAA C零基础入门                                              环境安装
+
+
+
+
+3. 环境安装
+SDAA C的编译器TecoCC作为TecoToolKit的组件之一，具体安装方法可以参考《环境安装手册》。
+
+
+
+
+文档版本：v1.1.0           版权所有 © 太初(无锡)电子科技有限公司                 7
+SDAA C零基础入门                                                    快速入门
+
+
+
+
+4. 快速入门
+相较于传统的CPU芯片，太初AI加速卡具有更多的计算单元，能够同时并行处理大量数据，提升数据计算的速度；同
+时太初AI加速卡具有更高的内存带宽。太初AI加速卡能够进行高速的矩阵乘法运算，对于依赖矩阵运算能力的深度学习
+领域、科学计算领域等，太初AI加速卡能够提升数据处理和模型训推的能力。
+
+SDAA C相较于其他加速卡的编程语言，最大程度隐藏了底层硬件的实现细节，无需深入了解硬件的体系架构，就可以
+正常使用太初AI加速卡提供的强大算力；支持C/C++编程语言，仅需学习少量的SDAA C编程语法，即可快速上手编
+程。
+
+
+
+
+                                         图1 太初AI加速卡具有更多的计算单元
+
+
+ 加法算子（C++）
+
+传统的CPU计算一般以单线程为主，本文以计算512个浮点数据的加法为例，介绍如何在CPU实现add算子。
+
+CPU完整代码如下：
+
+
+   #include <stdio.h>
+   #include <math.h>
+
+
+   #define TOTAL_NUM (512)
+   #define FSIZE (TOTAL_NUM * sizeof(float))
+
+
+   int main()
+   {
+       // 主机端申请输入数据和输出数据空间
+       float *hdata_x = (float *)malloc(FSIZE);
+       float *hdata_y = (float *)malloc(FSIZE);
+       float *hdata_z = (float *)malloc(FSIZE);
+       // 初始化输入数据的值， 初始化方式自定
+       for (int i = 0; i < TOTAL_NUM; i++) {
+           hdata_x[i] = (float)i / TOTAL_NUM;
+           hdata_y[i] = sin((float)i / TOTAL_NUM);
+       }
+
+
+       for (int i = 0; i < TOTAL_NUM; i++) {
+           // 将初始化的数据循环逐个累加
+           hdata_z[i] = hdata_x[i] + hdata_y[i];
+       }
+
+
+       // 数据利用完后，释放主机端内存空间
+       free(hdata_x);
+
+
+
+
+文档版本：v1.1.0                           版权所有 © 太初(无锡)电子科技有限公司       8
+SDAA C零基础入门                                                                       快速入门
+
+
+
+
+       free(hdata_y);
+       free(hdata_z);
+
+
+       printf(" DONE \n");
+       return 0;
+   }
+
+
+
+
+ 加法算子（SDAA C）
+
+SDAA C可以使用更多的线程，进行同时计算，每个线程计算一个数据，可以实现多线程、多数据的并行计算。
+
+本文以32线程为例，代码如下：
+
+   // 使用sdaa空间名
+   using namespace sdaa;
+   #define TOTAL_NUM (256 * 32)
+   #define FSIZE (TOTAL_NUM * sizeof(float))
+
+
+   // x，y：表示输入的Global存储空间地址，z：表示计算结果的Global存储空间地址
+   __global__ void kernel_add(float *x, float *y, float *z, uint32_t total_num)
+   {
+       // 计算循环次数
+       uint32_t tile_num = total_num / threadDim;
+       // 所有计算核心SPE循环tile_num次，并行做加法计算
+       for (uint32_t i = 0; i < tile_num; i += threadDim) {
+           // threadIdx表示计算核心SPE的编号，用 i + threadIdx 做输入数据下x, y的角标，
+           // 所有核心SPE并行计算不同的数据。
+           z[i + threadIdx] = x[i + threadIdx] + y[i + threadIdx];
+       }
+   }
+
+
+   int main()
+   {
+       // 设置0号SDAA计算设备，用于进行加法计算
+       sdaaSetDevice(0);
+       // 申请主机端输入数据和输出数据的内存空间
+       float *hdata_x = (float *)malloc(FSIZE);
+       float *hdata_y = (float *)malloc(FSIZE);
+       float *hdata_z = (float *)malloc(FSIZE);
+       // 初始化输入数据x，y的值， 初始化方式可以根据实际情况自行选择
+       for (int i = 0; i < TOTAL_NUM; i++) {
+           hdata_x[i] = (float)i / TOTAL_NUM;
+           hdata_y[i] = sin((float)i / TOTAL_NUM);
+       }
+       // 定义设备端指针初始化为NULL
+       float *dev_data_x = NULL;
+       float *dev_data_y = NULL;
+       float *dev_data_z = NULL;
+
+
+       // 申请Global存储空间，并返回地址给之前定义的指针
+       sdaaMalloc((void **)&dev_data_x, FSIZE);
+       sdaaMalloc((void **)&dev_data_y, FSIZE);
+       sdaaMalloc((void **)&dev_data_z, FSIZE);
+
+
+       // 将主机端数据复制到Global存储空间；需要配置sdaaMemcpyHostToDevice，数据传输方向是主机端至设备端
+       sdaaMemcpy(dev_data_x, hdata_x, FSIZE, sdaaMemcpyHostToDevice);
+
+
+
+
+文档版本：v1.1.0                           版权所有 © 太初(无锡)电子科技有限公司                          9
+SDAA C零基础入门                                                                快速入门
+
+
+
+
+       sdaaMemcpy(dev_data_y, hdata_y, FSIZE, sdaaMemcpyHostToDevice);
+
+
+       // 调用Kernel函数，将实际输入数据、输出数据的地址填入函数参数，进行计算
+       kernel_add<<<1>>>(dev_data_x, dev_data_y, dev_data_z, TOTAL_NUM);
+       // 进行同步，等待所有SPE运行完Kernel函数
+       sdaaDeviceSynchronize();
+       // 将计算完成的数据从Global搬运到主机端内存
+       sdaaMemcpy(hdata_z, dev_data_z, FSIZE, sdaaMemcpyDeviceToHost);
+
+
+       // 数据使用完后，释放主机端内存
+       free(hdata_x);
+       free(hdata_y);
+       free(hdata_z);
+       // 数据使用完后，释放Global存储空间
+       sdaaFree(dev_data_x);
+       sdaaFree(dev_data_y);
+       sdaaFree(dev_data_z);
+
+
+       return 0;
+   }
+
+
+
+
+文档版本：v1.1.0                           版权所有 © 太初(无锡)电子科技有限公司                   10
+SDAA C零基础入门                                                        开发加法算子
+
+
+
+
+5. 开发加法算子
+5.1 算子分析
+算子分析主要是分析算子的数学计算逻辑、输入输出数据，并明确算子的实现流程。本文以二维张量的加法为例，介
+绍如何进行算子分析。
+
+ 确定算子名称（name）
+
+算子的名称需要体现算子的功能，本文的加法算子的名称以 kernel_add 为例，即Kernel函数的名称为
+ kernel_add() 。
+
+
+ 明确算子任务
+
+计算两个二维张量的加法，即将两个输入矩阵的每个数据进行一一对应的相加：
+
+   z = x + y
+
+
+
+
+                                    图1 加法计算逻辑
+
+
+ 确定算子数据结构(Tensor)
+
+加法算子中有两组输入数据，一组输出数据。两组输入数据的名称分别为 x ， y ，输出数据的名称为 z ；输入
+输出数据的格式为2维(H,W)张量，输入输出数据的形状信息为(256,32)，即256行32列的矩阵。数据类型为单精度浮
+点型float，详细信息如下：
+
+               名称       形状          数据类型（data
+ 输入输出                                             数据排布格式（format）
+               （name）   （shape）     type）
+
+ 输入数据          x        (256,32)    float         (H,W)
+
+ 输入数据          y        (256,32)    float         (H,W)
+
+ 输出数据          z        (256,32)    float         (H,W)
+
+
+
+
+5.2 算子实现
+
+文档版本：v1.1.0                   版权所有 © 太初(无锡)电子科技有限公司                     11
+SDAA C零基础入门                                             开发加法算子
+
+
+
+
+5.2.1 实现流程
+算子实现是实现算子计算逻辑的核心步骤，其主要流程如下：
+
+
+
+
+                             图1 算子开发流程
+
+  1. 申请主机端内存，并准备输入数据：在主机端申请内存空间，并准备输入数据。
+
+ 2. 申请Global存储空间，并传输数据（主机端至Global）：申请Global存储空间，并将输入数据从主机端搬运至
+   Global存储空间。
+
+ 3. 申请SPM存储空间，并传输数据（Global至SPM）到SPM进行计算：申请SPM存储空间，将数据从Global存储
+   空间搬运至SPM存储空间，进行加速计算，并得出计算结果。
+ 4. 传输数据（SPM至Global）：将计算结果从SPM存储空间搬运至Global存储空间。
+
+ 5. 传输数据（Global至主机端）：将计算结果从Global存储空间搬运至主机端。
+
+ 6. 算子测试：算子的精度测试，通常是在主机端（业内认可度高、精度高的硬件芯片，如：X86架构的高精度芯片）
+   执行相同的计算，将计算结果与设备端传输回的计算结果进行比对验证。
+
+
+     说明：
+
+     其中，第1，2，5， 6步骤是主机端需要设计和执行的，代码都在主机端运行。而第3，4步骤是设备端需要设
+     计和执行的，代码在设备端运行。
+
+
+
+
+5.2.2 步骤一：申请主机端内存并初始化输入数据
+本文主要介绍如何申请主机端内存，以及如何初始化输入数据 x ， y 。
+
+ 编程思路
+
+  1. 主机端代码结构与CPU端代码结构相同，从   main() 函数开始。
+
+
+
+
+文档版本：v1.1.0           版权所有 © 太初(无锡)电子科技有限公司                     12
+SDAA C零基础入门                                                                开发加法算子
+
+
+
+
+        int main { }
+
+
+
+ 2. 在   main() 函数中，设置设备端进行加法计算的SDAA计算设备编号，本文以0号SDAA计算设备为例。
+
+
+        int main {
+            // 设置0号SDAA计算设备，用于进行加法计算
+            sdaaSetDevice(0);
+        }
+
+
+
+ 3. 申请主机端输入数据和输出数据的内存空间。
+
+
+        float *hdata_x = (float *)malloc(FSIZE);
+        float *hdata_y = (float *)malloc(FSIZE);
+        float *hdata_z = (float *)malloc(FSIZE);
+
+
+ 4. 初始化输入数据            x ，   y ，初始化方式可以根据实际情况自行选择。
+
+
+        for (int i = 0; i < TOTAL_NUM; i++) {
+            hdata_x[i] = (float)i / TOTAL_NUM;
+            hdata_y[i] = sin((float)i / TOTAL_NUM);
+        }
+
+
+
+
+5.2.3 步骤二：申请Global存储空间并搬运数据（主机端至Global）
+本文主要介绍如何申请Global存储空间，以及如何将输入数据 x ， y 从主机端搬运至Global存储空间。
+
+ 编程思路
+
+  1. 申请Global存储空间。
+
+
+        // 定义设备端指针初始化为NULL
+        float *dev_data_x = NULL;
+        float *dev_data_y = NULL;
+        float *dev_data_z = NULL;
+
+
+        // 申请Global存储空间，并返回地址给之前定义的指针
+        sdaaMalloc((void **)&dev_data_x, FSIZE);
+        sdaaMalloc((void **)&dev_data_y, FSIZE);
+        sdaaMalloc((void **)&dev_data_z, FSIZE);
+
+
+
+ 2. 将输入数据        x ，    y 从主机端搬运至Global存储空间。
+
+
+        // 将主机端数据复制到Global存储空间；需要配置sdaaMemcpyHostToDevice，数据传输方向是主机端至设备端
+        sdaaMemcpy(dev_data_x, hdata_x, FSIZE, sdaaMemcpyHostToDevice);
+        sdaaMemcpy(dev_data_y, hdata_y, FSIZE, sdaaMemcpyHostToDevice);
+
+
+
+
+文档版本：v1.1.0                            版权所有 © 太初(无锡)电子科技有限公司                    13
+SDAA C零基础入门                                                                     开发加法算子
+
+
+
+
+5.2.4 步骤三：申请SPM存储空间并搬运数据（Global至SPM）至SPM
+进行计算
+本文主要介绍如何申请SPM存储空间，并将数据从Global存储空间搬运至SPM存储空间进行加速计算，得出计算结
+果。
+
+ 数据切分
+
+SDAA C遵循SPMD编程范式（详情请参考《SDAA C编程指南》的SPMD章节），同一计算核心阵列SPA内所有计算
+核心SPE运行同一份应用程序，每个SPE可以独立完成对子问题的并行求解。其核心在于对复杂计算任务的切分，并合
+理地将计算任务分配到不同的SPE内进行计算。
+
+
+
+
+                                         图1 基于SDAA C的SPMD编程范式
+
+SDAA C提供了threadIdx（详情请参考《SDAA C编程指南》的threadIdx章节）和threadDim（详情请参考
+《SDAA C编程指南》的threadDim章节）为每个SPE定制计算任务。其中：
+
+     threadIdx ：当前计算核心SPE的ID号，可以通过该关键字为目标SPE分配计算任务。
+
+     threadDim ：同一计算核心阵列SPA内计算核心SPE的总数。
+
+
+ 编程思路
+
+  1. 根据SPE的总数      threadDim 切分数据，每个SPE分得                tile_num 个float数据，并计算出每块数据的大小，
+   单位：字节。
+
+      uint32_t tile_num = total_num / threadDim;
+      uint32_t spm_size = tile_num * sizeof(float);
+
+
+
+ 2. 申请SPM存储空间，大小为步骤一中每块数据的字节数目。
+
+
+      float *spm_x = (float *)malloc(spm_size);
+      float *spm_y = (float *)malloc(spm_size);
+      float *spm_z = (float *)malloc(spm_size);
+
+
+ 3. 将数据从Global存储空间搬运至SPM存储空间。
+
+
+      memcpy(spm_x, (x + threadIdx * tile_num), spm_size);
+      memcpy(spm_y, (y + threadIdx * tile_num), spm_size);
+
+
+
+
+文档版本：v1.1.0                          版权所有 © 太初(无锡)电子科技有限公司                            14
+SDAA C零基础入门                                                                       开发加法算子
+
+
+
+
+ 4. 每个SPE处理       tile_num 个float数据，且循环执行                 tile_num 次的加法计算。
+
+
+       for (uint32_t i = 0; i < tile_num; i++) {
+           spm_z[i] = spm_x[i] + spm_y[i];
+       }
+
+
+
+
+5.2.5 步骤四：搬运数据（SPM至Global）
+本文主要介绍如何将计算结果从SPM存储空间搬运至Global存储空间。
+
+ 编程思路
+
+将数据从SPM存储空间搬运至Global存储空间。
+
+   memcpy((z + threadIdx * tile_num), spm_z, spm_size);
+
+
+
+
+ 设备端Kernel函数
+
+   // x，y：表示输入的Global地址，z：表示计算结果的Global地址
+   __global__ void kernel_add(float *x, float *y, float *z, uint32_t total_num)
+   {
+       // 将所有数据切分为threadDim块，每块含有tile_num个数据，分给不同的SPE去计算
+       uint32_t tile_num = total_num / threadDim;
+       // 计算出tile_num个数据占用多少字节的数据空间
+       uint32_t spm_size = tile_num * sizeof(float);
+       // 在SPE为x, y, z申请SPM存储空间
+       // 使用SPM存储空间可以加快数据的访问速度，提升性能
+       float *spm_x = (float *)malloc(spm_size);
+       float *spm_y = (float *)malloc(spm_size);
+       float *spm_z = (float *)malloc(spm_size);
+       // 使用输入数据x, y的首地址 + threadIdx * tile_num 偏移坐标作为搬运数据的源地址
+       // 对Global存储空间的数据进行切分后，搬运到SPM存储空间
+       memcpy(spm_x, (x + threadIdx * tile_num), spm_size);
+       memcpy(spm_y, (y + threadIdx * tile_num), spm_size);
+
+
+       // 每个计算核心SPE相隔tile_num个float数据，且循环tile_num次，进行加法计算
+       for (uint32_t i = 0; i < tile_num; i++) {
+           // 将SPM上所有输入数据相加，并将计算结果输出到对应的SPM存储空间
+           spm_z[i] = spm_x[i] + spm_y[i];
+       }
+       // 用输出数据z的首地址 + threadIdx * tile_num 偏移坐标作为搬运数据的目的地址，
+       // 将SPM存储空间上的计算结果搬运到Global存储空间
+       memcpy((z + threadIdx * tile_num), spm_z, spm_size);
+   }
+
+
+
+
+5.2.6 步骤五：搬运数据（Global至主机端）
+
+
+文档版本：v1.1.0                           版权所有 © 太初(无锡)电子科技有限公司                            15
+SDAA C零基础入门                                                          开发加法算子
+
+
+
+
+本文主要介绍如何将计算结果从Global存储空间搬运至主机端。
+
+ 编程思路
+
+在主机端执行以下代码，将计算结果从Global存储空间搬运至主机端。
+
+   sdaaMemcpy(hdata_z, dev_data_z, FSIZE, sdaaMemcpyDeviceToHost);
+
+
+
+
+5.2.7 步骤六：算子测试
+算子的精度测试，通常是在主机端（业内认可度高、精度高的硬件芯片，如：X86架构的高精度芯片）执行相同的计
+算，将计算结果与设备端传回的计算结果进行比对验证，从而确定计算结果的精度。
+
+本文主要介绍如何验证算子的精度。
+
+ 确定测试精度
+
+测试精度通常根据算子的计算逻辑和输入输出数据类型，进行分析确认。
+
+本示例的add加法算子，输入输出的数据类型是float（单精度浮点数），其单位精度是 2−23 ，约为1.19e-07。因
+此，本文将绝对值误差定为5e-07。即：CPU计算的结果，和SDAA计算设备计算的结果之间的绝对值误差不超过 5e-
+07。
+
+
+       说明：
+
+       您也可以根据实际情况对主机端和设备端的绝对值误差进行调整。
+
+
+ 精度调测
+
+精度调测是将设备端输出的计算结果和主机端（X86架构的高精度芯片或业界其他标杆硬件）的计算数据结果进行逐一
+对比。
+
+   // 申请主机端的内存空间，用于存放主机端的加法计算结果
+   float *golden_z = (float *)malloc(FSIZE);
+   for (int i = 0; i < TOTAL_NUM; i++) {
+       // 在主机端执行加法计算
+       golden_z[i] = hdata_x[i] + hdata_y[i];
+       // 主机端计算结果和设备端计算结果的绝对值误差如果大于5e-7，则提示精度不达标
+       if(abs(golden_z[i] - hdata_z[i]) > 5e-7) {
+           printf(" %dth value: %f is wrong! \n", i, hdata_z[i]);
+           break;
+       }
+       if(i == TOTAL_NUM - 1) {
+           printf(" SUCCESS! \n");
+       }
+   }
+
+
+
+
+文档版本：v1.1.0                           版权所有 © 太初(无锡)电子科技有限公司               16
+SDAA C零基础入门                                                              开发加法算子
+
+
+
+
+       说明：
+
+           可以通过数据的标号确认精度存在误差的数据。
+
+           如果绝对值误差不达标（大于5e-7），可以从计算和数据存储两个主要维度，分析问题的原因：
+
+                计算：
+
+                   查看算子的计算逻辑是否有误。
+
+                   使用的计算指令是否正确恰当。如果指令本身有问题或者使用有问题，也会引起精度问题。
+
+                数据存储：
+
+                   检查使用的数据地址是否正确。
+
+                   异步数据操作时，操作同步不当，引起的数据踩踏的问题，也会导致精度错误。
+
+
+
+ 主机端测试代码
+
+在主机端编写和设备端Kernel函数相同计算逻辑的验证函数。针对 kernel_add() 函数，主机端的测试代码如
+下：
+
+   #define TOTAL_NUM (256 * 32)
+   #define FSIZE (TOTAL_NUM * sizeof(float))
+
+
+   int main()
+   {
+       // 申请主机端的输入数据和输出数据的内存空间
+       float *hdata_x = (float *)malloc(FSIZE);
+       float *hdata_y = (float *)malloc(FSIZE);
+
+
+       // 初始化输入数据x，y的值，初始化方式根据实际情况自行选择
+       for (int i = 0; i < TOTAL_NUM; i++) {
+           hdata_x[i] = (float)(i / TOTAL_NUM);
+           hdata_y[i] = (float)sin(i / TOTAL_NUM);
+       }
+       // 申请主机端的内存空间，用于存放主机端的加法计算结果
+       float *golden_z = (float *)malloc(FSIZE);
+       for (int i = 0; i < TOTAL_NUM; i++) {
+           // 在主机端执行加法计算
+           golden_z[i] = hdata_x[i] + hdata_y[i];
+           // 主机端计算结果和设备端计算结果的绝对值误差如果大于5e-7，则提示精度不达标
+           if(abs(golden_z[i] - hdata_z[i]) > 5e-7) {
+                printf(" %dth value: %f is wrong! \n", i, hdata_z[i]);
+                break;
+           }
+           if(i == TOTAL_NUM - 1) {
+                printf(" SUCCESS! \n");
+           }
+       }
+   }
+
+
+
+
+文档版本：v1.1.0                               版权所有 © 太初(无锡)电子科技有限公司               17
+SDAA C零基础入门                                                                       开发加法算子
+
+
+
+
+5.2.8 完整程序
+加法算子 kernel_add() 的完整程序如下：
+
+   // 使用sdaa空间名
+   using namespace sdaa;
+   #define TOTAL_NUM (256 * 32)
+   #define FSIZE (TOTAL_NUM * sizeof(float))
+
+
+   // x，y：表示输入的Global地址，z：表示计算结果的Global地址
+   __global__ void kernel_add(float *x, float *y, float *z, uint32_t total_num)
+   {
+       // 将所有数据切分为threadDim块，每块含有tile_num个数据，分给不同的SPE去计算
+       uint32_t tile_num = total_num / threadDim;
+       // 计算出tile_num个数据占用多少字节的数据空间
+       uint32_t spm_size = tile_num * sizeof(float);
+       // 在SPE为x，y，z申请SPM存储空间
+       // 使用SPM存储空间可以加快数据的访问速度，提升性能
+       float *spm_x = (float *)malloc(spm_size);
+       float *spm_y = (float *)malloc(spm_size);
+       float *spm_z = (float *)malloc(spm_size);
+       // 使用输入数据x, y的首地址 + threadIdx * tile_num 偏移坐标作为搬运数据的源地址
+       // 对Global存储空间的数据进行切分后，搬运到SPM存储空间
+       memcpy(spm_x, (x + threadIdx * tile_num), spm_size);
+       memcpy(spm_y, (y + threadIdx * tile_num), spm_size);
+
+
+       // 每个计算核心SPE相隔tile_num个float数据，且循环tile_num次，进行加法计算
+       for (uint32_t i = 0; i < tile_num; i++) {
+           // 将SPM上所有输入数据相加，并将计算结果输出到对应的SPM存储空间
+           spm_z[i] = spm_x[i] + spm_y[i];
+       }
+       // 用输出数据z的首地址 + threadIdx * tile_num 偏移坐标作为搬运数据的目的地址
+       // 将SPM存储空间上的计算结果搬运到Global存储空间
+       memcpy((z + threadIdx * tile_num), spm_z, spm_size);
+   }
+
+
+   int main()
+   {
+       // 设置0号SDAA计算设备，用于进行加法计算
+       sdaaSetDevice(0);
+       // 申请主机端输入数据和输出数据的内存空间
+       float *hdata_x = (float *)malloc(FSIZE);
+       float *hdata_y = (float *)malloc(FSIZE);
+       float *hdata_z = (float *)malloc(FSIZE);
+       // 初始化输入数据x，y的值， 初始化方式可以根据实际情况自行选择
+       for (int i = 0; i < TOTAL_NUM; i++) {
+           hdata_x[i] = (float)(i / TOTAL_NUM);
+           hdata_y[i] = (float)sin(i / TOTAL_NUM);
+       }
+       // 定义设备端指针初始化为NULL
+       float *dev_data_x = NULL;
+       float *dev_data_y = NULL;
+       float *dev_data_z = NULL;
+
+
+
+
+文档版本：v1.1.0                           版权所有 © 太初(无锡)电子科技有限公司                            18
+SDAA C零基础入门                                                                开发加法算子
+
+
+
+
+       // 申请Global存储空间，并返回地址给之前定义的指针
+       sdaaMalloc((void **)&dev_data_x, FSIZE);
+       sdaaMalloc((void **)&dev_data_y, FSIZE);
+       sdaaMalloc((void **)&dev_data_z, FSIZE);
+
+
+       // 将主机端数据复制到Global存储空间；需要配置sdaaMemcpyHostToDevice，数据传输方向是主机端至设备端
+       sdaaMemcpy(dev_data_x, hdata_x, FSIZE, sdaaMemcpyHostToDevice);
+       sdaaMemcpy(dev_data_y, hdata_y, FSIZE, sdaaMemcpyHostToDevice);
+
+
+       // 调用Kernel函数，将实际输入数据、输出数据的地址填入函数参数，进行计算
+       kernel_add<<<1>>>(dev_data_x, dev_data_y, dev_data_z, TOTAL_NUM);
+       // 进行同步，等待所有SPE运行完Kernel函数
+       sdaaDeviceSynchronize();
+       // 将计算完成的数据从Global搬运到主机端内存
+       sdaaMemcpy(hdata_z, dev_data_z, FSIZE, sdaaMemcpyDeviceToHost);
+
+
+       // 申请主机端的内存空间，用于存放主机端的加法计算结果
+       float *golden_z = (float *)malloc(FSIZE);
+       for (int i = 0; i < TOTAL_NUM; i++) {
+           // 在主机端执行加法计算
+           golden_z[i] = hdata_x[i] + hdata_y[i];
+           // 主机端计算结果和设备端计算结果的绝对值误差如果大于5e-7，则提示精度不达标
+           if(abs(golden_z[i] - hdata_z[i]) > 5e-7) {
+               printf(" %dth value: %f is wrong! \n", i, hdata_z[i]);
+               break;
+           }
+           if(i == TOTAL_NUM - 1) {
+               printf(" SUCCESS! \n");
+           }
+       }
+
+
+       // 数据使用完后，释放主机端内存
+       free(hdata_x);
+       free(hdata_y);
+       free(hdata_z);
+       free(golden_z);
+       // 数据使用完后，释放Global存储空间
+       sdaaFree(dev_data_x);
+       sdaaFree(dev_data_y);
+       sdaaFree(dev_data_z);
+
+
+       return 0;
+   }
+
+
+
+
+5.3 编译运行
+算子代码编写完成后，编译并运行可以获得算子的计算结果。本文主要介绍如何进行编译和运行。
+
+ 操作步骤
+
+  1. 将完整程序中的代码复制到                 example.scpp 文件中。
+
+ 2. 执行以下编译命令，将             example.scpp 生成可执行文件              a.out 。
+
+
+
+
+文档版本：v1.1.0                              版权所有 © 太初(无锡)电子科技有限公司                  19
+SDAA C零基础入门                                          开发加法算子
+
+
+
+
+       tecocc example.scpp
+
+
+ 3. 执行以下命令，运行程序。
+
+
+       ./a.out
+
+
+
+
+ 执行结果
+
+输出以下内容，表示算子可以正常运行，且精度达标，即：主机端计算结果和设备端计算结果的绝对值误差小于5e-
+7。
+
+
+   SUCCESS!
+
+
+
+
+文档版本：v1.1.0                  版权所有 © 太初(无锡)电子科技有限公司        20
+SDAA C零基础入门                                                        开发矩阵乘算子
+
+
+
+
+6. 开发矩阵乘算子
+6.1 算子分析
+本例将在太初AI加速卡上使用SDAA C开发矩阵乘算子。
+
+ 确定算子名称（name）
+
+矩阵乘算子的名称为 kernel_matmul ，即Kernel函数的名称为         kernel_matmul() 。
+
+
+ 确定算子任务
+
+计算两个矩阵的乘积，计算公式：
+
+C =A×B
+
+ 确定算子数据结构(Tensor)
+
+矩阵乘法算子中有两组输入数据，一组输出数据。输入矩阵分别为A和B，输出矩阵为C，详细信息如下：
+
+              名称                      数据类型（data
+ 输入输出                  形状（shape）                      数据排布格式（format）
+              （name）                  type）
+
+ 输入矩阵         A        (32,128,256)   int16           (N, H, W)
+
+ 输入矩阵         B        (32,256,32)    int16           (N, H, W)
+
+ 输出矩阵         C        (32,128,32)    int16           (N, H, W)
+
+
+ 算子实现逻辑分析
+
+ 矩阵切分
+
+为提升矩阵乘算子的计算性能，可以对矩阵A和B进行数据切分。对于单个Batch（1,H,W），将矩阵A和矩阵B切分后：
+
+
+
+
+文档版本：v1.1.0                   版权所有 © 太初(无锡)电子科技有限公司                      21
+SDAA C零基础入门                                                               开发矩阵乘算子
+
+
+
+
+                                                     图1 矩阵切分
+
+其中：
+
+   A矩阵(128,256)，分为8个(128,32)的小矩阵；B矩阵(256,32)分为8个(32,32)的小矩阵。A和B矩阵切分后：
+
+       A矩阵，每次加载的数据量是 m × k ，其中：行数m是128，列数k是32。
+
+       B矩阵，每次加载的数据量是 k × n ，其中：行数k是32，列数n是32。
+
+   切分后的矩阵相乘的计算结果会累加，并缓存在矩阵乘计算单元的累加缓冲区内。
+
+ 坐标转换
+
+矩阵是二维向量，而在实际内存中数据的排布是一维线性的。因此，在进行二维矩阵乘法时，需要将二维矩阵的元素
+坐标换算为内存中的真实地址。
+
+例如：
+
+   矩阵A的维度是(M, K)，某一矩阵元素 Amk 的坐标是(m,k)，A矩阵第一行第一列的元素 A00 在内存中的地址为
+                                                 ​                    ​
+
+
+
+
+    pBasea ，则 Amk 在内存中的真实地址：
+                          ​       ​
+
+
+
+
+    pAddra = pBasea + （m ⋅ K + k ）
+                      ​
+
+
+
+
+   矩阵B的维度是(K,N)，某一矩阵元素 Bmk 的坐标是(k,n)，B矩阵第一行第一列的元素 B00 在内存中的地址为
+                                             ​                    ​
+
+
+
+
+    pBaseb ，则 Bkn 在内存中的真实地址：
+                  ​           ​
+
+
+
+
+    pAddrb = pBaseb + （k ⋅ N + n）
+              ​                       ​
+
+
+
+
+6.2 算子实现
+6.2.1 设备端矩阵乘
+ 核心编程思路
+
+  1. 申请SPM存储空间：使用SPM存储空间进行矩阵乘运算，性能更好。申请SPM存储空间，用于存储输入矩阵A和
+   B，以及输出矩阵C的数据。
+
+ 2. 矩阵切分：将切分后的8次矩阵乘划分为4组，每次做2个矩阵乘，共循环4次，循环次数用j表示，取值范围0~3。
+
+
+
+
+文档版本：v1.1.0                               版权所有 © 太初(无锡)电子科技有限公司                 22
+SDAA C零基础入门                                                                     开发矩阵乘算子
+
+
+
+
+ 3. 配置矩阵乘的参数，例如：是否需要刷出累加缓冲区数据，输入矩阵的行数偏移等，可参考SDAA C编程指南的非
+   阻塞型矩阵乘（详情请参考《SDAA C编程指南》的配置型操作章节）章节。
+
+ 4. 加载权重矩阵B：矩阵B每次循环的起始元素为 Bk0 ，其中：第一个矩阵 k = (2 × j) × 32 ，第二个矩阵
+                                             ​
+
+
+
+
+    k = (2 × j + 1) × 32 。
+
+   由矩阵B任意元素在内存中真实地址的计算公式 pAddrb = pBaseb + （k ⋅ N + n） 可以得出，两个矩阵起
+                                                         ​       ​
+
+
+
+
+   始元素在内存中的真实地址是：
+
+    pBaseb + ((2 × j) × 32 × 32 + 0) 和 pBaseb + ((2 × j + 1) × 32 × 32 + 0) 。
+              ​                                      ​
+
+
+
+
+   获取到矩阵B起始元素在内存中的真实地址后，传入matmul_load_weight（详情请参考《SDAA C编程指南》
+   的matmul_load_weight章节）接口，从SPM的指定地址加载权重矩阵到矩阵乘计算单元上。
+
+ 5. 加载输入矩阵A：矩阵A每次循环的起始元素为 A0k ，其中：第一个矩阵 k = (2 × j) × 32 ，第二个矩阵
+                                                 ​
+
+
+
+
+    k = (2 × j + 1) × 32 。
+
+   由矩阵A任意元素在内存中真实地址的计算公式 pAddra = pBasea + （m ⋅ K + k ） 可以得出，两个矩阵
+                                                             ​       ​
+
+
+
+
+   起始元素在内存中的真实地址是：
+
+    pBasea + (0 + (2 × j) × 32) 和 pBaseb + (0 + (2 × j + 1) × 32) 。
+                  ​                      ​
+
+
+
+
+   获取到矩阵A起始元素在内存中的真实地址后，传入matmul_compute（详情请参考《SDAA C编程指南》的
+   matmul_compute章节）接口，从SPM的指定地址加载输入矩阵，并与加载好的权重矩阵做矩阵乘运算。
+
+
+          说明：
+
+          对于矩阵A1，第一行数据和第二行数据在内存里并不是连续的，所以在加载第一行以后的数据时，每次换
+          行均需要跨过32 × 7个int16数据。而跨步设置的基本单位是64B，正好是32个int16数据，因此跨步的步
+          长是 32 x 7 × 2B / 64B = 7。
+
+ 6. 计算结果累加并输出：将计算结果从累加缓冲区输出到SPM存储空间（matmul_store（详情请参考《SDAA C
+   编程指南》的matmul_store章节）），再从SPM存储空间搬运到Global存储空间。
+
+ 代码实现
+
+设备端矩阵乘的代码如下：
+
+   #include <sdaa_matmul.h>
+
+
+   using namespace sdaa;
+
+
+   // B 数据batch大小
+   #define B 32
+   // M维度大小
+   #define M 128
+   // N维度大小
+   #define N 32
+   // K维度大小
+   #define K 256
+   // K维度切分的最小颗粒度
+   #define K_BLK 32
+
+
+
+
+文档版本：v1.1.0                     版权所有 © 太初(无锡)电子科技有限公司                                 23
+SDAA C零基础入门                                                                                        开发矩阵乘算子
+
+
+
+
+   // 矩阵乘的Kernel函数，参数是输入矩阵a，b和输出矩阵c的地址
+   __global__ void kernel_matmul(char *dataA, char *dataB, char *dataC) {
+
+
+      // 计算每个SPE 要平均分配多少batch的数据量
+      int32_t batch_spe = B/threadDim;
+      // 一个SPE分别被分得的 矩阵a, b, c的batch数的总数据量大小
+      int32_t a_size_spe = batch_spe * M * K * sizeof(int16_t);
+      int32_t b_size_spe = batch_spe * K * N * sizeof(int16_t);
+      int32_t c_size_spe = batch_spe * M * N * sizeof(int32_t);
+      // 给输入矩阵a（输入矩阵）申请SPM存储空间
+      int16_t *spm_input = (int16_t *)malloc(a_size_spe);
+      // 通过threadIdx做地址偏移，将当前spe分得的输入矩阵a的数据从Global内存上复制到
+      // SPM上申请的a矩阵数据空间
+      memcpy_async(spm_input, dataA + threadIdx * a_size_spe, a_size_spe, MemcpyGlobalToSpm);
+
+
+      // 给输入矩阵b（权重矩阵）申请SPM存储空间
+      int16_t *spm_weight = (int16_t *)malloc(b_size_spe);
+      // 通过threadIdx做地址偏移，将当前spe分得的输入矩阵b的数据从Global内存上复制到
+      // SPM上申请的b矩阵数据空间
+      memcpy_async(spm_weight, dataB + threadIdx * b_size_spe, b_size_spe, MemcpyGlobalToSpm);
+      // 等待矩阵a，b数据复制完成
+      memcpy_wait();
+      // 给输出矩阵c 申请SPM存储空间
+      int32_t *spm_output = (int32_t *)malloc(c_size_spe);
+
+
+      // 定义一个矩阵乘的句柄，可以将矩阵乘的一些配置项设置到句柄里。这样矩阵乘执行时，
+      // 可以按照句柄里的配置来进行计算
+      MatmulHandle handle;
+      // 配置输入数据是short 类型，输出数据是int型
+      matmul_init(handle, MatmulShortToInt);
+      // 计算一次矩阵乘 K 的切分是32一块，一个循环计算2次。计算出循环次数
+      uint32_t chunks = K / (K_BLK * 2);
+
+
+      for (int j = 0; j < chunks; j++) {
+           // 等待输入矩阵a矩阵数据加载完成，若之前没有加载动作，等待也会自动跳过
+           matmul_wait_loading_input(handle);
+           // 等待权重矩阵b矩阵数据加载完成，若之前没有加载动作，等待也会自动跳过
+           matmul_wait_loading_weight(handle);
+           // 设置本次matmul计算完成后，是否需要把数据从累加buffer 刷出到SPM上
+           // 本次计算不是最后一次，所以不需要设置刷出数据
+           matmul_set_flushing_output(handle, false);
+           // 设置输入矩阵a的偏移量，通常是输入矩阵行数不够128，且没有从128行的第一行
+           // 开始加载时，才需要设置的偏移量。此处输入是128行，且从128行里的第一行开始
+           // 所以设置为0
+           matmul_set_output_row_offset(handle, MatmulEnableOutputRowOffset, 0);
+           // 加载权重矩阵b，由之前计算出循环的第一次地址是 pBase_b                + ((2 * j ) * 32 × 32 + 0)，
+           // 对应到代码中是，spm_weight + K_BLK * K_BLK * j * 2
+           matmul_load_weight(handle, spm_weight + K_BLK * K_BLK * j * 2, MatmulK32, MatmulN32);
+           // 加载输入矩阵并进行计算，由之前计算出第一次地址是 pBase_a                 + (2 * j) * 32，
+           // 对应到代码中是，spm_input + K_BLK * j * 2，注意跨步的基本单位是 64B，
+           // 跨步的步长是7(即 K / K_BLK - 1)
+           matmul_compute(handle, spm_input + K_BLK * j * 2, M, MatmulK32, (K / K_BLK - 1));
+
+
+           // 设置本次matmul计算完成后，是否需要把数据从累加buffer 刷出到SPM上。
+           // 当j == (chunks - 1)， 即最后一次计算后，需要把数据刷出到SPM上
+           matmul_set_flushing_output(handle, (j == (chunks - 1)));
+           // 设置输入矩阵a的偏移量，通常是输入矩阵行数不够128，且没有从128行的第一行
+           // 开始加载时，才需要设置的偏移量。此处输入是128行，且从128行里的第一行开始
+
+
+
+
+文档版本：v1.1.0                           版权所有 © 太初(无锡)电子科技有限公司                                              24
+SDAA C零基础入门                                                                                   开发矩阵乘算子
+
+
+
+
+           // 所以设置为0
+           matmul_set_output_row_offset(handle, MatmulEnableOutputRowOffset, 0);
+           // 加载权重矩阵b，由之前计算出循环的第一次地址是 pBase_b                + ((2 * j + 1) * 32 × 32 + 0)，
+           // 对应到代码中是，spm_weight + K_BLK * K_BLK * (j * 2 + 1)
+           matmul_load_weight(handle, spm_weight + K_BLK * K_BLK * (j * 2 + 1),
+                              MatmulK32, MatmulN32);
+           // 加载输入矩阵并进行计算，由之前计算出第一次地址是 pBase_a                 + (2 * j + 1) * 32，
+           // 对应到代码中是，spm_input + K_BLK * (j * 2 + 1)，注意跨步的基本单位是 64B，
+           // 跨步的步长是7(即 K / K_BLK - 1)
+           matmul_compute(handle, spm_input + K_BLK * (j * 2 + 1), M, MatmulK32,
+                           (K / K_BLK - 1));
+       }
+       // 把累加buffer 上的数据，输出到已申请的SPM地址 spm_output上
+       matmul_store(handle, spm_output, M, MatmulN32);
+       // 等待数据刷出完成
+       matmul_wait(handle);
+       // 通过threadIdx做地址偏移，将当前spe计算出的输出矩阵c的数据复制到Global上
+       memcpy(dataC + threadIdx * c_size_spe, spm_output, c_size_spe);
+       // 释放申请的SPM存储空间
+       free(spm_output);
+       free(spm_weight);
+       free(spm_input);
+   }
+
+
+
+
+6.2.2 主机端矩阵乘
+在主机端同样做一次矩阵A和矩阵B的乘法计算，生成用于对比的数据。主机端矩阵乘的代码如下：
+
+   #include <time.h>
+
+
+   // B 数据batch大小
+   #define B 32
+   // M维度大小
+   #define M 128
+   // N维度大小
+   #define N 32
+   // K维度大小
+   #define K 256
+   // K维度切分的最小颗粒度
+   #define K_BLK 32
+
+
+   int main() {
+       int b, i, j, k;
+
+
+       int a_size = B * M * K;
+       int b_size = B * K * N;
+       int c_size = B * M * N;
+
+
+       unsigned int local_seed = time(NULL);
+
+
+       // 在Host 端申请输入矩阵a的内存空间
+       int16_t *host_a = (int16_t *)malloc(a_size * sizeof(int16_t));
+       // 在Host 端申请输入矩阵b的内存空间
+       int16_t *host_b = (int16_t *)malloc(b_size * sizeof(int16_t));
+       // 在Host 端申请需要从设备端复制数据到Host端输出矩阵c的内存空间
+       int *host_c = (int *)malloc(c_size * sizeof(int));
+
+
+
+
+文档版本：v1.1.0                            版权所有 © 太初(无锡)电子科技有限公司                                        25
+SDAA C零基础入门                                                                          开发矩阵乘算子
+
+
+
+
+       // 在Host 端申请Host 自己计算的输出矩阵c 的对比数据的内存空间
+       int *true_c = (int *)malloc(c_size * sizeof(int));
+       // 初始化矩阵a, b的输入数据
+       memset(host_a, 0, a_size * sizeof(int16_t));
+       memset(host_b, 0, b_size * sizeof(int16_t));
+       for (b = 0; b < B; b++) {
+           for (i = 0; i < M; i++) {
+               for (j = 0; j < K; j++) {
+                   host_a[b * M * K + i * K + j] = rand_r(&local_seed) % 100 - 50;
+               }
+           }
+           for (i = 0; i < K; i++) {
+               for (j = 0; j < N; j++) {
+                   host_b[b * K * N + i * N + j] = rand_r(&local_seed) % 5 - 2;
+               }
+           }
+       }
+
+
+
+       memset(true_c, 0, c_size * sizeof(int));
+       // Host端计算 用于对比的输出矩阵c的数据
+       for (b = 0; b < B; b++) {
+           for (i = 0; i < M; i++) {
+               for (j = 0; j < N; j++) {
+                   for (k = 0; k < K; k++) {
+                       true_c[b * M * N + i * N + j] +=
+                           ((int)host_a[b * M * K + i * K + k])
+                              * ((int)host_b[b * K * N + k * N + j]);
+                   }
+               }
+           }
+       }
+
+
+       // 释放Host端内存空间
+       free(true_c);
+       free(host_c);
+       free(host_b);
+       free(host_a);
+
+
+       return 0;
+   }
+
+
+
+
+6.2.3 完整程序
+将设备端计算出的结果复制到主机端，并和主机端生成数据，进行逐一对比。完整代码如下：
+
+   #include <time.h>
+   #include <sdaa_matmul.h>
+
+
+   using namespace sdaa;
+
+
+   // B 数据batch大小
+   #define B 32
+   // M维度大小
+   #define M 128
+   // N维度大小
+
+
+
+
+文档版本：v1.1.0                             版权所有 © 太初(无锡)电子科技有限公司                              26
+SDAA C零基础入门                                                                                        开发矩阵乘算子
+
+
+
+
+   #define N 32
+   // K维度大小
+   #define K 256
+   // K维度切分的最小颗粒度
+   #define K_BLK 32
+
+
+   // 矩阵乘的核函数，参数是输入矩阵a，b和输出矩阵c的地址
+   __global__ void kernel_matmul(char *dataA, char *dataB, char *dataC) {
+
+
+       // 计算每个SPE 要平均分配多少batch的数据量
+       int32_t batch_spe = B/threadDim;
+       // 一个SPE分别被分得的 矩阵a, b, c的batch数的总数据量大小
+       int32_t a_size_spe = batch_spe * M * K * sizeof(int16_t);
+       int32_t b_size_spe = batch_spe * K * N * sizeof(int16_t);
+       int32_t c_size_spe = batch_spe * M * N * sizeof(int32_t);
+       // 给输入矩阵a（输入矩阵）申请SPM存储空间
+       int16_t *spm_input = (int16_t *)malloc(a_size_spe);
+       // 通过threadIdx做地址偏移，将当前spe分得的输入矩阵a的数据从Global内存上复制到
+       // SPM上申请的a矩阵数据空间
+       memcpy_async(spm_input, dataA + threadIdx * a_size_spe, a_size_spe, MemcpyGlobalToSpm);
+
+
+       // 给输入矩阵b（权重矩阵）申请SPM存储空间
+       int16_t *spm_weight = (int16_t *)malloc(b_size_spe);
+       // 通过threadIdx做地址偏移，将当前spe分得的输入矩阵b的数据从Global内存上复制到
+       // SPM上申请的b矩阵数据空间
+       memcpy_async(spm_weight, dataB + threadIdx * b_size_spe, b_size_spe, MemcpyGlobalToSpm);
+       // 等待矩阵a，b数据复制完成
+       memcpy_wait();
+       // 给输出矩阵c 申请SPM存储空间
+       int32_t *spm_output = (int32_t *)malloc(c_size_spe);
+
+
+       // 定义一个矩阵乘的句柄，可以将矩阵乘的一些配置项设置到句柄里。这样矩阵乘执行时，
+       // 可以按照句柄里的配置来进行计算
+       MatmulHandle handle;
+       // 配置输入数据是short 类型，输出数据是int型
+       matmul_init(handle, MatmulShortToInt);
+       // 计算一次矩阵乘 K 的切分是32一块，一个循环计算2次。计算出循环次数
+       uint32_t chunks = K / (K_BLK * 2);
+
+
+       for (int j = 0; j < chunks; j++) {
+           // 等待输入矩阵a矩阵数据加载完成，若之前没有加载动作，等待也会自动跳过
+           matmul_wait_loading_input(handle);
+           // 等待权重矩阵b矩阵数据加载完成，若之前没有加载动作，等待也会自动跳过
+           matmul_wait_loading_weight(handle);
+           // 设置本次matmul计算完成后，是否需要把数据从累加buffer 刷出到SPM上
+           // 本次计算不是最后一次，所以不需要设置刷出数据
+           matmul_set_flushing_output(handle, false);
+           // 设置输入矩阵a的偏移量，通常是输入矩阵行数不够128，且没有从128行的第一行
+           // 开始加载时，才需要设置的偏移量。此处输入是128行，且从128行里的第一行开始
+           // 所以设置为0
+           matmul_set_output_row_offset(handle, MatmulEnableOutputRowOffset, 0);
+           // 加载权重矩阵b，由之前计算出循环的第一次地址是 pBase_b                 + ((2 * j ) * 32 × 32 + 0)，
+           // 对应到代码中是，spm_weight + K_BLK * K_BLK * j * 2
+           matmul_load_weight(handle, spm_weight + K_BLK * K_BLK * j * 2, MatmulK32, MatmulN32);
+           // 加载输入矩阵并进行计算，由之前计算出第一次地址是 pBase_a                  + (2 * j) * 32，
+           // 对应到代码中是，spm_input + K_BLK * j * 2，注意跨步的基本单位是 64B，
+           // 跨步的步长是7(即 K / K_BLK - 1)
+           matmul_compute(handle, spm_input + K_BLK * j * 2, M, MatmulK32, (K / K_BLK - 1));
+
+
+
+
+文档版本：v1.1.0                           版权所有 © 太初(无锡)电子科技有限公司                                              27
+SDAA C零基础入门                                                                                      开发矩阵乘算子
+
+
+
+
+           // 设置本次matmul计算完成后，是否需要把数据从累加buffer 刷出到SPM上。
+           // 当j == (chunks - 1)， 即最后一次计算后，需要把数据刷出到SPM上
+           matmul_set_flushing_output(handle, (j == (chunks - 1)));
+           // 设置输入矩阵a的偏移量，通常是输入矩阵行数不够128，且没有从128行的第一行
+           // 开始加载时，才需要设置的偏移量。此处输入是128行，且从128行里的第一行开始
+           // 所以设置为0
+           matmul_set_output_row_offset(handle, MatmulEnableOutputRowOffset, 0);
+           // 加载权重矩阵b，由之前计算出循环的第一次地址是 pBase_b                   + ((2 * j + 1) * 32 × 32 + 0)，
+           // 对应到代码中是，spm_weight + K_BLK * K_BLK * (j * 2 + 1)
+           matmul_load_weight(handle, spm_weight + K_BLK * K_BLK * (j * 2 + 1),
+                                MatmulK32, MatmulN32);
+           // 加载输入矩阵并进行计算，由之前计算出第一次地址是 pBase_a                    + (2 * j + 1) * 32，
+           // 对应到代码中是，spm_input + K_BLK * (j * 2 + 1)，注意跨步的基本单位是 64B，
+           // 跨步的步长是7(即 K / K_BLK - 1)
+           matmul_compute(handle, spm_input + K_BLK * (j * 2 + 1), M, MatmulK32,
+                             (K / K_BLK - 1));
+       }
+       // 把累加buffer 上的数据，输出到已申请的SPM地址 spm_output上
+       matmul_store(handle, spm_output, M, MatmulN32);
+       // 等待数据刷出完成
+       matmul_wait(handle);
+       // 通过threadIdx做地址偏移，将当前spe计算出的输出矩阵c的数据复制到Global上
+       memcpy(dataC + threadIdx * c_size_spe, spm_output, c_size_spe);
+       // 释放申请的SPM存储空间
+       free(spm_output);
+       free(spm_weight);
+       free(spm_input);
+   }
+
+
+   int main() {
+       int b, i, j, k;
+
+
+       char *dev_a = NULL;
+       char *dev_b = NULL;
+       char *dev_c = NULL;
+
+
+       int a_size = B * M * K;
+       int b_size = B * K * N;
+       int c_size = B * M * N;
+
+
+       unsigned int local_seed = time(NULL);
+
+
+       // 设置需要用到的设备号
+       sdaaSetDevice(1);
+       // 在Device端申请输入矩阵a 的Global空间
+       sdaaMalloc((void **)&dev_a, a_size * sizeof(int16_t));
+       // 在Device端申请输入矩阵b 的Global空间
+       sdaaMalloc((void **)&dev_b, b_size * sizeof(int16_t));
+       // 在Device端申请输出矩阵c 的Global空间
+       sdaaMalloc((void **)&dev_c, c_size * sizeof(int));
+       // 在Host 端申请输入矩阵a的内存空间
+       int16_t *host_a = (int16_t *)malloc(a_size * sizeof(int16_t));
+       // 在Host 端申请输入矩阵b的内存空间
+       int16_t *host_b = (int16_t *)malloc(b_size * sizeof(int16_t));
+       // 在Host 端申请需要从设备端复制数据到Host端输出矩阵c的内存空间
+       int *host_c = (int *)malloc(c_size * sizeof(int));
+       // 在Host 端申请Host 自己计算的输出矩阵c 的对比数据的内存空间
+       int *true_c = (int *)malloc(c_size * sizeof(int));
+       // 初始化矩阵a, b的输入数据
+
+
+
+
+文档版本：v1.1.0                              版权所有 © 太初(无锡)电子科技有限公司                                         28
+SDAA C零基础入门                                                                                   开发矩阵乘算子
+
+
+
+
+      memset(host_a, 0, a_size * sizeof(int16_t));
+      memset(host_b, 0, b_size * sizeof(int16_t));
+      for (b = 0; b < B; b++) {
+          for (i = 0; i < M; i++) {
+              for (j = 0; j < K; j++) {
+                  host_a[b * M * K + i * K + j] = rand_r(&local_seed) % 100 - 50;
+              }
+          }
+          for (i = 0; i < K; i++) {
+              for (j = 0; j < N; j++) {
+                  host_b[b * K * N + i * N + j] = rand_r(&local_seed) % 5 - 2;
+              }
+          }
+      }
+
+
+      // 将初始化好的输入矩阵a数据从Host 端复制到Device 端
+      sdaaMemcpy(dev_a, host_a, a_size * sizeof(int16_t), sdaaMemcpyHostToDevice);
+      // 将初始化好的输入矩阵b数据从Host 端复制到Device 端
+      sdaaMemcpy(dev_b, host_b, b_size * sizeof(int16_t), sdaaMemcpyHostToDevice);
+
+
+      // Kernel函数kernel_matmul运行
+      kernel_matmul<<<1>>>(dev_a, dev_b, dev_c);
+      sdaaDeviceSynchronize();
+      // 将Device 端计算好的 输出矩阵c的数据复制到Host 端
+      sdaaMemcpy(host_c, dev_c, c_size * sizeof(int), sdaaMemcpyDeviceToHost);
+
+
+      memset(true_c, 0, c_size * sizeof(int));
+      // Host端计算 用于对比的输出矩阵c的数据
+      for (b = 0; b < B; b++) {
+          for (i = 0; i < M; i++) {
+              for (j = 0; j < N; j++) {
+                  for (k = 0; k < K; k++) {
+                        true_c[b * M * N + i * N + j] +=
+                            ((int)host_a[b * M * K + i * K + k])
+                             * ((int)host_b[b * K * N + k * N + j]);
+                  }
+              }
+          }
+      }
+      // 将 从Device 端复制过到Host 端的输出矩阵c 的数据和Host端自己计算的
+      // 输出矩阵c的数据做逐一对比，如有不同报错
+      for (i = 0; i < c_size; i++) {
+          if (host_c[i] != true_c[i]) {
+              printf(
+                  "error: find mismatching data on %dth value,     device: %d, host: %d\n",
+                  i, (int)host_c[i], (int)true_c[i]);
+              break;
+          }
+          if (i == c_size - 1) {
+              printf("matmul compare finished\n");
+          }
+      }
+      // 释放Host端内存空间
+      free(true_c);
+      free(host_c);
+      free(host_b);
+      free(host_a);
+      // 释放Device端内存空间
+      sdaaFree(dev_c);
+
+
+
+
+文档版本：v1.1.0                            版权所有 © 太初(无锡)电子科技有限公司                                        29
+SDAA C零基础入门                                                   开发矩阵乘算子
+
+
+
+
+       sdaaFree(dev_b);
+       sdaaFree(dev_a);
+
+
+       return 0;
+   }
+
+
+
+
+6.3 编译运行
+ 程序编译
+
+  1. 将完整程序中的代码复制到              example.scpp 文件中。
+
+ 2. 执行以下编译命令，将               example.scpp 生成可执行文件   a.out 。
+
+
+       tecocc example.scpp
+
+
+
+ 3. 执行以下命令，运行程序。
+
+
+       ./a.out
+
+
+
+
+ 执行结果
+
+输出以下内容，表示算子可以正常运行，且设备端和主机端的结算结果一致。
+
+   matmul compare finished
+
+
+
+
+文档版本：v1.1.0                         版权所有 © 太初(无锡)电子科技有限公司           30
+SDAA C零基础入门                                         性能优化
+
+
+
+
+7. 性能优化
+算子的性能对模型训练、模型推理等均有较大影响。本文主要介绍如何基于SDAA C从计算和访存两个维度提升算子的
+性能。
+
+ 计算相关
+
+   增强指令或指令中数据的并行度，例如：使用向量指令，有效利用指令的流水等，具体可以参考《性能优化手册-
+   算子篇》。
+   增加计算数据的并行度，例如：使用多线程，多任务的并行计算，具体可以参考《性能优化手册-SDAA C篇》。
+
+ 访存相关
+
+   从时间上提高访存的利用率，例如：非阻塞型的访存数据搬运，采用双流水的方式，减少数据的等待时间；增加
+   内存搬运硬件的利用率，具体可以参考《性能优化手册-算子篇》。
+   从数据空间上提高访存的利用率，提高数据的重复利用率，减少数据的搬运次数；通过数据广播的方式进行数据
+   搬运，减少数据的重复搬运次数，具体可以参考《性能优化手册-SDAA C篇》。
+
+
+
+
+文档版本：v1.1.0         版权所有 © 太初(无锡)电子科技有限公司              31
+

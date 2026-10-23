@@ -1,0 +1,17 @@
+{
+  "name": "teco-ops-agent",
+  "description": "TECO SDAA 算子开发 Demo Agent：环境检查、架构参考、文档检索、LIBRT/KERNEL/SATE API、性能最佳实践、算子脚手架与 PyTorch 精度验证。",
+  "version": "0.1.0",
+  "author": {
+    "name": "TECO Ops"
+  },
+  "homepage": "https://git.tecorigin.net/gury/teco-ops-agent",
+  "repository": "https://git.tecorigin.net/gury/teco-ops-agent",
+  "license": "MIT",
+  "keywords": [
+    "sdaa",
+    "teco",
+    "operator",
+    "skills"
+  ]
+}

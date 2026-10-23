@@ -1,0 +1,15 @@
+{
+  "name": "KernelPilot",
+  "owner": {
+    "name": "BBuf"
+  },
+  "description": "KernelPilot 的 Claude Code 市场，用于 Humanize 内核优化循环。",
+  "plugins": [
+    {
+      "name": "humanize",
+      "source": "./humanize",
+      "description": "Humanize plus the KernelPilot Hermes loop, native teco-ops correctness and SDPTI performance testing, exclusive teco-ops-wiki evidence, and review-gated iteration.",
+      "version": "1.17.0"
+    }
+  ]
+}
