@@ -1,0 +1,14 @@
+defaults:
+  # 5-target subset of the official ppi_bb_only validation set (see ppi_bb_only_subset_12).
+  - /datasets/val/ppi@_here_: ppi_bb_only
+  - _self_
+
+dataset:
+  subset_to_keys:
+    - pdl1
+    - il7ra
+    - 36_VEGFA
+    - 30_SC2RBD
+    - 04_IFNAR2
+
+  num_replicates: 30

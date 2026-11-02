@@ -1,0 +1,11 @@
+{
+  "n_pairs": 8,
+  "median_identity": 0.8020050125313283,
+  "min_identity": 0.6991869918699187,
+  "frac_identity_ge_0.95": 0.0,
+  "frac_identity_ge_0.99": 0.0,
+  "median_backbone_rmsd": 0.2256852852069478,
+  "max_backbone_rmsd": 1.1886984625024462,
+  "a": "run_sdaa/results_aligned/sdaa/motif-1BCF/inference_samples",
+  "b": "run_sdaa/results/sdaa/motif-1BCF/inference_samples"
+}

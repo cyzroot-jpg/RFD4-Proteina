@@ -1,0 +1,1 @@
+/data01/tuyilist/cyz/RFD4-Proteina/run_sdaa/results_planA/sdaa/monomer-long/eval_inputs/monomer-long_rep1_job0/monomer-long_rep1_job0_generated.cif

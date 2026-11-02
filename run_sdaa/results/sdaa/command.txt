@@ -1,0 +1,7 @@
+# Pipeline: generate (official inline metrics) -> offline evaluate -> aggregate
+# Tasks: monomer-{short,medium,long}, motif-1BCF, ppi-pdl1 (official ppi_bb_only/pdl1.cif.zst)
+# Per-task commands are stored in <task>/command.txt
+# common overrides:
+#   inference_experiment=inference_on_user_inputs compile_lengths=null seed=1234 batch_size=1
+#   precision=bf16-mixed job_id=0 save_chain_of_interest=true hf_ckpt_path=nvidia/RFD4-Proteina
+#   metrics/inline_metrics=all_inline_metrics_no_rosetta

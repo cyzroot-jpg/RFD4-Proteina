@@ -1,4 +1,8 @@
-# SDAA adaptation patch
+# SDAA adaptation
+
+- `SDAA_ADAPTATION.md`: full adaptation record (environment, analysis, changes,
+  weights, test results, CUDA vs SDAA comparison, pitfalls).
+- `patches/rfd4-proteina-sdaa.patch`: source/config/doc diff.
 
 `patches/rfd4-proteina-sdaa.patch` contains the source/config/doc changes for
 running RFD4-Proteina on Teco SDAA (LoongArch, Torch-SDAA 3.3.0). It is a plain

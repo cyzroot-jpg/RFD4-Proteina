@@ -1,0 +1,9 @@
+platform=sdaa
+task=monomer-short
+nsteps=20
+fidelity_calls=20
+device=0
+torch_sdaa_align_nv_device=a100
+git_commit=54ef019072c08e7ee118a7671a30efa181c03ae8
+start=2026-10-28T04:38:33+00:00
+end=2026-10-28T04:43:24+00:00

@@ -1,0 +1,11 @@
+{
+  "n_pairs": 6,
+  "median_identity": 0.31233122072196196,
+  "min_identity": 0.23958333333333334,
+  "frac_identity_ge_0.95": 0.0,
+  "frac_identity_ge_0.99": 0.0,
+  "median_backbone_rmsd": 15.758894633250037,
+  "max_backbone_rmsd": 29.10581026641583,
+  "a": "run_sdaa/results_aligned/sdaa/monomer-medium/inference_samples",
+  "b": "run_sdaa/results/sdaa/monomer-medium/inference_samples"
+}

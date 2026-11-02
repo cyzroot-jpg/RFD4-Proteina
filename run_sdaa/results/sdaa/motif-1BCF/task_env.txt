@@ -1,0 +1,11 @@
+task=motif-1BCF
+platform=sdaa
+device_slot=3
+SDAA_VISIBLE_DEVICES=12
+input=data/benchmarks/motif_scaffolding/motif_indexed/1BCF_AA.cif.zst
+num_replicates=8
+metrics_tags=[design,developability,3d_coordinate_conditioning]
+seed=1234
+ckpt=nvidia/RFD4-Proteina
+start=2026-10-26T11:03:48+00:00
+end=2026-10-26T12:56:16+00:00

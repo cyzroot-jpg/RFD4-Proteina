@@ -1,3 +1,0 @@
-example_id,dataset_name,task,designed_structure_path,output_base_dir,metrics_tags,designed_chain_path,pre_oracle_pass,chain_of_interest
-1bcf_aa_rep0_generated_633a36a2,inference_samples,all,linshi/work/gen_motif/inference_samples/1bcf_aa_rep0/1bcf_aa_rep0_generated.cif,linshi/work/eval_motif/evaluation_samples,"design,3d_coordinate_conditioning",,0.0,
-1bcf_aa_rep1_generated_7778a2be,inference_samples,all,linshi/work/gen_motif/inference_samples/1bcf_aa_rep1/1bcf_aa_rep1_generated.cif,linshi/work/eval_motif/evaluation_samples,"design,3d_coordinate_conditioning",,0.0,

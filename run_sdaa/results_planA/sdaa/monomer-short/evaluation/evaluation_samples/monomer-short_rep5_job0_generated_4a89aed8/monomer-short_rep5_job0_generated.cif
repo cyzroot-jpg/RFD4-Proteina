@@ -1,0 +1,1 @@
+/data01/tuyilist/cyz/RFD4-Proteina/run_sdaa/results_planA/sdaa/monomer-short/eval_inputs/monomer-short_rep5_job0/monomer-short_rep5_job0_generated.cif

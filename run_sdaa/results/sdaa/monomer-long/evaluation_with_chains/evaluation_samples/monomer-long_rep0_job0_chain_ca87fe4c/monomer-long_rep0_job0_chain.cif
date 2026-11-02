@@ -1,0 +1,1 @@
+/data01/tuyilist/cyz/RFD4-Proteina/run_sdaa/results/sdaa/monomer-long/inference_samples/foldseek_input_chains/7b42075d/monomer-long/monomer-long_rep0_job0_chain.cif

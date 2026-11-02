@@ -1,9 +1,0 @@
-task,dataset,n_res,bad_bond_frac,clash_frac,helix,sheet,loop,n_sse,gravy,instability,motif_rmsd,hotspot_obedience
-monomer,monomer-long,250.0,0.0,0.0,0.828,0.0,0.172,23.0,-0.2404,48.6724,,
-monomer,monomer-medium,150.0,0.0,0.0,0.84,0.0,0.16,15.0,-0.5073,61.1653,,
-monomer,monomer-short,100.0,0.0,0.0,0.41,0.26,0.33,13.0,-0.654,84.34,,
-motif_scaffolding,1BCF_AA_rep0,131.0,0.0,0.0,0.8702,0.0,0.1298,9.0,,,0.1643,
-motif_scaffolding,1BCF_AA_rep1,124.0,0.0,0.0,0.8629,0.0,0.1371,9.0,,,0.1566,
-protein_binder,pdl1_binder_0_generated_24ee8b0b,209.0,0.0,0.0,0.3876,0.2201,0.3923,23.0,,,,
-protein_binder,pdl1_binder_1_generated_0e7ad2bb,169.0,0.0,0.0,0.2781,0.2663,0.4556,19.0,,,,
-protein_binder_inline,pdl1_binder_0,186.0,0.0,0.0,0.0538,0.3763,0.5699,23.0,,,,1.0

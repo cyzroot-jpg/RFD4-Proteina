@@ -1,0 +1,1 @@
+/data01/tuyilist/cyz/RFD4-Proteina/run_sdaa/results/sdaa/monomer-medium/inference_samples/foldseek_input_chains/d3433456/monomer-medium/monomer-medium_rep0_job0_chain.cif

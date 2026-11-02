@@ -1,7 +1,0 @@
-run,size,designs,wall_s,s_per_design,peak_device_GB,rss_GB,cpu_util_pct
-monomer-short,100 aa,1,463.6,463.6,1.87,4.36,0.66
-monomer-medium,150 aa,1,1004.3,1004.3,2.01,4.35,0.35
-monomer-long,250 aa,1,2709.2,2709.2,2.45,4.35,0.2
-motif_1BCF_AA,124-131 aa,2,1762.3,881.2,1.95,4.42,0.42
-ppi_inline,186 aa,1,1530.1,1530.1,2.14,4.42,0.28
-ppi_2reps,169-209 aa,2,4248.2,2124.1,2.24,4.32,0.22

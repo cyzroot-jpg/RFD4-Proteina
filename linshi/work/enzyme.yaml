@@ -1,3 +1,0 @@
-rubisco_site:
-  input: data/benchmarks/mcsa/mcsa_37/M0907_1rbl.cif.zst
-  input_as_annotated_cif: true

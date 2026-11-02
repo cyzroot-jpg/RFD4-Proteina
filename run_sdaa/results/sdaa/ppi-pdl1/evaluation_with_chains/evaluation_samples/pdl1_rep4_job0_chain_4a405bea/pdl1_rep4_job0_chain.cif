@@ -1,0 +1,1 @@
+/data01/tuyilist/cyz/RFD4-Proteina/run_sdaa/results/sdaa/ppi-pdl1/inference_samples/foldseek_input_chains/efd88188/pdl1/pdl1_rep4_job0_chain.cif

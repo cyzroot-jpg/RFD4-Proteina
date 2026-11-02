@@ -1,0 +1,11 @@
+task=monomer-short
+platform=sdaa
+device_slot=0
+SDAA_VISIBLE_DEVICES=0
+input=data/benchmarks/monomer/monomer-short.cif.zst
+num_replicates=8
+metrics_tags=[design,developability]
+seed=1234
+ckpt=nvidia/RFD4-Proteina
+start=2026-10-26T11:03:48+00:00
+end=2026-10-26T12:06:27+00:00

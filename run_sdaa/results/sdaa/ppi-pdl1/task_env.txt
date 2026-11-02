@@ -1,0 +1,11 @@
+task=ppi-pdl1
+platform=sdaa
+device_slot=4
+SDAA_VISIBLE_DEVICES=16
+input=data/benchmarks/ppi/ppi_bb_only/pdl1.cif.zst
+num_replicates=6
+metrics_tags=[design,developability,interchain_interactions]
+seed=1234
+ckpt=nvidia/RFD4-Proteina
+start=2026-10-26T11:03:48+00:00
+end=2026-10-26T14:12:48+00:00

@@ -1,7 +1,0 @@
-name atoms bonds bad_bond_frac clash_frac
-monomer-short 806 816 0.0000 0.0000
-monomer-medium 1246 1260 0.0000 0.0000
-monomer-long 2019 2048 0.0000 0.0000
-motif-1BCF-rep0 1089 1101 0.0000 0.0000
-motif-1BCF-rep1 991 1003 0.0000 0.0000
-ppi-inline 1489 1512 0.0000 0.0000

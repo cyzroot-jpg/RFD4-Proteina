@@ -1,0 +1,14 @@
+task=monomer-long
+platform=sdaa
+device_slot=3
+SDAA_VISIBLE_DEVICES=12
+input=data/benchmarks/monomer/monomer-long.cif.zst
+num_replicates=4
+metrics_tags=[design,developability]
+seed=1234
+ckpt=nvidia/RFD4-Proteina
+torch_sdaa_align_nv_device=a100
+plan_a=1
+ablate=force_einsum
+start=2026-10-28T10:44:58+00:00
+end=2026-10-28T13:49:36+00:00

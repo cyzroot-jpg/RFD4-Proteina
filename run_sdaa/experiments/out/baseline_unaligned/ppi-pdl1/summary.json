@@ -1,0 +1,11 @@
+{
+  "n_pairs": 6,
+  "median_identity": 0.30989583333333337,
+  "min_identity": 0.21212121212121213,
+  "frac_identity_ge_0.95": 0.0,
+  "frac_identity_ge_0.99": 0.0,
+  "median_backbone_rmsd": 9.69496512034534,
+  "max_backbone_rmsd": 15.06232357261113,
+  "a": "run_sdaa/results_aligned/sdaa/ppi-pdl1/inference_samples",
+  "b": "run_sdaa/results/sdaa/ppi-pdl1/inference_samples"
+}
