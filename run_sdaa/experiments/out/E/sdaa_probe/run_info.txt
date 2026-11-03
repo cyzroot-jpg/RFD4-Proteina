@@ -1,8 +1,0 @@
-platform=sdaa
-task=monomer-short
-nsteps=20
-fidelity_calls=20
-device=0
-git_commit=54ef019072c08e7ee118a7671a30efa181c03ae8
-start=2026-10-28T03:38:59+00:00
-end=2026-10-28T03:43:49+00:00
