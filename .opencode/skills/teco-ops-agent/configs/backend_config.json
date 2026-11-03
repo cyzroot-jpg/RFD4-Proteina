@@ -1,7 +1,0 @@
-{
-  "backends": {
-    "teco_ops": {
-      "demo_root": "../../teco-ops"
-    }
-  }
-}

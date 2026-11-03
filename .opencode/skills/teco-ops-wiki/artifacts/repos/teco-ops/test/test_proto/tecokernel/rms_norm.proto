@@ -1,6 +1,0 @@
-syntax = "proto2";
-package testpt;
-
-message RmsNormParam{
-    optional float eps = 1 [default = 1e-5];
-}
