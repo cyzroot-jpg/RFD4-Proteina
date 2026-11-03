@@ -1,5 +1,0 @@
-PASS monomer-short
-PASS monomer-medium
-PASS monomer-long
-PASS motif-1BCF
-PASS ppi-pdl1
