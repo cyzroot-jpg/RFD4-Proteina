@@ -1,1 +1,0 @@
-/data01/tuyilist/cyz/RFD4-Proteina/run_sdaa/results/sdaa/monomer-medium/inference_samples/monomer-medium_rep1_job0/monomer-medium_rep1_job0_generated.cif

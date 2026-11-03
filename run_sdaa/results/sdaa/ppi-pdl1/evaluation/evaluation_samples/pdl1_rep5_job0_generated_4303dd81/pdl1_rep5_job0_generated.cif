@@ -1,1 +1,0 @@
-/data01/tuyilist/cyz/RFD4-Proteina/run_sdaa/results/sdaa/ppi-pdl1/eval_inputs/pdl1_rep5_job0/pdl1_rep5_job0_generated.cif

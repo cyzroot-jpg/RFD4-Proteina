@@ -1,1 +1,0 @@
-/data01/tuyilist/cyz/RFD4-Proteina/run_sdaa/results/sdaa/motif-1BCF/inference_samples/foldseek_input_chains/5e3c8465/1BCF_AA/1BCF_AA_rep6_job0_chain.cif

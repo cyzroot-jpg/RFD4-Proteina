@@ -1,1 +1,0 @@
-/data01/tuyilist/cyz/RFD4-Proteina/run_sdaa/results/sdaa/motif-1BCF/eval_inputs/1BCF_AA_rep0_job0/1BCF_AA_rep0_job0_generated.cif
